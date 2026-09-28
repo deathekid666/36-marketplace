@@ -1,0 +1,768 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CREATOR
+  STUDIO_OWNER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum StudioStatus {
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum StudioCategory {
+  RECORDING
+  PODCAST
+  PHOTO
+  VIDEO
+  REHEARSAL
+  DJ
+  PRODUCTION
+}
+
+enum BookingStatus {
+  PENDING_DEPOSIT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  DISPUTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum PaymentKind {
+  DEPOSIT
+  BALANCE
+  REFUND
+}
+
+enum StudioRequestStatus {
+  OPEN
+  OFFER_SELECTED
+  CLOSED
+  CANCELLED
+}
+
+enum RequestOfferStatus {
+  ACTIVE
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum FlashSlotStatus {
+  ACTIVE
+  BOOKED
+  EXPIRED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  ELIGIBLE
+  PAID
+  HOLD
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  WHATSAPP
+}
+
+enum NotificationDeliveryStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum PromoDiscountType {
+  PERCENT
+  FIXED_MAD
+}
+
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REWARDED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  ISSUED
+  VOID
+}
+
+model User {
+  id                      String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                   String        @unique
+  referralCode            String?       @unique
+  name                    String
+  phone                   String?
+  passwordHash            String
+  role                    UserRole      @default(CREATOR)
+  status                  UserStatus    @default(ACTIVE)
+  emailVerifiedAt         DateTime?     @db.Timestamp(3)
+  createdAt               DateTime      @default(now()) @db.Timestamp(3)
+  updatedAt               DateTime      @updatedAt @db.Timestamp(3)
+  sessions                AuthSession[]
+  studios                 Studio[]
+  bookings                Booking[]
+  studioRequests          StudioRequest[]
+  confirmedPayments       Payment[]       @relation("PaymentConfirmedBy")
+  cancelledBookings       Booking[]       @relation("BookingCancelledBy")
+  messages                Message[]
+  reviews                 Review[]
+  favorites               Favorite[]
+  notifications           Notification[]
+  marketplaceEvents       MarketplaceEvent[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+  storedFiles             StoredFile[]
+  disputesOpened          Dispute[] @relation("DisputeOpenedBy")
+  disputesAssigned        Dispute[] @relation("DisputeAssignedAdmin")
+  promoCodesCreated       PromoCode[] @relation("PromoCreatedBy")
+  promoRedemptions        PromoRedemption[]
+  referralsInvited        Referral[] @relation("ReferralInviter")
+  referralAsInvitee       Referral? @relation("ReferralInvitee")
+
+  @@index([role])
+}
+
+model AuthSession {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash String   @unique
+  userId    String   @db.Uuid
+  expiresAt DateTime @db.Timestamp(3)
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Studio {
+  id                    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId               String         @db.Uuid
+  name                  String
+  slug                  String         @unique
+  description           String         @default("")
+  primaryCategory       StudioCategory @default(RECORDING)
+  city                  String         @default("Casablanca")
+  neighborhood          String         @default("")
+  address               String         @default("")
+  latitude              Decimal?       @db.Decimal(9, 6)
+  longitude             Decimal?       @db.Decimal(9, 6)
+  phone                 String         @default("")
+  instagram             String         @default("")
+  website               String         @default("")
+  status                StudioStatus   @default(DRAFT)
+  submittedAt           DateTime?      @db.Timestamp(3)
+  verifiedAt            DateTime?      @db.Timestamp(3)
+  verificationNote      String         @default("")
+  depositPercent        Int            @default(30)
+  freeCancellationHours Int            @default(24)
+  commissionBps         Int            @default(1200)
+  legalName             String         @default("")
+  taxId                 String         @default("")
+  ice                   String         @default("")
+  taxRateBps            Int            @default(0)
+  createdAt             DateTime       @default(now()) @db.Timestamp(3)
+  updatedAt             DateTime       @updatedAt @db.Timestamp(3)
+  owner                 User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  rooms                 Room[]
+  photos                StudioPhoto[]
+  amenities             StudioAmenity[]
+  openingHours          OpeningHour[]
+  bookings              Booking[]
+  requestOffers         RequestOffer[]
+  reviews               Review[]
+  favorites             Favorite[]
+  addons                StudioAddon[]
+  payouts               Payout[]
+  marketplaceEvents     MarketplaceEvent[]
+  storedFiles           StoredFile[]
+  promoCodes            PromoCode[]
+
+  @@index([ownerId])
+  @@index([city, status])
+  @@index([status])
+}
+
+model StudioPhoto {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studioId  String   @db.Uuid
+  url       String
+  alt       String   @default("")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+  studio    Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@index([studioId, sortOrder])
+}
+
+model StudioAmenity {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studioId String @db.Uuid
+  name     String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@unique([studioId, name])
+  @@index([studioId])
+}
+
+model Room {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studioId        String         @db.Uuid
+  name            String
+  description     String         @default("")
+  category        StudioCategory @default(RECORDING)
+  hourlyRateMad   Int
+  minimumHours    Int            @default(1)
+  capacity        Int            @default(1)
+  engineerIncluded Boolean       @default(false)
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now()) @db.Timestamp(3)
+  updatedAt       DateTime       @updatedAt @db.Timestamp(3)
+  studio          Studio         @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  equipment       RoomEquipment[]
+  blockedSlots    BlockedSlot[]
+  bookings        Booking[]
+  requestOffers   RequestOffer[]
+  flashSlots        FlashSlot[]
+  addons            StudioAddon[]
+
+  @@index([studioId])
+  @@index([category, active])
+}
+
+model RoomEquipment {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roomId   String @db.Uuid
+  name     String
+  quantity Int    @default(1)
+  room     Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, name])
+  @@index([roomId])
+}
+
+model OpeningHour {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studioId  String  @db.Uuid
+  dayOfWeek  Int
+  opensAt    String    @default("09:00")
+  closesAt   String    @default("22:00")
+  closed      Boolean   @default(false)
+  studio      Studio     @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@unique([studioId, dayOfWeek])
+  @@index([studioId])
+}
+
+model BlockedSlot {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roomId    String   @db.Uuid
+  startAt   DateTime @db.Timestamp(3)
+  endAt      DateTime @db.Timestamp(3)
+  reason     String   @default("")
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+  room       Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, startAt, endAt])
+}
+
+model Booking {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId           String        @db.Uuid
+  studioId           String        @db.Uuid
+  roomId             String        @db.Uuid
+  status               BookingStatus @default(PENDING_DEPOSIT)
+  paymentStatus        PaymentStatus @default(PENDING)
+  startAt               DateTime      @db.Timestamp(3)
+  endAt                 DateTime      @db.Timestamp(3)
+  durationMinutes       Int
+  baseAmountMad         Int
+  depositPercent        Int
+  depositAmountMad      Int
+  totalAmountMad        Int
+  notes                  String        @default("")
+  expiresAt              DateTime?     @db.Timestamp(3)
+  cancelledAt            DateTime?     @db.Timestamp(3)
+  cancelledById          String?       @db.Uuid
+  cancellationReason      String        @default("")
+  refundAmountMad        Int            @default(0)
+  flashSlotId            String?        @unique @db.Uuid
+  commissionBps          Int            @default(1200)
+  commissionAmountMad   Int            @default(0)
+  studioNetAmountMad     Int            @default(0)
+  promoDiscountMad        Int            @default(0)
+  taxBps                  Int            @default(0)
+  taxAmountMad          Int            @default(0)
+  createdAt               DateTime       @default(now()) @db.Timestamp(3)
+  updatedAt               DateTime      @updatedAt @db.Timestamp(3)
+  creator                 User           @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  studio                  Studio          @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  room                    Room            @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  payments                Payment[]
+  cancelledBy            User?           @relation("BookingCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  flashSlot              FlashSlot?      @relation(fields: [flashSlotId], references: [id], onDelete: SetNull)
+  conversation            Conversation?
+  review                 Review?
+  addons                 BookingAddon[]
+  payout                  Payout?
+  marketplaceEvents      MarketplaceEvent[]
+  storedFiles            StoredFile[]
+  reminders              BookingReminder[]
+  dispute                Dispute?
+  promoRedemption        PromoRedemption?
+  invoice                 Invoice?
+
+  @@index([creatorId, createdAt])
+  @@index([studioId, startAt])
+  @@index([roomId, startAt, endAt])
+  @@index([status, expiresAt])
+  @@index([cancelledById])
+}
+
+model Payment {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId     String       @db.Uuid
+  kind         PaymentKind
+  amountMad    Int
+  status       PaymentStatus @default(PENDING)
+  provider      String        @default("MANUAL")
+  providerRef   String        @default("")
+  checkoutUrl    String        @default("")
+  confirmedAt   DateTime?     @db.Timestamp(3)
+  confirmedById String?       @db.Uuid
+  createdAt     DateTime      @default(now()) @db.Timestamp(3)
+  updatedAt     DateTime      @updatedAt @db.Timestamp(3)
+  booking       Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  confirmedBy   User?        @relation("PaymentConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+
+  @@index([bookingId, status])
+  @@index([confirmedById])
+}
+
+model StudioRequest {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId         String            @db.Uuid
+  category         StudioCategory
+  city             String
+  neighborhood     String            @default("")
+  desiredStartAt    DateTime          @db.Timestamp(3)
+  durationMinutes   Int
+  budgetMad         Int
+  engineerRequired  Boolean          @default(false)
+  details           String            @default("")
+  status            StudioRequestStatus @default(OPEN)
+  expiresAt         DateTime          @db.Timestamp(3)
+  createdAt         DateTime          @default(now()) @db.Timestamp(3)
+  updatedAt         DateTime          @updatedAt @db.Timestamp(3)
+  creator            User              @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  offers             RequestOffer[]
+
+  @@index([creatorId, createdAt])
+  @@index([city, category, status])
+  @@index([status, expiresAt])
+}
+
+model RequestOffer {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId        String             @db.Uuid
+  studioId         String             @db.Uuid
+  roomId           String             @db.Uuid
+  offeredStartAt    DateTime            @db.Timestamp(3)
+  durationMinutes   Int
+  totalAmountMad    Int
+  message           String             @default("")
+  status            RequestOfferStatus @default(ACTIVE)
+  expiresAt         DateTime            @db.Timestamp(3)
+  createdAt         DateTime            @default(now()) @db.Timestamp(3)
+  updatedAt         DateTime            @updatedAt @db.Timestamp(3)
+  request            StudioRequest         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  studio            Studio               @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  room              Room                 @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, studioId])
+  @@index([requestId, status])
+  @@index([studioId, createdAt])
+  @@index([roomId, offeredStartAt])
+}
+
+model FlashSlot {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roomId            String          @db.Uuid
+  startAt           DateTime        @db.Timestamp(3)
+  endAt              DateTime        @db.Timestamp(3)
+  originalRateMad    Int
+  flashRateMad      Int
+  status            FlashSlotStatus @default(ACTIVE)
+  expiresAt          DateTime        @db.Timestamp(3)
+  createdAt         DateTime        @default(now()) @db.Timestamp(3)
+  updatedAt         DateTime        @updatedAt @db.Timestamp(3)
+  room               Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  booking             Booking?
+
+  @@unique([roomId, startAt, endAt])
+  @@index([roomId, startAt])
+  @@index([status, expiresAt])
+}
+
+model Conversation {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId String    @unique @db.Uuid
+  createdAt DateTime  @default(now()) @db.Timestamp(3)
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String       @db.Uuid
+  senderId       String       @db.Uuid
+  body           String
+  createdAt      DateTime     @default(now()) @db.Timestamp(3)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+model Review {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId     String   @unique @db.Uuid
+  creatorId     String   @db.Uuid
+  studioId      String   @db.Uuid
+  rating        Int
+  accuracy      Int
+  equipment     Int
+  communication Int
+  comment       String    @default("")
+  ownerReply     String   @default("")
+  createdAt      DateTime @default(now()) @db.Timestamp(3)
+  updatedAt      DateTime @updatedAt @db.Timestamp(3)
+  booking        Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  creator        User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  studio        Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@index([studioId, createdAt])
+  @@index([creatorId])
+}
+
+model Favorite {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  studioId  String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, studioId])
+  @@index([studioId])
+}
+
+model StudioAddon {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studioId     String   @db.Uuid
+  roomId       String?  @db.Uuid
+  name         String
+  description  String   @default("")
+  unitPriceMad Int
+  unitLabel    String   @default("item")
+  active       Boolean  @default(true)
+  createdAt     DateTime @default(now()) @db.Timestamp(3)
+  updatedAt     DateTime @updatedAt @db.Timestamp(3)
+  studio       Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  room         Room?      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  bookingAddons BookingAddon[]
+
+  @@index([studioId, active])
+  @@index([roomId, active])
+}
+
+model BookingAddon {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId    String   @db.Uuid
+  addonId      String?  @db.Uuid
+  nameSnapshot String
+  unitPriceMad Int
+  quantity      Int      @default(1)
+  totalMad       Int
+  booking       Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  addon         StudioAddon? @relation(fields: [addonId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId])
+  @@index([addonId])
+}
+
+model Notification {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String  @db.Uuid
+  type       String
+  title      String
+  body        String  @default("")
+  href        String  @default("")
+  readAt      DateTime? @db.Timestamp(3)
+  createdAt   DateTime `default(now()) @db.Timestamp(3)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries   NotificationDelivery[]
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model NotificationDelivery {
+  id             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notificationId String                @db.Uuid
+  channel         NotificationChannel
+  status           NotificationDeliveryStatus @default(QUEUED)
+  provider         String                @default("")
+  providerRef      String                @default("")
+  error            String                @default("")
+  sentAt           DateTime?               @db.Timestamp(3)
+  createdAt        DateTime              @default(now()) @db.Timestamp(3)
+  notification      Notification              @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([status, channel])
+}
+
+model Payout {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId         String        @unique @db.Uuid
+  studioId           String        @db.Uuid
+  grossAmountMad     Int
+  commissionBps       Int
+  commissionAmountMad Int
+  netAmountMad       Int
+  status              PayoutStatus @default(PENDING)
+  availableAt         DateTime?      @db.Timestamp(3)
+  paidAt              DateTime?      @db.Timestamp(3)
+  reference            String         @default("")
+  createdAt             DateTime       @default(now()) @db.Timestamp(3)
+  updatedAt             DateTime       @updatedAt @db.Timestamp(3)
+  booking              Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  studio               Studio        @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@index([studioId, status])
+}
+
+model MarketplaceEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventType String
+  userId    String?  @db.Uuid
+  studioId  String?  @db.Uuid
+  bookingId String?  @db.Uuid
+  metadata  Json?
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  studio    Studio?  @relation(fields: [studioId], references: [id], onDelete: SetNull)
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, createdAt])
+  @@index([studioId, createdAt])
+  @@index([userId, createdAt])
+}
+
+
+model EmailVerificationToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime @db.Timestamp(3)
+  usedAt    DateTime? @db.Timestamp(3)
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model PasswordResetToken {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String  @db.Uuid
+  tokenHash String  @unique
+  expiresAt DateTime @db.Timestamp(3)
+  usedAt    DateTime? @db.Timestamp(3)
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model RateLimitWindow {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  keyHash     String
+  action      String
+  windowStart DateTime @db.Timestamp(3)
+  count       Int      @default(1)
+  updatedAt   DateTime @updatedAt @db.Timestamp(3)
+
+  @@unique([keyHash, action, windowStart])
+  @@index([updatedAt])
+}
+
+model StoredFile {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId   String   @db.Uuid
+  studioId   String?  @db.Uuid
+  bookingId  String?  @db.Uuid
+  kind       String
+  provider   String
+  storageKey String   @unique
+  url        String
+  mimeType   String
+  sizeBytes  BigInt
+  createdAt  DateTime @default(now()) @db.Timestamp(3)
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  studio     Studio?  @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  booking    Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+  @@index([studioId, createdAt])
+  @@index([bookingId, createdAt])
+}
+
+model BookingReminder {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId String   @db.Uuid
+  kind      String
+  sendAt    DateTime @db.Timestamp(3)
+  sentAt    DateTime? @db.Timestamp(3)
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, kind])
+  @@index([sendAt, sentAt])
+}
+
+model Dispute {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId       String        @unique @db.Uuid
+  openedById      String        @db.Uuid
+  assignedAdminId String?       @db.Uuid
+  status          DisputeStatus @default(OPEN)
+  reason          String
+  details         String        @default("")
+  resolution      String        @default("")
+  refundAmountMad Int           @default(0)
+  createdAt       DateTime      @default(now()) @db.Timestamp(3)
+  updatedAt       DateTime      @updatedAt @db.Timestamp(3)
+  resolvedAt      DateTime?     @db.Timestamp(3)
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  openedBy        User          @relation("DisputeOpenedBy", fields: [openedById], references: [id], onDelete: Cascade)
+  assignedAdmin   User?         @relation("DisputeAssignedAdmin", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([assignedAdminId])
+}
+
+model PromoCode {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code          String            @unique
+  discountType  PromoDiscountType
+  amount        Int
+  active        Boolean           @default(true)
+  startsAt      DateTime?         @db.Timestamp(3)
+  endsAt        DateTime?         @db.Timestamp(3)
+  maxUses       Int?
+  perUserLimit  Int               @default(1)
+  minBookingMad Int               @default(0)
+  studioId      String?           @db.Uuid
+  createdById   String            @db.Uuid
+  createdAt     DateTime          @default(now()) @db.Timestamp(3)
+  updatedAt     DateTime          @updatedAt @db.Timestamp(3)
+  studio        Studio?           @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  createdBy     User              @relation("PromoCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  redemptions   PromoRedemption[]
+
+  @@index([studioId, active])
+  @@index([active, endsAt])
+}
+
+model PromoRedemption {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  promoId     String    @db.Uuid
+  userId      String    @db.Uuid
+  bookingId   String    @unique @db.Uuid
+  discountMad Int
+  createdAt   DateTime  @default(now()) @db.Timestamp(3)
+  promo       PromoCode @relation(fields: [promoId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([promoId])
+  @@index([userId])
+}
+
+model Referral {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inviterId   String         @db.Uuid
+  inviteeId   String         @unique @db.Uuid
+  code        String
+  status      ReferralStatus @default(PENDING)
+  rewardMad   Int            @default(0)
+  createdAt   DateTime       @default(now()) @db.Timestamp(3)
+  qualifiedAt DateTime?      @db.Timestamp(3)
+  rewardedAt  DateTime?      @db.Timestamp(3)
+  inviter     User           @relation("ReferralInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee     User           @relation("ReferralInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@unique([code, inviteeId])
+  @@index([inviterId, status])
+}
+
+model Invoice {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId    String        @unique @db.Uuid
+  number       String        @unique
+  status       InvoiceStatus @default(ISSUED)
+  sellerName   String
+  sellerTaxId  String        @default("")
+  sellerIce    String        @default("")
+  buyerName    String
+  buyerEmail   String
+  subtotalMad  Int
+  discountMad  Int           @default(0)
+  taxBps       Int           @default(0)
+  taxAmountMad Int           @default(0)
+  totalMad     Int
+  issuedAt     DateTime      @default(now()) @db.Timestamp(3)
+  createdAt    DateTime      @default(now()) @db.Timestamp(3)
+  booking      Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
