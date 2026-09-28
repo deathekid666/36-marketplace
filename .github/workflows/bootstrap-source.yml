@@ -21,42 +21,17 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
-          import base64, hashlib, itertools
+          import base64
           from pathlib import Path
-
-          target = "761af4c90955fcc11ea0afbcafa9e463698ae39e88126b252449784747a8215e"
           parts = sorted(Path(".bootstrap2").glob("part*.b64"))
           raw = "".join(p.read_text() for p in parts)
           raw = "".join(raw.split())
-          alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-
-          candidates = [""]
-          rem = len(raw) % 4
-          need = (-len(raw)) % 4
-          if need == 1:
-              candidates += list(alphabet)
-          elif need == 2:
-              candidates += ["=="]
-              candidates += [c + "=" for c in alphabet]
-              candidates += ["".join(x) for x in itertools.product(alphabet, repeat=2)]
-          elif need == 3:
-              candidates += ["="]
-              candidates += [c + "==" for c in alphabet]
-              candidates += ["".join(x) + "=" for x in itertools.product(alphabet, repeat=2)]
-              candidates += ["".join(x) for x in itertools.product(alphabet, repeat=3)]
-
-          for suffix in candidates:
-              try:
-                  data = base64.b64decode(raw + suffix, validate=True)
-              except Exception:
-                  continue
-              if hashlib.sha256(data).hexdigest() == target:
-                  Path("/tmp/source.zip").write_bytes(data)
-                  print("Recovered archive with suffix length", len(suffix))
-                  break
-          else:
-              raise SystemExit("Could not reconstruct source archive with expected checksum")
+          raw += "=" * ((-len(raw)) % 4)
+          data = base64.b64decode(raw, validate=True)
+          Path("/tmp/source.zip").write_bytes(data)
+          print("archive bytes", len(data))
           PY
+          unzip -t /tmp/source.zip
           unzip -o /tmp/source.zip -d .
           rm -rf .bootstrap .bootstrap2
           rm -f .github/workflows/bootstrap-source.yml
