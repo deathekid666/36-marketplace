@@ -39,3 +39,5 @@ jobs:
             git commit -m "Expand 36 Marketplace source"
             git push
           fi
+
+# trigger source expansion
