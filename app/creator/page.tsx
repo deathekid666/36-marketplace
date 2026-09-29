@@ -12,7 +12,7 @@ export default async function Page() {
         <span className="text-xs font-bold uppercase tracking-[0.2em] text-acid">
           Find a place to create
         </span>
-        <div className="mt-3 flex flex-wrap items-end gap-4">
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black tracking-[-0.045em] sm:text-5xl">
               Creator dashboard
