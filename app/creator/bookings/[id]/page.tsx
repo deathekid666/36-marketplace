@@ -34,7 +34,7 @@ export default async function CreatorBookingDetailPage({
       dispute: true,
       flashSlot: true,
       addons: true,
-      files: true,
+      storedFiles: true,
     },
   });
   if (!booking) notFound();
@@ -74,7 +74,7 @@ export default async function CreatorBookingDetailPage({
               {booking.addons.length > 0 && <div className="mt-4 border-t border-zinc-900 pt-4"><span className="label">Add-ons</span><div className="space-y-2">{booking.addons.map((addon)=><div key={addon.id} className="flex justify-between text-xs"><span className="text-zinc-500">{addon.nameSnapshot} ×{addon.quantity}</span><b>{addon.totalMad} MAD</b></div>)}</div></div>}
             </section>
 
-            <section className="panel"><div className="flex items-center justify-between"><div><span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">Shared workspace</span><h2 className="mt-2 text-xl font-black">Project files</h2></div><span className="text-xs text-zinc-600">{booking.files.length} files</span></div><div className="mt-4 space-y-2">{booking.files.map((f)=><a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="flex justify-between rounded-xl border border-zinc-900 p-3 text-xs hover:border-zinc-700"><span className="text-zinc-300">{f.mimeType}</span><span className="text-zinc-600">{Math.round(Number(f.sizeBytes)/1024)} KB ↗</span></a>)}</div><BookingFileUploader bookingId={booking.id}/></section>
+            <section className="panel"><div className="flex items-center justify-between"><div><span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">Shared workspace</span><h2 className="mt-2 text-xl font-black">Project files</h2></div><span className="text-xs text-zinc-600">{booking.storedFiles.length} files</span></div><div className="mt-4 space-y-2">{booking.storedFiles.map((f)=><a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="flex justify-between rounded-xl border border-zinc-900 p-3 text-xs hover:border-zinc-700"><span className="text-zinc-300">{f.mimeType}</span><span className="text-zinc-600">{Math.round(Number(f.sizeBytes)/1024)} KB ↗</span></a>)}</div><BookingFileUploader bookingId={booking.id}/></section>
 
             <section className="panel">
               <div className="flex items-center justify-between"><div><span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">Private booking chat</span><h2 className="mt-2 text-xl font-black">Message the studio</h2></div><span className="text-xs text-zinc-600">{booking.conversation?.messages.length || 0} messages</span></div>
