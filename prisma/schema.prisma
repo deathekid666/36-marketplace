@@ -539,7 +539,7 @@ model Notification {
   body        String  @default("")
   href        String  @default("")
   readAt      DateTime? @db.Timestamp(3)
-  createdAt   DateTime `default(now()) @db.Timestamp(3)
+  createdAt   DateTime @default(now()) @db.Timestamp(3)
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries   NotificationDelivery[]
 
