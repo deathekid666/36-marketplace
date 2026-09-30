@@ -32,5 +32,10 @@ jobs:
           rm -rf .tmp-discovery-tests
           npx tsc scripts/test-discovery-normalization.ts lib/discovery/normalization.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-discovery-tests --noEmit false
           node .tmp-discovery-tests/scripts/test-discovery-normalization.js
+      - name: Test discovery deduplication fixtures
+        run: |
+          rm -rf .tmp-dedup-tests
+          npx tsc scripts/test-discovery-deduplication.ts lib/discovery/deduplication.ts lib/discovery/normalization.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-dedup-tests --noEmit false --baseUrl .
+          node .tmp-dedup-tests/scripts/test-discovery-deduplication.js
       - name: Build Next.js
         run: npm run build
