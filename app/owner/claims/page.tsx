@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { withdrawCandidateClaimAction } from "@/app/owner/claims/actions";
+import { startClaimedStudioOnboardingAction } from "@/app/owner/claims/onboarding-actions";
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -34,6 +35,10 @@ export default async function OwnerClaimsPage({
           district: true,
           category: true,
           status: true,
+          convertedStudioId: true,
+          convertedStudio: {
+            select: { id: true, status: true },
+          },
         },
       },
     },
@@ -71,7 +76,11 @@ export default async function OwnerClaimsPage({
         )}
         {query.error && (
           <div className="mt-6 rounded-xl border border-red-900/50 bg-red-950/10 p-4 text-sm text-red-300">
-            The claim action could not be completed.
+            {query.error === "market-not-supported"
+              ? "This discovery record is outside the currently supported Morocco booking market."
+              : query.error === "claim-not-verified"
+                ? "Ownership must be verified before onboarding can start."
+                : "The claim action could not be completed."}
           </div>
         )}
 
@@ -135,11 +144,33 @@ export default async function OwnerClaimsPage({
                   </form>
                 )}
 
-                {claim.status === "VERIFIED" && (
-                  <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4 text-sm text-emerald-300">
-                    Ownership is verified. D9 will turn this into the controlled 36 onboarding flow; this discovery record is not bookable yet.
+                {claim.status === "VERIFIED" && claim.candidateStudio.convertedStudio ? (
+                  <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
+                    <b className="text-sm text-emerald-300">Onboarding started</b>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">
+                      A private 36 Studio draft now exists. Complete the listing and submit it for marketplace verification.
+                    </p>
+                    <Link
+                      href={`/owner/studios/${claim.candidateStudio.convertedStudio.id}`}
+                      className="button-dark mt-3 inline-flex"
+                    >
+                      Continue studio onboarding →
+                    </Link>
                   </div>
-                )}
+                ) : claim.status === "VERIFIED" ? (
+                  <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
+                    <b className="text-sm text-emerald-300">Ownership verified</b>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">
+                      Start a private 36 Studio draft from this verified claim. It will not be bookable until you complete onboarding and pass listing verification.
+                    </p>
+                    <form action={startClaimedStudioOnboardingAction} className="mt-3">
+                      <input type="hidden" name="claimId" value={claim.id} />
+                      <button className="rounded-xl bg-acid px-5 py-3 text-xs font-black text-black">
+                        Start 36 onboarding
+                      </button>
+                    </form>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>

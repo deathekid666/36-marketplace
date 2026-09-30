@@ -30,7 +30,7 @@ export default async function DiscoverStudiosPage({
 
   const candidates = await db.candidateStudio.findMany({
     where: {
-      status: "APPROVED",
+      status: { in: ["APPROVED", "CONVERTED"] },
       ...(q
         ? {
             OR: [
@@ -45,6 +45,9 @@ export default async function DiscoverStudiosPage({
       ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
     },
     include: {
+      convertedStudio: {
+        select: { status: true },
+      },
       sources: {
         where: { active: true },
         orderBy: { collectedAt: "desc" },
@@ -63,7 +66,7 @@ export default async function DiscoverStudiosPage({
   const cityRows = await db.candidateStudio.groupBy({
     by: ["city"],
     where: {
-      status: "APPROVED",
+      status: { in: ["APPROVED", "CONVERTED"] },
       city: { not: null },
     },
     _count: { city: true },
@@ -71,7 +74,11 @@ export default async function DiscoverStudiosPage({
     take: 30,
   });
 
-  const mapPoints = candidates
+  const visibleCandidates = candidates.filter(
+    (candidate) => candidate.convertedStudio?.status !== "VERIFIED",
+  );
+
+  const mapPoints = visibleCandidates
     .filter((candidate) => candidate.latitude != null && candidate.longitude != null)
     .map((candidate) => ({
       id: candidate.id,
@@ -140,15 +147,15 @@ export default async function DiscoverStudiosPage({
 
         <div className="mt-7 flex items-center justify-between gap-4">
           <p className="text-sm text-zinc-500">
-            <b className="text-zinc-200">{candidates.length}</b> reviewed discovery listing
-            {candidates.length === 1 ? "" : "s"}
+            <b className="text-zinc-200">{visibleCandidates.length}</b> reviewed discovery listing
+            {visibleCandidates.length === 1 ? "" : "s"}
           </p>
           <Link href="/studios" className="text-xs font-black text-acid">
             Show bookable studios →
           </Link>
         </div>
 
-        {candidates.length === 0 ? (
+        {visibleCandidates.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-dashed border-zinc-800 p-14 text-center">
             <h2 className="text-xl font-black">No public discovery listings yet</h2>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-zinc-600">
@@ -158,11 +165,11 @@ export default async function DiscoverStudiosPage({
         ) : (
           <div className={mapPoints.length > 0 ? "mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.05fr)_minmax(460px,.95fr)]" : "mt-7"}>
             <div className={mapPoints.length > 0 ? "grid gap-5 md:grid-cols-2" : "grid gap-5 md:grid-cols-2 xl:grid-cols-3"}>
-              {candidates.map((candidate) => (
+              {visibleCandidates.map((candidate) => (
                 <article key={candidate.id} className="rounded-3xl border border-zinc-900 bg-zinc-950/60 p-5">
                   <div className="flex items-start justify-between gap-3">
-                    <span className="rounded-full border border-sky-900/50 bg-sky-950/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-sky-300">
-                      Discovery
+                    <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${candidate.status === "CONVERTED" ? "border-emerald-900/50 bg-emerald-950/20 text-emerald-300" : "border-sky-900/50 bg-sky-950/20 text-sky-300"}`}>
+                      {candidate.status === "CONVERTED" ? "Owner onboarding" : "Discovery"}
                     </span>
                     <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-700">
                       {labelCategory(candidate.category)}

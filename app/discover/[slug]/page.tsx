@@ -60,7 +60,7 @@ export default async function DiscoveryStudioPage({
     redirect("/studios/" + candidate.convertedStudio.slug);
   }
 
-  if (candidate.status !== "APPROVED") notFound();
+  if (candidate.status !== "APPROVED" && candidate.status !== "CONVERTED") notFound();
 
   const mapPoints =
     candidate.latitude != null && candidate.longitude != null
@@ -78,6 +78,8 @@ export default async function DiscoveryStudioPage({
 
   const website = safeExternalUrl(candidate.website);
   const ownershipVerified = candidate.claims.length > 0;
+  const onboardingInProgress =
+    candidate.status === "CONVERTED" && candidate.convertedStudio?.status !== "VERIFIED";
   const claimHref = "/discover/" + candidate.slug + "/claim";
 
   return (
@@ -107,9 +109,13 @@ export default async function DiscoveryStudioPage({
             </p>
           </div>
           <div className="rounded-2xl border border-amber-900/50 bg-amber-950/10 px-5 py-4 text-right">
-            <b className="text-sm text-amber-300">Not yet bookable on 36</b>
+            <b className="text-sm text-amber-300">
+              {onboardingInProgress ? "Owner onboarding in progress" : "Not yet bookable on 36"}
+            </b>
             <p className="mt-1 max-w-xs text-xs leading-5 text-zinc-600">
-              This studio has not completed owner onboarding and 36 verification.
+              {onboardingInProgress
+                ? "Ownership is verified and a private 36 listing is being completed. Booking stays disabled until marketplace verification."
+                : "This studio has not completed owner onboarding and 36 verification."}
             </p>
           </div>
         </div>
@@ -213,7 +219,14 @@ export default async function DiscoveryStudioPage({
                 </a>
               )}
 
-              {ownershipVerified ? (
+              {onboardingInProgress ? (
+                <div className="mt-5 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
+                  <b className="text-sm text-emerald-300">Claim verified · onboarding started</b>
+                  <p className="mt-1 text-xs leading-5 text-zinc-600">
+                    A real studio representative is building the authoritative 36 listing now.
+                  </p>
+                </div>
+              ) : ownershipVerified ? (
                 <div className="mt-5 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
                   <b className="text-sm text-emerald-300">Ownership claim verified</b>
                   <p className="mt-1 text-xs leading-5 text-zinc-600">
