@@ -65,6 +65,7 @@ export default async function AdminDiscoveryPage({
     skipped?: string;
     preset?: string;
     importError?: string;
+    provider?: string;
   }>;
 }) {
   const user = await requireRole("ADMIN");
