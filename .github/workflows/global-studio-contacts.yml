@@ -21,7 +21,7 @@ permissions:
 
 concurrency:
   group: global-studio-business-contact-import
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   import:
