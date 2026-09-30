@@ -69,17 +69,16 @@ jobs:
             --output=tmp/casablanca.osm.pbf \
             --overwrite
 
-      - name: Filter studio features
+      - name: Export named Casablanca features for studio classification
         run: |
           osmium tags-filter \
             tmp/casablanca.osm.pbf \
-            nwr/amenity=studio \
-            nwr/shop=photo_studio \
-            --output=tmp/studios.osm.pbf \
+            nwr/name \
+            --output=tmp/named.osm.pbf \
             --overwrite
 
           osmium export \
-            tmp/studios.osm.pbf \
+            tmp/named.osm.pbf \
             --output=tmp/studios.geojson \
             --overwrite
 

@@ -8,11 +8,11 @@ D6 uses OpenStreetMap data, but the production application no longer depends on 
 
 The first implementation queried public Overpass instances directly from Vercel. Production probes from Vercel and GitHub-hosted cloud runners showed repeated timeouts / HTTP failures. The OpenStreetMap platform status currently documents temporary cloud-provider blocking and heavy-load workarounds affecting Overpass.
 
-For a deterministic pilot, D6 now uses Geofabrik's free Morocco OpenStreetMap PBF extract and produces a small Casablanca-only snapshot in GitHub Actions.
+For a deterministic pilot, D6 now uses a free Morocco OpenStreetMap PBF extract and produces a small Casablanca-only snapshot in GitHub Actions.
 
 Flow:
 
-Geofabrik Morocco PBF
+Morocco OSM PBF
 -> GitHub Actions worker
 -> Osmium Casablanca bbox extraction
 -> Osmium studio tag filter
@@ -25,11 +25,15 @@ Geofabrik Morocco PBF
 
 ## OpenStreetMap source
 
-Geofabrik publishes normally daily OSM regional extracts.
+The worker uses a Morocco OpenStreetMap country extract, preferring the OSM France mirror and retaining the exact source URL in the generated snapshot.
 
-Pilot file:
+Current preferred pilot source:
 
-https://download.geofabrik.de/africa/morocco-latest.osm.pbf
+https://download.openstreetmap.fr/extracts/africa/morocco-latest.osm.pbf
+
+Fallback:
+
+https://download-ext2.geofabrik.de/africa/morocco-latest.osm.pbf
 
 License:
 
@@ -41,12 +45,15 @@ Attribution retained:
 
 ## Studio tags
 
-The snapshot keeps only:
+The worker first exports named Casablanca map features, then keeps a conservative studio shortlist.
 
+Direct structured matches:
 - amenity=studio
 - shop=photo_studio
 
-The existing adapter also interprets studio=* when present.
+It also keeps records whose public OSM name/description/brand/operator contains a studio-oriented term such as studio, recording studio, podcast studio, studio photo, studio vidéo, studio musique, or Arabic equivalents.
+
+This wider shortlist is necessary because the Casablanca OSM extract currently contains no objects using the two dedicated studio tags. Ambiguous generic "studio" records are not trusted: D3 leaves unresolved categories as OTHER and D2 sends them to review rather than automatically approving them.
 
 ## Pilot geography
 

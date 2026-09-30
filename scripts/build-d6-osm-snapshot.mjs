@@ -63,6 +63,64 @@ function osmTags(feature) {
   return tags;
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function looksLikeCreativeStudio(tags) {
+  if (tags.amenity === "studio" || tags.shop === "photo_studio") return true;
+
+  const haystack = normalizeText([
+    tags.name,
+    tags.brand,
+    tags.operator,
+    tags.description,
+    tags["contact:website"],
+    tags.website,
+  ].filter(Boolean).join(" "));
+
+  if (!haystack) return false;
+
+  const studioTokens = [
+    "studio",
+    "studios",
+    "استوديو",
+    "ستوديو",
+  ];
+
+  if (studioTokens.some((token) => haystack.includes(token))) return true;
+
+  const creativePhrases = [
+    "recording studio",
+    "audio recording",
+    "sound recording",
+    "podcast studio",
+    "photo studio",
+    "photography studio",
+    "video studio",
+    "music production",
+    "studio enregistrement",
+    "enregistrement audio",
+    "studio photo",
+    "studio photographie",
+    "studio video",
+    "studio musique",
+    "studio son",
+    "studio podcast",
+    "تسجيل صوتي",
+    "استوديو تسجيل",
+    "ستوديو تسجيل",
+  ];
+
+  return creativePhrases.some((phrase) => haystack.includes(normalizeText(phrase)));
+}
+
 const elements = [];
 
 for (const feature of features) {
@@ -70,7 +128,7 @@ for (const feature of features) {
   if (!identity) continue;
 
   const tags = osmTags(feature);
-  if (!(tags.amenity === "studio" || tags.shop === "photo_studio")) continue;
+  if (!looksLikeCreativeStudio(tags)) continue;
 
   const center = centerOfGeometry(feature.geometry);
   if (!center) continue;
@@ -98,7 +156,7 @@ elements.sort((a, b) => {
 
 const snapshot = {
   provider: "OPENSTREETMAP",
-  delivery: "GEOFABRIK_PBF",
+  delivery: "OSM_PBF_SNAPSHOT",
   sourceUrl:
     process.env.OSM_SOURCE_URL ||
     "https://download.geofabrik.de/africa/morocco-latest.osm.pbf",
@@ -109,4 +167,6 @@ const snapshot = {
 await fs.mkdir(path.dirname(outputPath), { recursive: true });
 await fs.writeFile(outputPath, JSON.stringify(snapshot, null, 2) + "\n", "utf8");
 
-console.log(`D6 snapshot wrote ${elements.length} OSM studio features to ${outputPath}`);
+console.log(
+  `D6 snapshot classified ${elements.length} studio candidates from ${features.length} named Casablanca features into ${outputPath}`,
+);
