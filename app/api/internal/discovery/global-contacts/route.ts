@@ -12,7 +12,6 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const MAX_BATCH = 12;
-const INGEST_CONCURRENCY = 3;
 const MAX_BODY_BYTES = 700_000;
 
 export async function POST(request: Request) {
@@ -71,32 +70,29 @@ export async function POST(request: Request) {
     refreshed: 0,
   };
 
-  const records = payload.records
-    .map((raw) =>
-      raw && typeof raw === "object"
-        ? overtureGlobalContactRecord(
-            raw as OvertureGlobalContactPayload,
-            release,
-          )
-        : null,
+  for (const raw of payload.records) {
+    if (!raw || typeof raw !== "object") {
+      stats.skipped += 1;
+      continue;
+    }
+
+    const record = overtureGlobalContactRecord(
+      raw as OvertureGlobalContactPayload,
+      release,
     );
 
-  stats.skipped = records.filter((record) => !record).length;
-  const acceptedRecords = records.filter(
-    (record): record is NonNullable<typeof record> => Boolean(record),
-  );
-
-  for (let index = 0; index < acceptedRecords.length; index += INGEST_CONCURRENCY) {
-    const chunk = acceptedRecords.slice(index, index + INGEST_CONCURRENCY);
-    const results = await Promise.all(chunk.map((record) => ingestDiscoveryStudio(record)));
-
-    for (const result of results) {
-      stats.accepted += 1;
-      if (result.outcome === "CREATED_ENRICHED") stats.enriched += 1;
-      if (result.outcome === "CREATED_REVIEW") stats.review += 1;
-      if (result.outcome === "AUTO_MATCHED") stats.matched += 1;
-      if (result.outcome === "REFRESHED") stats.refreshed += 1;
+    if (!record) {
+      stats.skipped += 1;
+      continue;
     }
+
+    const result = await ingestDiscoveryStudio(record);
+    stats.accepted += 1;
+
+    if (result.outcome === "CREATED_ENRICHED") stats.enriched += 1;
+    if (result.outcome === "CREATED_REVIEW") stats.review += 1;
+    if (result.outcome === "AUTO_MATCHED") stats.matched += 1;
+    if (result.outcome === "REFRESHED") stats.refreshed += 1;
   }
 
   return NextResponse.json({ ok: true, release, stats });
