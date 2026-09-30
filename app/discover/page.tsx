@@ -26,6 +26,18 @@ function cleanPhoneHref(value: string) {
   return "tel:" + value.replace(/[^+\d]/g, "");
 }
 
+const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+
+function countryName(code: string | null | undefined) {
+  const normalized = String(code || "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalized)) return normalized || "Unknown country";
+  try {
+    return regionNames.of(normalized) || normalized;
+  } catch {
+    return normalized;
+  }
+}
+
 export default async function DiscoverStudiosPage({
   searchParams,
 }: {
@@ -122,6 +134,11 @@ export default async function DiscoverStudiosPage({
             attribution: true,
           },
         },
+        claims: {
+          where: { status: "VERIFIED" },
+          select: { id: true },
+          take: 1,
+        },
       },
       orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
       skip: (page - 1) * pageSize,
@@ -154,7 +171,27 @@ export default async function DiscoverStudiosPage({
     (candidate) => candidate.convertedStudio?.status !== "VERIFIED",
   );
 
-  const mapPoints = visibleCandidates
+  const rankedCandidates = [...visibleCandidates].sort((a, b) => {
+    function score(candidate: (typeof visibleCandidates)[number]) {
+      let value = 0;
+      if (candidate.claims.length > 0) value += 100;
+      if (candidate.status === "CONVERTED") value += 55;
+      else if (candidate.status === "APPROVED") value += 35;
+      if (candidate.website) value += 12;
+      if (candidate.email) value += 10;
+      if (candidate.instagram) value += 8;
+      if (candidate.address) value += 6;
+      if (candidate.latitude != null && candidate.longitude != null) value += 4;
+      value += Math.min(6, candidate.sources.length * 3);
+      return value;
+    }
+
+    const scoreDifference = score(b) - score(a);
+    if (scoreDifference !== 0) return scoreDifference;
+    return b.updatedAt.getTime() - a.updatedAt.getTime();
+  });
+
+  const mapPoints = rankedCandidates
     .filter(
       (candidate) =>
         candidate.latitude != null && candidate.longitude != null,
@@ -234,7 +271,7 @@ export default async function DiscoverStudiosPage({
                   value={row.countryCode!}
                   className="bg-zinc-950"
                 >
-                  {row.countryCode} · {row._count.countryCode}
+                  {countryName(row.countryCode)} · {row._count.countryCode}
                 </option>
               ))}
             </select>
@@ -289,7 +326,7 @@ export default async function DiscoverStudiosPage({
           <p className="text-sm text-zinc-500">
             <b className="text-zinc-200">{total}</b> contact listing
             {total === 1 ? "" : "s"}
-            {country ? " in " + country : ""}
+            {country ? " in " + countryName(country) : ""}
             {city ? " · " + city : ""}
             {category ? " · " + labelCategory(category) : ""}
           </p>
@@ -320,7 +357,8 @@ export default async function DiscoverStudiosPage({
                   : "grid gap-5 md:grid-cols-2 xl:grid-cols-3"
               }
             >
-              {visibleCandidates.map((candidate) => {
+              {rankedCandidates.map((candidate) => {
+                const ownershipVerified = candidate.claims.length > 0;
                 const reviewed =
                   candidate.status === "APPROVED" ||
                   candidate.status === "CONVERTED";
@@ -334,18 +372,22 @@ export default async function DiscoverStudiosPage({
                       <span
                         className={
                           "rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] " +
-                          (candidate.status === "CONVERTED"
+                          (ownershipVerified
                             ? "border-emerald-900/50 bg-emerald-950/20 text-emerald-300"
-                            : reviewed
-                              ? "border-sky-900/50 bg-sky-950/20 text-sky-300"
-                              : "border-zinc-800 text-zinc-400")
+                            : candidate.status === "CONVERTED"
+                              ? "border-amber-900/50 bg-amber-950/20 text-amber-300"
+                              : reviewed
+                                ? "border-sky-900/50 bg-sky-950/20 text-sky-300"
+                                : "border-zinc-800 text-zinc-400")
                         }
                       >
-                        {candidate.status === "CONVERTED"
-                          ? "Owner onboarding"
-                          : reviewed
-                            ? "Reviewed contact"
-                            : "Public contact"}
+                        {ownershipVerified
+                          ? "Owner verified"
+                          : candidate.status === "CONVERTED"
+                            ? "Owner onboarding"
+                            : reviewed
+                              ? "Reviewed contact"
+                              : "Public contact"}
                       </span>
                       <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-700">
                         {labelCategory(candidate.category)}
@@ -354,7 +396,11 @@ export default async function DiscoverStudiosPage({
 
                     <h2 className="mt-5 text-xl font-black">{candidate.name}</h2>
                     <p className="mt-2 text-sm text-zinc-500">
-                      {[candidate.district, candidate.city, candidate.countryCode]
+                      {[
+                        candidate.district,
+                        candidate.city,
+                        candidate.countryCode ? countryName(candidate.countryCode) : null,
+                      ]
                         .filter(Boolean)
                         .join(" · ") || "Location available"}
                     </p>

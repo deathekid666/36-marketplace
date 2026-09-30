@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { submitDiscoveryContactReportAction } from "@/app/discover/[slug]/report-actions";
 import { AppHeader } from "@/components/AppHeader";
 import { StudioMap } from "@/components/StudioMap";
 import { getCurrentUser } from "@/lib/auth";
@@ -40,13 +41,28 @@ function cleanPhoneHref(value: string) {
   return "tel:" + value.replace(/[^+\d]/g, "");
 }
 
+const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+
+function countryName(code: string | null | undefined) {
+  const normalized = String(code || "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalized)) return normalized || "Unknown country";
+  try {
+    return regionNames.of(normalized) || normalized;
+  } catch {
+    return normalized;
+  }
+}
+
 export default async function DiscoveryStudioPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ report?: string }>;
 }) {
   const user = await getCurrentUser();
   const { slug } = await params;
+  const query = await searchParams;
 
   const candidate = await db.candidateStudio.findUnique({
     where: { slug },
@@ -173,7 +189,11 @@ export default async function DiscoveryStudioPage({
               {candidate.name}
             </h1>
             <p className="mt-3 text-sm text-zinc-500">
-              {[candidate.district, candidate.city, candidate.countryCode]
+              {[
+                candidate.district,
+                candidate.city,
+                candidate.countryCode ? countryName(candidate.countryCode) : null,
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
@@ -192,6 +212,22 @@ export default async function DiscoveryStudioPage({
             </p>
           </div>
         </div>
+
+        {query.report === "submitted" && (
+          <div className="mt-6 rounded-xl border border-emerald-900/50 bg-emerald-950/10 p-4 text-sm text-emerald-300">
+            Thanks. The directory issue was sent to the 36 admin review queue.
+          </div>
+        )}
+        {query.report === "rate-limited" && (
+          <div className="mt-6 rounded-xl border border-amber-900/50 bg-amber-950/10 p-4 text-sm text-amber-300">
+            You have already reported this listing recently. The existing report remains in the review queue.
+          </div>
+        )}
+        {query.report === "invalid" && (
+          <div className="mt-6 rounded-xl border border-red-900/50 bg-red-950/10 p-4 text-sm text-red-300">
+            Choose a valid report reason and try again.
+          </div>
+        )}
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_360px]">
           <div className="space-y-7">
@@ -226,7 +262,8 @@ export default async function DiscoveryStudioPage({
               </span>
               <h2 className="mt-3 text-2xl font-black">
                 {candidate.district ? candidate.district + ", " : ""}
-                {candidate.city || candidate.countryCode || "Location"}
+                {candidate.city ||
+                  (candidate.countryCode ? countryName(candidate.countryCode) : "Location")}
               </h2>
               <p className="mt-2 text-sm text-zinc-500">
                 {candidate.address ||
@@ -237,6 +274,47 @@ export default async function DiscoveryStudioPage({
                 <div className="mt-5">
                   <StudioMap points={mapPoints} />
                 </div>
+              )}
+            </section>
+
+            <section className="panel">
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">
+                Report directory data
+              </span>
+              <h2 className="mt-3 text-2xl font-black">Something wrong?</h2>
+              <p className="mt-3 text-sm leading-7 text-zinc-500">
+                Report a wrong phone number, closed business, duplicate listing or other directory problem. Reports go to the admin review queue and never change the listing automatically.
+              </p>
+
+              {user ? (
+                <form action={submitDiscoveryContactReportAction} className="mt-5 space-y-3">
+                  <input type="hidden" name="candidateId" value={candidate.id} />
+                  <input type="hidden" name="slug" value={candidate.slug} />
+                  <select name="reason" required className="field">
+                    <option value="">Choose a reason</option>
+                    <option value="PHONE_WRONG">Phone number is wrong</option>
+                    <option value="BUSINESS_CLOSED">Business appears closed</option>
+                    <option value="WRONG_STUDIO">This is not a studio / wrong business</option>
+                    <option value="WRONG_LOCATION">Location or address is wrong</option>
+                    <option value="WEBSITE_BROKEN">Website is wrong or broken</option>
+                    <option value="DUPLICATE">Duplicate listing</option>
+                    <option value="OTHER">Other issue</option>
+                  </select>
+                  <textarea
+                    name="details"
+                    maxLength={1200}
+                    className="field min-h-24"
+                    placeholder="Optional details that help us verify the issue"
+                  />
+                  <button className="button-dark w-full">Send report</button>
+                </form>
+              ) : (
+                <Link
+                  href={"/auth/login?next=" + encodeURIComponent("/discover/" + candidate.slug)}
+                  className="button-dark mt-5 inline-flex"
+                >
+                  Sign in to report an issue
+                </Link>
               )}
             </section>
 
