@@ -192,10 +192,28 @@ export async function ingestDiscoveryStudio(
     select: {
       id: true,
       candidateStudioId: true,
+      candidateStudio: {
+        select: {
+          phone: true,
+          email: true,
+          website: true,
+          instagram: true,
+          address: true,
+          postalCode: true,
+          city: true,
+          region: true,
+          countryCode: true,
+          country: true,
+          latitude: true,
+          longitude: true,
+        },
+      },
     },
   });
 
   if (existingSource) {
+    const current = existingSource.candidateStudio;
+
     await db.$transaction([
       db.candidateStudioSource.update({
         where: { id: existingSource.id },
@@ -214,6 +232,18 @@ export async function ingestDiscoveryStudio(
         data: {
           lastSeenAt: now,
           lastCheckedAt: now,
+          phone: current.phone || record.phone || undefined,
+          email: current.email || record.email || undefined,
+          website: current.website || record.website || undefined,
+          instagram: current.instagram || record.instagram || undefined,
+          address: current.address || record.address || undefined,
+          postalCode: current.postalCode || record.postalCode || undefined,
+          city: current.city || record.city || undefined,
+          region: current.region || record.region || undefined,
+          countryCode: current.countryCode || record.countryCode || undefined,
+          country: current.country || record.country || undefined,
+          latitude: current.latitude || record.latitude || undefined,
+          longitude: current.longitude || record.longitude || undefined,
         },
       }),
     ]);
@@ -267,6 +297,8 @@ export async function ingestDiscoveryStudio(
   );
 
   if (match.decision === "AUTO_MATCH" && match.candidateId) {
+    const matchedCandidate = shortlist.find((candidate) => candidate.id === match.candidateId);
+
     try {
       await db.$transaction(async (tx) => {
         await createSource(tx, match.candidateId!, record, now);
@@ -275,6 +307,15 @@ export async function ingestDiscoveryStudio(
           data: {
             lastSeenAt: now,
             lastCheckedAt: now,
+            phone: matchedCandidate?.phone || record.phone || undefined,
+            website: matchedCandidate?.website || record.website || undefined,
+            instagram: matchedCandidate?.instagram || record.instagram || undefined,
+            address: matchedCandidate?.address || record.address || undefined,
+            postalCode: matchedCandidate?.postalCode || record.postalCode || undefined,
+            city: matchedCandidate?.city || record.city || undefined,
+            countryCode: matchedCandidate?.countryCode || record.countryCode || undefined,
+            latitude: matchedCandidate?.latitude || record.latitude || undefined,
+            longitude: matchedCandidate?.longitude || record.longitude || undefined,
           },
         });
       });

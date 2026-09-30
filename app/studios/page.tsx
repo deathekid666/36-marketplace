@@ -116,6 +116,11 @@ export default async function StudiosPage({
             OR: [
               { status: "CONVERTED" },
               { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+              {
+                status: "ENRICHED",
+                phone: { not: null },
+                lastCheckedAt: { gte: staleCutoff },
+              },
             ],
           },
           ...(city
@@ -152,6 +157,11 @@ export default async function StudiosPage({
         OR: [
           { status: "CONVERTED" },
           { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+          {
+            status: "ENRICHED",
+            phone: { not: null },
+            lastCheckedAt: { gte: staleCutoff },
+          },
         ],
       },
       select: { city: true, district: true },
@@ -450,8 +460,11 @@ export default async function StudiosPage({
                   <p className="mt-1 text-sm text-zinc-500">
                     {[candidate.district, candidate.city].filter(Boolean).join(", ") || candidate.country || "Location available"}
                   </p>
+                  {candidate.phone && (
+                    <p className="mt-3 text-sm font-bold text-sky-300">☎ {candidate.phone}</p>
+                  )}
                   <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-amber-300">Not yet bookable</span>
+                    <span className="text-xs font-bold text-amber-300">Contact only · not bookable</span>
                     {candidate.sources.map((source) => (
                       <span key={source.id} className="rounded-full border border-zinc-900 px-2 py-1 text-[9px] text-zinc-600">
                         {source.provider}

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import Link from "next/link";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -8,8 +9,9 @@ import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
 import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
 
 export const metadata = {
-  title: "Discover studios · 36",
-  description: "Explore creative studios discovered by 36. Discovery listings are not yet bookable until the studio joins and is verified.",
+  title: "Global studio contacts · 36",
+  description:
+    "Browse public contact details for creative studios discovered by 36. Discovery listings are not bookable until a studio joins and is verified.",
 };
 
 function labelCategory(value: string) {
@@ -20,85 +22,134 @@ function labelCategory(value: string) {
     .join(" ");
 }
 
+function cleanPhoneHref(value: string) {
+  return "tel:" + value.replace(/[^+\d]/g, "");
+}
+
 export default async function DiscoverStudiosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; city?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    country?: string;
+    city?: string;
+    page?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
   const query = await searchParams;
   const q = String(query.q || "").trim().slice(0, 120);
+  const country = /^[A-Za-z]{2}$/.test(String(query.country || "").trim())
+    ? String(query.country).trim().toUpperCase()
+    : "";
   const city = String(query.city || "").trim().slice(0, 120);
+  const page = Math.max(
+    1,
+    Math.min(5000, Number.parseInt(String(query.page || "1"), 10) || 1),
+  );
+  const pageSize = 48;
   const staleCutoff = discoveryStaleCutoff();
 
-  const candidates = await db.candidateStudio.findMany({
-    where: {
-      AND: [
-        discoveryRolloutWhere("PUBLIC_DISCOVERY"),
-        {
-          OR: [
-            { status: "CONVERTED" },
-            { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
-          ],
-        },
-        ...(q
-          ? [{
+  const visibility: Prisma.CandidateStudioWhereInput = {
+    AND: [
+      discoveryRolloutWhere("PUBLIC_DISCOVERY"),
+      { phone: { not: null } },
+      {
+        OR: [
+          { status: "CONVERTED" },
+          { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+          { status: "ENRICHED", lastCheckedAt: { gte: staleCutoff } },
+        ],
+      },
+      ...(q
+        ? [
+            {
               OR: [
                 { name: { contains: q, mode: "insensitive" as const } },
                 { normalizedName: { contains: q, mode: "insensitive" as const } },
                 { city: { contains: q, mode: "insensitive" as const } },
                 { district: { contains: q, mode: "insensitive" as const } },
                 { country: { contains: q, mode: "insensitive" as const } },
+                { phone: { contains: q } },
               ],
-            }]
-          : []),
-        ...(city ? [{ city: { contains: city, mode: "insensitive" as const } }] : []),
-      ],
-    },
-    include: {
-      convertedStudio: {
-        select: { status: true },
-      },
-      sources: {
-        where: { active: true },
-        orderBy: { collectedAt: "desc" },
-        take: 2,
-        select: {
-          id: true,
-          provider: true,
-          attribution: true,
-        },
-      },
-    },
-    orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
-    take: 80,
-  });
+            },
+          ]
+        : []),
+      ...(country ? [{ countryCode: country }] : []),
+      ...(city
+        ? [{ city: { contains: city, mode: "insensitive" as const } }]
+        : []),
+    ],
+  };
 
-  const cityRows = await db.candidateStudio.groupBy({
-    by: ["city"],
-    where: {
-      AND: [
-        discoveryRolloutWhere("PUBLIC_DISCOVERY"),
-        {
-          OR: [
-            { status: "CONVERTED" },
-            { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
-          ],
+  const geographyVisibility: Prisma.CandidateStudioWhereInput = {
+    AND: [
+      discoveryRolloutWhere("PUBLIC_DISCOVERY"),
+      { phone: { not: null } },
+      {
+        OR: [
+          { status: "CONVERTED" },
+          { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+          { status: "ENRICHED", lastCheckedAt: { gte: staleCutoff } },
+        ],
+      },
+    ],
+  };
+
+  const [candidates, total, countryRows, cityRows] = await Promise.all([
+    db.candidateStudio.findMany({
+      where: visibility,
+      include: {
+        convertedStudio: {
+          select: { status: true },
         },
-        { city: { not: null } },
-      ],
-    },
-    _count: { city: true },
-    orderBy: { _count: { city: "desc" } },
-    take: 30,
-  });
+        sources: {
+          where: { active: true },
+          orderBy: { collectedAt: "desc" },
+          take: 2,
+          select: {
+            id: true,
+            provider: true,
+            attribution: true,
+          },
+        },
+      },
+      orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    db.candidateStudio.count({ where: visibility }),
+    db.candidateStudio.groupBy({
+      by: ["countryCode"],
+      where: geographyVisibility,
+      _count: { countryCode: true },
+      orderBy: { _count: { countryCode: "desc" } },
+      take: 150,
+    }),
+    db.candidateStudio.groupBy({
+      by: ["city"],
+      where: {
+        AND: [
+          geographyVisibility,
+          { city: { not: null } },
+          ...(country ? [{ countryCode: country }] : []),
+        ],
+      },
+      _count: { city: true },
+      orderBy: { _count: { city: "desc" } },
+      take: 80,
+    }),
+  ]);
 
   const visibleCandidates = candidates.filter(
     (candidate) => candidate.convertedStudio?.status !== "VERIFIED",
   );
 
   const mapPoints = visibleCandidates
-    .filter((candidate) => candidate.latitude != null && candidate.longitude != null)
+    .filter(
+      (candidate) =>
+        candidate.latitude != null && candidate.longitude != null,
+    )
     .map((candidate) => ({
       id: candidate.id,
       name: candidate.name,
@@ -108,28 +159,40 @@ export default async function DiscoverStudiosPage({
       price: null,
     }));
 
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  function pageHref(target: number) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (country) params.set("country", country);
+    if (city) params.set("city", city);
+    if (target > 1) params.set("page", String(target));
+    return "/discover" + (params.toString() ? "?" + params.toString() : "");
+  }
+
   return (
     <main className="min-h-screen">
       <AppHeader user={user} />
 
       <section className="mx-auto max-w-[1500px] px-5 py-10">
-        <div className="max-w-3xl">
+        <div className="max-w-4xl">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-sky-300">
-            36 Discovery
+            36 Global Directory
           </span>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
-            Studios we found, before they join 36
+            Studio contacts around the world
           </h1>
           <p className="mt-4 text-sm leading-7 text-zinc-500">
-            These are reviewed discovery listings from external place data. They are not bookable on 36 yet.
-            A studio only becomes bookable after a real owner completes 36 onboarding and verification.
+            Public business phone numbers from external place data. These listings
+            are contact-only and are not bookable on 36 unless the real studio
+            later joins and passes verification.
           </p>
         </div>
 
         <form
           action="/discover"
           method="GET"
-          className="mt-8 grid gap-3 rounded-3xl border border-zinc-800 bg-[#11120f] p-3 md:grid-cols-[1fr_220px_auto]"
+          className="mt-8 grid gap-3 rounded-3xl border border-zinc-800 bg-[#11120f] p-3 lg:grid-cols-[1fr_170px_220px_auto]"
         >
           <label className="rounded-2xl px-4 py-2">
             <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
@@ -138,11 +201,36 @@ export default async function DiscoverStudiosPage({
             <input
               name="q"
               defaultValue={q}
-              placeholder="Studio name or area"
+              placeholder="Studio, city, area or phone"
               className="mt-1 w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-zinc-700"
             />
           </label>
-          <label className="rounded-2xl border-t border-zinc-900 px-4 py-2 md:border-l md:border-t-0">
+
+          <label className="rounded-2xl border-t border-zinc-900 px-4 py-2 lg:border-l lg:border-t-0">
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+              Country
+            </span>
+            <select
+              name="country"
+              defaultValue={country}
+              className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
+            >
+              <option value="" className="bg-zinc-950">
+                All countries
+              </option>
+              {countryRows.map((row) => (
+                <option
+                  key={row.countryCode!}
+                  value={row.countryCode!}
+                  className="bg-zinc-950"
+                >
+                  {row.countryCode} · {row._count.countryCode}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="rounded-2xl border-t border-zinc-900 px-4 py-2 lg:border-l lg:border-t-0">
             <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
               City
             </span>
@@ -151,7 +239,9 @@ export default async function DiscoverStudiosPage({
               defaultValue={city}
               className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
             >
-              <option value="" className="bg-zinc-950">All cities</option>
+              <option value="" className="bg-zinc-950">
+                All cities
+              </option>
               {cityRows.map((row) => (
                 <option key={row.city!} value={row.city!} className="bg-zinc-950">
                   {row.city} · {row._count.city}
@@ -159,63 +249,119 @@ export default async function DiscoverStudiosPage({
               ))}
             </select>
           </label>
+
           <button className="rounded-2xl bg-sky-300 px-6 py-3 text-sm font-black text-black">
             Search
           </button>
         </form>
 
-        <div className="mt-7 flex items-center justify-between gap-4">
+        <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm text-zinc-500">
-            <b className="text-zinc-200">{visibleCandidates.length}</b> reviewed discovery listing
-            {visibleCandidates.length === 1 ? "" : "s"}
+            <b className="text-zinc-200">{total}</b> contact listing
+            {total === 1 ? "" : "s"}
+            {country ? " in " + country : ""}
+            {city ? " · " + city : ""}
           </p>
           <Link href="/studios" className="text-xs font-black text-acid">
-            Show bookable studios →
+            Show verified bookable studios →
           </Link>
         </div>
 
         {visibleCandidates.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-dashed border-zinc-800 p-14 text-center">
-            <h2 className="text-xl font-black">No public discovery listings yet</h2>
+            <h2 className="text-xl font-black">No contact listings match this search</h2>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-zinc-600">
-              Candidates stay private until an admin reviews and approves them. This is intentional so raw provider data never appears publicly by accident.
+              Try another country, city or studio name.
             </p>
           </div>
         ) : (
-          <div className={mapPoints.length > 0 ? "mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.05fr)_minmax(460px,.95fr)]" : "mt-7"}>
-            <div className={mapPoints.length > 0 ? "grid gap-5 md:grid-cols-2" : "grid gap-5 md:grid-cols-2 xl:grid-cols-3"}>
-              {visibleCandidates.map((candidate) => (
-                <article key={candidate.id} className="rounded-3xl border border-zinc-900 bg-zinc-950/60 p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${candidate.status === "CONVERTED" ? "border-emerald-900/50 bg-emerald-950/20 text-emerald-300" : "border-sky-900/50 bg-sky-950/20 text-sky-300"}`}>
-                      {candidate.status === "CONVERTED" ? "Owner onboarding" : "Discovery"}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-700">
-                      {labelCategory(candidate.category)}
-                    </span>
-                  </div>
-                  <h2 className="mt-5 text-xl font-black">{candidate.name}</h2>
-                  <p className="mt-2 text-sm text-zinc-500">
-                    {[candidate.district, candidate.city, candidate.countryCode].filter(Boolean).join(" · ") || "Location available on listing"}
-                  </p>
-                  <p className="mt-4 text-xs leading-5 text-zinc-600">
-                    Not yet bookable on 36.
-                  </p>
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {candidate.sources.map((source) => (
-                      <span key={source.id} className="rounded-full border border-zinc-800 px-2.5 py-1 text-[10px] text-zinc-500">
-                        {source.provider}
-                      </span>
-                    ))}
-                  </div>
-                  <Link
-                    href={"/discover/" + candidate.slug}
-                    className="mt-5 inline-flex text-xs font-black text-sky-300 hover:text-white"
+          <div
+            className={
+              mapPoints.length > 0
+                ? "mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.05fr)_minmax(460px,.95fr)]"
+                : "mt-7"
+            }
+          >
+            <div
+              className={
+                mapPoints.length > 0
+                  ? "grid gap-5 md:grid-cols-2"
+                  : "grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+              }
+            >
+              {visibleCandidates.map((candidate) => {
+                const reviewed =
+                  candidate.status === "APPROVED" ||
+                  candidate.status === "CONVERTED";
+
+                return (
+                  <article
+                    key={candidate.id}
+                    className="rounded-3xl border border-zinc-900 bg-zinc-950/60 p-5"
                   >
-                    View discovery listing →
-                  </Link>
-                </article>
-              ))}
+                    <div className="flex items-start justify-between gap-3">
+                      <span
+                        className={
+                          "rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] " +
+                          (candidate.status === "CONVERTED"
+                            ? "border-emerald-900/50 bg-emerald-950/20 text-emerald-300"
+                            : reviewed
+                              ? "border-sky-900/50 bg-sky-950/20 text-sky-300"
+                              : "border-zinc-800 text-zinc-400")
+                        }
+                      >
+                        {candidate.status === "CONVERTED"
+                          ? "Owner onboarding"
+                          : reviewed
+                            ? "Reviewed contact"
+                            : "Public contact"}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-700">
+                        {labelCategory(candidate.category)}
+                      </span>
+                    </div>
+
+                    <h2 className="mt-5 text-xl font-black">{candidate.name}</h2>
+                    <p className="mt-2 text-sm text-zinc-500">
+                      {[candidate.district, candidate.city, candidate.countryCode]
+                        .filter(Boolean)
+                        .join(" · ") || "Location available"}
+                    </p>
+
+                    {candidate.phone && (
+                      <a
+                        href={cleanPhoneHref(candidate.phone)}
+                        className="mt-4 flex items-center justify-between rounded-xl border border-zinc-800 bg-black/20 px-4 py-3 text-sm transition hover:border-sky-800"
+                      >
+                        <span className="text-zinc-500">☎ Public phone</span>
+                        <b className="text-sky-300">{candidate.phone}</b>
+                      </a>
+                    )}
+
+                    <p className="mt-4 text-xs leading-5 text-zinc-600">
+                      Contact-only listing · not bookable on 36.
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {candidate.sources.map((source) => (
+                        <span
+                          key={source.id}
+                          className="rounded-full border border-zinc-800 px-2.5 py-1 text-[10px] text-zinc-500"
+                        >
+                          {source.provider}
+                        </span>
+                      ))}
+                    </div>
+
+                    <Link
+                      href={"/discover/" + candidate.slug}
+                      className="mt-5 inline-flex text-xs font-black text-sky-300 hover:text-white"
+                    >
+                      View contact listing →
+                    </Link>
+                  </article>
+                );
+              })}
             </div>
 
             {mapPoints.length > 0 && (
@@ -223,7 +369,9 @@ export default async function DiscoverStudiosPage({
                 <div className="sticky top-5">
                   <div className="mb-3 flex items-center justify-between">
                     <b className="text-sm">Map</b>
-                    <span className="text-xs text-zinc-600">{mapPoints.length} locations</span>
+                    <span className="text-xs text-zinc-600">
+                      {mapPoints.length} locations on this page
+                    </span>
                   </div>
                   <StudioMap points={mapPoints} />
                 </div>
@@ -235,6 +383,32 @@ export default async function DiscoverStudiosPage({
                 <StudioMap points={mapPoints} />
               </div>
             )}
+          </div>
+        )}
+
+        {pageCount > 1 && (
+          <div className="mt-8 flex items-center justify-between">
+            <Link
+              href={pageHref(Math.max(1, page - 1))}
+              className={
+                "button-dark " +
+                (page <= 1 ? "pointer-events-none opacity-40" : "")
+              }
+            >
+              ← Previous
+            </Link>
+            <span className="text-xs text-zinc-600">
+              Page {page} of {pageCount}
+            </span>
+            <Link
+              href={pageHref(Math.min(pageCount, page + 1))}
+              className={
+                "button-dark " +
+                (page >= pageCount ? "pointer-events-none opacity-40" : "")
+              }
+            >
+              Next →
+            </Link>
           </div>
         )}
       </section>
