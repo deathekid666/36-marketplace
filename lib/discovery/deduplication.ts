@@ -1,6 +1,6 @@
 import { DiscoveryStudioCategory } from "@prisma/client";
 
-import { normalizeSearchText } from "@/lib/discovery/normalization";
+import { normalizeSearchText } from "./normalization";
 
 export type DedupDecision = "AUTO_MATCH" | "REVIEW" | "DISTINCT";
 
