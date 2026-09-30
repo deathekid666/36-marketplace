@@ -31,8 +31,9 @@ jobs:
       - name: Download Morocco OpenStreetMap extract
         run: |
           mkdir -p tmp
-          curl --fail --location --retry 3 --retry-delay 2 \
-            https://download.geofabrik.de/africa/morocco-latest.osm.pbf \
+          curl --fail --location --retry 3 --retry-delay 2 --max-redirs 10 \
+            --user-agent "36-marketplace/0.1" \
+            https://download-ext2.geofabrik.de/africa/morocco-latest.osm.pbf \
             --output tmp/morocco-latest.osm.pbf
 
       - name: Extract Casablanca pilot area
