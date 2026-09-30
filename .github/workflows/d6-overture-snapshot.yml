@@ -1,0 +1,63 @@
+name: D6 Overture snapshot
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/d6-overture-snapshot.yml"
+      - "scripts/build-d6-overture-snapshot.mjs"
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Overture client
+        run: pip install --disable-pip-version-check overturemaps
+
+      - name: Download Casablanca Overture places
+        run: |
+          mkdir -p tmp
+          overturemaps download \
+            --bbox=-7.75,33.45,-7.45,33.70 \
+            --type=place \
+            -f geojson \
+            -o tmp/casablanca-places.geojson
+
+      - name: Build filtered 36 discovery snapshot
+        run: |
+          node scripts/build-d6-overture-snapshot.mjs \
+            tmp/casablanca-places.geojson \
+            data/discovery/overture/casablanca.json
+
+      - name: Validate snapshot
+        run: |
+          node -e 'const x=require("./data/discovery/overture/casablanca.json"); if(!Array.isArray(x.records)||x.records.length===0) process.exit(1); console.log({generatedAt:x.generatedAt,totalPlacesInBbox:x.totalPlacesInBbox,records:x.records.length});'
+
+      - name: Commit refreshed snapshot
+        run: |
+          if git diff --quiet -- data/discovery/overture/casablanca.json; then
+            echo "Snapshot unchanged."
+            exit 0
+          fi
+
+          git config user.name "36 discovery bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/discovery/overture/casablanca.json
+          git commit -m "data: refresh Casablanca Overture studio snapshot"
+          git push

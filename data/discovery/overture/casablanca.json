@@ -1,0 +1,13 @@
+{
+  "provider": "OVERTURE",
+  "release": "latest",
+  "generatedAt": null,
+  "bbox": {
+    "west": -7.75,
+    "south": 33.45,
+    "east": -7.45,
+    "north": 33.7
+  },
+  "totalPlacesInBbox": 0,
+  "records": []
+}
