@@ -18,7 +18,7 @@ import duckdb
 API_URL = "https://36-marketplace.vercel.app/api/internal/discovery/global-contacts"
 AUDIENCE = "36-marketplace-global-contacts"
 MAX_RECORDS = max(0, int(os.environ.get("MAX_RECORDS", "0") or "0"))
-BATCH_SIZE = 10
+BATCH_SIZE = 12
 
 
 def latest_release():
