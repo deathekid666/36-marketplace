@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { DiscoveryStudioCategory, Prisma } from "@prisma/client";
 import Link from "next/link";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -33,6 +33,7 @@ export default async function DiscoverStudiosPage({
     q?: string;
     country?: string;
     city?: string;
+    category?: string;
     page?: string;
   }>;
 }) {
@@ -43,6 +44,11 @@ export default async function DiscoverStudiosPage({
     ? String(query.country).trim().toUpperCase()
     : "";
   const city = String(query.city || "").trim().slice(0, 120);
+  const category = Object.values(DiscoveryStudioCategory).includes(
+    String(query.category || "") as DiscoveryStudioCategory,
+  )
+    ? (String(query.category) as DiscoveryStudioCategory)
+    : "";
   const page = Math.max(
     1,
     Math.min(5000, Number.parseInt(String(query.page || "1"), 10) || 1),
@@ -79,6 +85,7 @@ export default async function DiscoverStudiosPage({
       ...(city
         ? [{ city: { contains: city, mode: "insensitive" as const } }]
         : []),
+      ...(category ? [{ category }] : []),
     ],
   };
 
@@ -166,6 +173,7 @@ export default async function DiscoverStudiosPage({
     if (q) params.set("q", q);
     if (country) params.set("country", country);
     if (city) params.set("city", city);
+    if (category) params.set("category", category);
     if (target > 1) params.set("page", String(target));
     return "/discover" + (params.toString() ? "?" + params.toString() : "");
   }
@@ -192,7 +200,7 @@ export default async function DiscoverStudiosPage({
         <form
           action="/discover"
           method="GET"
-          className="mt-8 grid gap-3 rounded-3xl border border-zinc-800 bg-[#11120f] p-3 lg:grid-cols-[1fr_170px_220px_auto]"
+          className="mt-8 grid gap-3 rounded-3xl border border-zinc-800 bg-[#11120f] p-3 lg:grid-cols-[1fr_150px_190px_190px_auto]"
         >
           <label className="rounded-2xl px-4 py-2">
             <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
@@ -250,6 +258,26 @@ export default async function DiscoverStudiosPage({
             </select>
           </label>
 
+          <label className="rounded-2xl border-t border-zinc-900 px-4 py-2 lg:border-l lg:border-t-0">
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+              Studio type
+            </span>
+            <select
+              name="category"
+              defaultValue={category}
+              className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
+            >
+              <option value="" className="bg-zinc-950">
+                All types
+              </option>
+              {Object.values(DiscoveryStudioCategory).map((value) => (
+                <option key={value} value={value} className="bg-zinc-950">
+                  {labelCategory(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <button className="rounded-2xl bg-sky-300 px-6 py-3 text-sm font-black text-black">
             Search
           </button>
@@ -261,6 +289,7 @@ export default async function DiscoverStudiosPage({
             {total === 1 ? "" : "s"}
             {country ? " in " + country : ""}
             {city ? " · " + city : ""}
+            {category ? " · " + labelCategory(category) : ""}
           </p>
           <Link href="/studios" className="text-xs font-black text-acid">
             Show verified bookable studios →
