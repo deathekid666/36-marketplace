@@ -46,6 +46,8 @@ export async function importOpenStreetMapAction(form: FormData) {
     redirect("/admin/discovery?importError=scan-rate-limited");
   }
 
+  let destination = "/admin/discovery?importError=import-failed";
+
   try {
     const scan = await fetchOpenStreetMapStudios(preset);
 
@@ -77,8 +79,10 @@ export async function importOpenStreetMapAction(form: FormData) {
       preset: preset.key,
     });
 
-    redirect(`/admin/discovery?${params.toString()}`);
+    destination = `/admin/discovery?${params.toString()}`;
   } catch (error) {
-    redirect(`/admin/discovery?importError=${importErrorCode(error)}`);
+    destination = `/admin/discovery?importError=${importErrorCode(error)}`;
   }
+
+  redirect(destination);
 }
