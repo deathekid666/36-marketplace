@@ -9,6 +9,7 @@ const ALLOWED_EVENTS = new Set([
   "REQUEST_CREATED",
   "OFFER_CREATED",
   "FLASH_VIEW",
+  "DISCOVERY_SEARCH_IMPRESSION",
 ]);
 
 export async function trackMarketplaceEvent(input: {

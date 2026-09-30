@@ -9,6 +9,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { getRoomAvailability } from "@/lib/booking";
 import { db } from "@/lib/db";
 import { trackMarketplaceEvent } from "@/lib/analytics";
+import {
+  discoveryCategoriesForStudioCategory,
+  discoveryCategoryLabel,
+} from "@/lib/discovery/search";
+import { normalizeSearchText } from "@/lib/discovery/normalization";
 import { categoryLabel, STUDIO_CATEGORIES } from "@/lib/studio";
 
 function parseCategory(value?: string): StudioCategory | undefined {
@@ -56,7 +61,9 @@ export default async function StudiosPage({
     },
   });
 
-  const [studios, locationRows] = await Promise.all([
+  const discoveryCategories = discoveryCategoriesForStudioCategory(category);
+
+  const [studios, locationRows, candidateRows, candidateLocationRows] = await Promise.all([
     db.studio.findMany({
       where: {
         status: "VERIFIED",
@@ -98,6 +105,45 @@ export default async function StudiosPage({
       orderBy: [{ city: "asc" }, { neighborhood: "asc" }],
       take: 200,
     }),
+    db.candidateStudio.findMany({
+      where: {
+        status: { in: ["APPROVED", "CONVERTED"] },
+        ...(city
+          ? {
+              OR: [
+                { city: { contains: city, mode: "insensitive" as const } },
+                { district: { contains: city, mode: "insensitive" as const } },
+                { address: { contains: city, mode: "insensitive" as const } },
+              ],
+            }
+          : {}),
+        ...(discoveryCategories ? { category: { in: discoveryCategories } } : {}),
+      },
+      include: {
+        convertedStudio: {
+          select: { status: true },
+        },
+        sources: {
+          where: { active: true },
+          orderBy: { collectedAt: "desc" },
+          take: 2,
+          select: {
+            id: true,
+            provider: true,
+          },
+        },
+      },
+      orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
+      take: 30,
+    }),
+    db.candidateStudio.findMany({
+      where: {
+        status: { in: ["APPROVED", "CONVERTED"] },
+      },
+      select: { city: true, district: true },
+      orderBy: [{ city: "asc" }, { district: "asc" }],
+      take: 200,
+    }),
   ]);
 
   const availability = date
@@ -114,6 +160,29 @@ export default async function StudiosPage({
     : studios.map(() => true);
 
   const results = studios.filter((_, index) => availability[index]);
+
+  const bookableNameKeys = new Set(
+    results.map((studio) => normalizeSearchText(studio.name)),
+  );
+
+  const discoveryResults = candidateRows.filter(
+    (candidate) =>
+      candidate.convertedStudio?.status !== "VERIFIED" &&
+      !bookableNameKeys.has(candidate.normalizedName),
+  );
+
+  await trackMarketplaceEvent({
+    eventType: "DISCOVERY_SEARCH_IMPRESSION",
+    userId: user?.id,
+    metadata: {
+      city,
+      category: category || "ANY",
+      discoveryResults: discoveryResults.length,
+      bookableResults: results.length,
+      dateAppliedToBookableOnly: Boolean(date),
+      maxPriceAppliedToBookableOnly: Boolean(maxPrice),
+    },
+  });
 
   const favoriteIds =
     user?.role === "CREATOR"
@@ -142,12 +211,16 @@ export default async function StudiosPage({
     }));
 
   const locationSuggestions = Array.from(
-    new Set(
-      locationRows.flatMap((row) => [
+    new Set([
+      ...locationRows.flatMap((row) => [
         row.city,
         row.neighborhood ? `${row.neighborhood}, ${row.city}` : "",
       ]),
-    ),
+      ...candidateLocationRows.flatMap((row) => [
+        row.city || "",
+        row.city && row.district ? `${row.district}, ${row.city}` : "",
+      ]),
+    ]),
   ).filter(Boolean);
 
   const detailParams = new URLSearchParams();
@@ -200,10 +273,15 @@ export default async function StudiosPage({
 
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-zinc-500">
-            <b className="text-zinc-200">{results.length}</b> verified studio
+            <b className="text-zinc-200">{results.length}</b> bookable studio
             {results.length === 1 ? "" : "s"}
             {date ? ` available for ${durationHours}h` : ""}
             {city ? ` in ${city}` : ""}
+            {discoveryResults.length > 0 ? (
+              <span className="ml-2 text-sky-300">
+                · {discoveryResults.length} discovered
+              </span>
+            ) : null}
           </p>
           {user?.role === "CREATOR" && (
             <Link href="/creator/requests" className="text-xs font-black text-acid">
@@ -318,6 +396,60 @@ export default async function StudiosPage({
             )}
           </div>
         )}
+
+        {discoveryResults.length > 0 && (
+          <section className="mt-12 border-t border-zinc-900 pt-9">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="max-w-2xl">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">
+                  36 Discovery
+                </span>
+                <h2 className="mt-2 text-2xl font-black">
+                  More studios found around this search
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-600">
+                  These studios match the location/category search, but they are not bookable on 36 yet.
+                  Date availability and maximum-price filters do not apply to discovery listings because no owner-verified inventory or pricing exists yet.
+                </p>
+              </div>
+              <Link href={"/discover?city=" + encodeURIComponent(city)} className="text-xs font-black text-sky-300">
+                Open discovery →
+              </Link>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {discoveryResults.map((candidate) => (
+                <Link
+                  key={candidate.id}
+                  href={"/discover/" + candidate.slug}
+                  className="rounded-2xl border border-sky-950 bg-sky-950/[0.08] p-5 transition hover:border-sky-900"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="rounded-full border border-sky-900/50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-sky-300">
+                      {candidate.status === "CONVERTED" ? "Owner onboarding" : "Discovered"}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-700">
+                      {discoveryCategoryLabel(candidate.category)}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-lg font-black">{candidate.name}</h3>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    {[candidate.district, candidate.city].filter(Boolean).join(", ") || candidate.country || "Location available"}
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-amber-300">Not yet bookable</span>
+                    {candidate.sources.map((source) => (
+                      <span key={source.id} className="rounded-full border border-zinc-900 px-2 py-1 text-[9px] text-zinc-600">
+                        {source.provider}
+                      </span>
+                    ))}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
       </section>
     </main>
   );
