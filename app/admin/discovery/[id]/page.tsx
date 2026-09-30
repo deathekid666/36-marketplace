@@ -157,12 +157,22 @@ export default async function AdminDiscoveryCandidatePage({
     <main className="min-h-screen">
       <AppHeader user={user} />
       <section className="mx-auto max-w-7xl px-5 py-10">
-        <Link
-          href="/admin/discovery"
-          className="text-xs font-bold text-zinc-500 hover:text-white"
-        >
-          ← Discovery workspace
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/admin/discovery"
+            className="text-xs font-bold text-zinc-500 hover:text-white"
+          >
+            ← Discovery workspace
+          </Link>
+          {candidate.status === CandidateStudioStatus.APPROVED && (
+            <Link
+              href={`/discover/${candidate.slug}`}
+              className="rounded-full border border-sky-900/50 px-4 py-2 text-xs font-black text-sky-300 hover:border-sky-700"
+            >
+              View public listing ↗
+            </Link>
+          )}
+        </div>
 
         {query.result && RESULT_MESSAGES[query.result] && (
           <div className="mt-6 rounded-xl border border-acid/30 bg-acid/[0.04] p-4 text-sm text-acid">

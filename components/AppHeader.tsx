@@ -13,6 +13,7 @@ export async function AppHeader({ user }: { user?: User | null }) {
         <Logo />
         <nav className="flex flex-wrap items-center justify-end gap-3">
           <Link href="/studios" className="text-xs font-semibold text-zinc-400 hover:text-white">Studios</Link>
+          <Link href="/discover" className="hidden text-xs font-semibold text-zinc-400 hover:text-white md:inline">Discover</Link>
           <Link href="/now" className="text-xs font-semibold text-acid hover:text-white">⚡ 36 NOW</Link>
           {user ? (
             <>
