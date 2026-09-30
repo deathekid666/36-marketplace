@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "fra1";
 
 const ENDPOINTS = [
   "https://overpass.private.coffee/api/interpreter",
