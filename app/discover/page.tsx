@@ -27,6 +27,18 @@ function cleanPhoneHref(value: string) {
   return "tel:" + value.replace(/[^+\d]/g, "");
 }
 
+function safeExternalUrl(value: string | null) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
 
 function countryName(code: string | null | undefined) {
@@ -47,6 +59,9 @@ export default async function DiscoverStudiosPage({
     country?: string;
     city?: string;
     category?: string;
+    verified?: string;
+    website?: string;
+    email?: string;
     page?: string;
   }>;
 }) {
@@ -62,6 +77,14 @@ export default async function DiscoverStudiosPage({
   )
     ? (String(query.category) as DiscoveryStudioCategory)
     : "";
+  const verifiedOnly = query.verified === "1";
+  const websiteOnly = query.website === "1";
+  const emailOnly = query.email === "1";
+  const qualityFilters: Prisma.CandidateStudioWhereInput[] = [
+    ...(verifiedOnly ? [{ claims: { some: { status: "VERIFIED" } } }] : []),
+    ...(websiteOnly ? [{ website: { not: null } }] : []),
+    ...(emailOnly ? [{ email: { not: null } }] : []),
+  ];
   const page = Math.max(
     1,
     Math.min(5000, Number.parseInt(String(query.page || "1"), 10) || 1),
@@ -105,6 +128,7 @@ export default async function DiscoverStudiosPage({
         ? [{ city: { contains: city, mode: "insensitive" as const } }]
         : []),
       ...(category ? [{ category }] : []),
+      ...qualityFilters,
     ],
   };
 
@@ -125,6 +149,7 @@ export default async function DiscoverStudiosPage({
           },
         ],
       },
+      ...qualityFilters,
     ],
   };
 
@@ -224,6 +249,9 @@ export default async function DiscoverStudiosPage({
     if (country) params.set("country", country);
     if (city) params.set("city", city);
     if (category) params.set("category", category);
+    if (verifiedOnly) params.set("verified", "1");
+    if (websiteOnly) params.set("website", "1");
+    if (emailOnly) params.set("email", "1");
     if (target > 1) params.set("page", String(target));
     return "/discover" + (params.toString() ? "?" + params.toString() : "");
   }
@@ -331,6 +359,37 @@ export default async function DiscoverStudiosPage({
           <button className="rounded-2xl bg-sky-300 px-6 py-3 text-sm font-black text-black">
             Search
           </button>
+
+          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-zinc-900 px-4 py-3 text-xs font-bold text-zinc-400">
+            <input
+              type="checkbox"
+              name="verified"
+              value="1"
+              defaultChecked={verifiedOnly}
+              className="accent-sky-300"
+            />
+            Owner verified
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-zinc-900 px-4 py-3 text-xs font-bold text-zinc-400">
+            <input
+              type="checkbox"
+              name="website"
+              value="1"
+              defaultChecked={websiteOnly}
+              className="accent-sky-300"
+            />
+            Has website
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-zinc-900 px-4 py-3 text-xs font-bold text-zinc-400">
+            <input
+              type="checkbox"
+              name="email"
+              value="1"
+              defaultChecked={emailOnly}
+              className="accent-sky-300"
+            />
+            Has email
+          </label>
         </form>
 
         <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
@@ -340,6 +399,9 @@ export default async function DiscoverStudiosPage({
             {country ? " in " + countryName(country) : ""}
             {city ? " · " + city : ""}
             {category ? " · " + labelCategory(category) : ""}
+            {verifiedOnly ? " · Owner verified" : ""}
+            {websiteOnly ? " · Website" : ""}
+            {emailOnly ? " · Email" : ""}
           </p>
           <Link href="/studios" className="text-xs font-black text-acid">
             Show verified bookable studios →
@@ -370,6 +432,7 @@ export default async function DiscoverStudiosPage({
             >
               {rankedCandidates.map((candidate) => {
                 const ownershipVerified = candidate.claims.length > 0;
+                const website = safeExternalUrl(candidate.website);
                 const reviewed =
                   candidate.status === "APPROVED" ||
                   candidate.status === "CONVERTED";
@@ -425,6 +488,30 @@ export default async function DiscoverStudiosPage({
                         <b className="text-sky-300">{candidate.phone}</b>
                       </a>
                     )}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-zinc-800 px-2.5 py-1 text-[10px] font-bold text-zinc-500">
+                        Phone ✓
+                      </span>
+                      {website && (
+                        <a
+                          href={website}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="rounded-full border border-zinc-800 px-2.5 py-1 text-[10px] font-bold text-zinc-400 hover:border-sky-800 hover:text-sky-300"
+                        >
+                          Website ↗
+                        </a>
+                      )}
+                      {candidate.email && (
+                        <a
+                          href={"mailto:" + candidate.email}
+                          className="rounded-full border border-zinc-800 px-2.5 py-1 text-[10px] font-bold text-zinc-400 hover:border-sky-800 hover:text-sky-300"
+                        >
+                          Email
+                        </a>
+                      )}
+                    </div>
 
                     <p className="mt-4 text-xs leading-5 text-zinc-600">
                       Contact-only listing · not bookable on 36.
