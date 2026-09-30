@@ -7,6 +7,7 @@ import {
 
 import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/notifications";
+import { trackMarketplaceEvent } from "@/lib/analytics";
 import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 function studioCategory(value: DiscoveryStudioCategory): StudioCategory {
@@ -178,6 +179,18 @@ export async function startClaimedStudioOnboarding(input: {
     body: "36 created a private draft listing from your verified claim. Add rooms, pricing, equipment, photos and opening hours before submitting it for marketplace verification.",
     href: `/owner/studios/${result.studioId}`,
   });
+
+  if (!result.alreadyConverted) {
+    await trackMarketplaceEvent({
+      eventType: "DISCOVERY_ONBOARDING_STARTED",
+      userId: input.claimantId,
+      studioId: result.studioId,
+      metadata: {
+        candidateStudioId: result.candidateId,
+        claimId: input.claimId,
+      },
+    });
+  }
 
   return result;
 }

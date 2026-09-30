@@ -7,6 +7,7 @@ import {
 import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/notifications";
 import { normalizeEmail, validateEmail } from "@/lib/validation";
+import { trackMarketplaceEvent } from "@/lib/analytics";
 import { isUnsafeDiscoveryProofUrl } from "@/lib/discovery/security";
 import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
@@ -185,6 +186,16 @@ export async function submitCandidateClaim(input: SubmitCandidateClaimInput) {
     ),
   );
 
+  await trackMarketplaceEvent({
+    eventType: "DISCOVERY_CLAIM_SUBMITTED",
+    userId: input.claimantId,
+    metadata: {
+      candidateStudioId: result.claim.candidateStudioId,
+      claimId: result.claim.id,
+      relationship: input.relationship,
+    },
+  });
+
   return result;
 }
 
@@ -305,6 +316,19 @@ export async function reviewCandidateClaim(input: {
         ? `Ownership of ${result.candidateName} is verified. The listing is still not bookable until the 36 onboarding step is completed.`
         : `Your claim for ${result.candidateName} was not verified. Review the admin note and submit stronger evidence if needed.`,
     href: "/owner/claims",
+  });
+
+  await trackMarketplaceEvent({
+    eventType:
+      result.claim.status === CandidateStudioClaimStatus.VERIFIED
+        ? "DISCOVERY_CLAIM_VERIFIED"
+        : "DISCOVERY_CLAIM_REJECTED",
+    userId: result.claim.claimantId,
+    metadata: {
+      candidateStudioId: result.claim.candidateStudioId,
+      claimId: result.claim.id,
+      reviewedByAdminId: input.adminId,
+    },
   });
 
   return result;

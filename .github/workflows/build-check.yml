@@ -52,5 +52,10 @@ jobs:
           rm -rf .tmp-rollout-tests
           npx tsc scripts/test-discovery-rollout.ts lib/discovery/rollout.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-rollout-tests --noEmit false
           node .tmp-rollout-tests/scripts/test-discovery-rollout.js
+      - name: Test discovery analytics fixtures
+        run: |
+          rm -rf .tmp-analytics-tests
+          npx tsc scripts/test-discovery-analytics.ts lib/discovery/metrics.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-analytics-tests --noEmit false
+          node .tmp-analytics-tests/scripts/test-discovery-analytics.js
       - name: Build Next.js
         run: npm run build
