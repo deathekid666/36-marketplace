@@ -126,6 +126,30 @@ enum InvoiceStatus {
   VOID
 }
 
+enum CandidateStudioStatus {
+  DISCOVERED
+  ENRICHED
+  REVIEW_REQUIRED
+  APPROVED
+  REJECTED
+  ARCHIVED
+  CONVERTED
+}
+
+enum DiscoveryStudioCategory {
+  RECORDING
+  PODCAST
+  PHOTO
+  VIDEO
+  REHEARSAL
+  DJ
+  PRODUCTION
+  VOICE_OVER
+  LIVE_STREAMING
+  POST_PRODUCTION
+  OTHER
+}
+
 model User {
   id                      String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                   String        @unique
@@ -216,6 +240,7 @@ model Studio {
   marketplaceEvents     MarketplaceEvent[]
   storedFiles           StoredFile[]
   promoCodes            PromoCode[]
+  discoveryCandidate    CandidateStudio?
 
   @@index([ownerId])
   @@index([city, status])
@@ -765,4 +790,62 @@ model Invoice {
   issuedAt     DateTime      @default(now()) @db.Timestamp(3)
   createdAt    DateTime      @default(now()) @db.Timestamp(3)
   booking      Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+
+model CandidateStudio {
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  normalizedName    String
+  slug              String                    @unique
+  category          DiscoveryStudioCategory   @default(OTHER)
+  status            CandidateStudioStatus     @default(DISCOVERED)
+  countryCode       String?                   @db.VarChar(2)
+  country           String?
+  region            String?
+  city              String?
+  district          String?
+  postalCode        String?
+  address           String?
+  latitude          Decimal?                  @db.Decimal(9, 6)
+  longitude         Decimal?                  @db.Decimal(9, 6)
+  phone             String?
+  email             String?
+  website           String?
+  instagram         String?
+  convertedStudioId String?                   @unique @db.Uuid
+  firstSeenAt       DateTime                  @default(now()) @db.Timestamp(3)
+  lastSeenAt        DateTime                  @default(now()) @db.Timestamp(3)
+  lastCheckedAt     DateTime?                 @db.Timestamp(3)
+  convertedAt       DateTime?                 @db.Timestamp(3)
+  createdAt         DateTime                  @default(now()) @db.Timestamp(3)
+  updatedAt         DateTime                  @updatedAt @db.Timestamp(3)
+  convertedStudio   Studio?                   @relation(fields: [convertedStudioId], references: [id], onDelete: SetNull)
+  sources           CandidateStudioSource[]
+
+  @@index([normalizedName])
+  @@index([status, countryCode, city])
+  @@index([category, status])
+}
+
+model CandidateStudioSource {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidateStudioId String          @db.Uuid
+  provider          String
+  sourceKey         String
+  externalId        String?
+  sourceUrl         String?
+  providerCategory  String?
+  attribution       String?
+  licenseUrl        String?
+  active            Boolean         @default(true)
+  collectedAt       DateTime        @default(now()) @db.Timestamp(3)
+  lastCheckedAt     DateTime?       @db.Timestamp(3)
+  createdAt         DateTime        @default(now()) @db.Timestamp(3)
+  updatedAt         DateTime        @updatedAt @db.Timestamp(3)
+  candidateStudio   CandidateStudio @relation(fields: [candidateStudioId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, sourceKey])
+  @@index([candidateStudioId])
+  @@index([provider, externalId])
 }
