@@ -408,9 +408,17 @@ export default async function DiscoverStudiosPage({
             {websiteOnly ? " · Website" : ""}
             {emailOnly ? " · Email" : ""}
           </p>
-          <Link href="/studios" className="text-xs font-black text-acid">
-            Show verified bookable studios →
-          </Link>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link
+              href={user ? "/discover/add" : "/auth/login?next=%2Fdiscover%2Fadd"}
+              className="text-xs font-black text-sky-300 hover:text-white"
+            >
+              + Suggest a missing studio
+            </Link>
+            <Link href="/studios" className="text-xs font-black text-acid">
+              Show verified bookable studios →
+            </Link>
+          </div>
         </div>
 
         {visibleCandidates.length === 0 ? (
