@@ -97,7 +97,7 @@ function candidateForDedup(candidate: {
 }
 
 function sourceMetadata(record: DiscoveryProviderStudioRecord): Prisma.InputJsonObject {
-  const metadata: Prisma.InputJsonObject = {
+  const base: Prisma.InputJsonObject = {
     provider: record.provider,
     sourceKey: record.sourceKey,
     externalId: record.externalId,
@@ -109,11 +109,12 @@ function sourceMetadata(record: DiscoveryProviderStudioRecord): Prisma.InputJson
     issues: record.issues,
   };
 
-  if (record.metadata !== undefined) {
-    metadata.providerMetadata = record.metadata;
-  }
-
-  return metadata;
+  return record.metadata === undefined
+    ? base
+    : {
+        ...base,
+        providerMetadata: record.metadata,
+      };
 }
 
 function slugBase(value: string) {
