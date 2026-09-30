@@ -1,13 +1,2592 @@
 {
   "provider": "OVERTURE",
   "release": "latest",
-  "generatedAt": null,
+  "generatedAt": "2026-09-30T13:32:35.299Z",
   "bbox": {
     "west": -7.75,
     "south": 33.45,
     "east": -7.45,
     "north": 33.7
   },
-  "totalPlacesInBbox": 0,
-  "records": []
+  "totalPlacesInBbox": 25730,
+  "records": [
+    {
+      "id": "c6e885d9-2aa6-49ad-960d-5c2939340572",
+      "name": "9 O'clock Studio",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.6143646836280823,
+      "longitude": -7.697798900015565,
+      "latitude": 33.539412333374266,
+      "address": {
+        "freeform": "زنقة 27 16",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://www.9oclockstudio.com/"
+      ],
+      "socials": [
+        "https://www.facebook.com/101457682189750"
+      ],
+      "emails": [
+        "contact@9oclockstudio.com"
+      ],
+      "phones": [
+        "+212680355565"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "101457682189750",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.6143646836280823
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "28d21960-9852-463b-a1c3-64a5fa9416cc",
+      "name": "Ak47Production",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.27373531460762024,
+      "longitude": -7.64269465,
+      "latitude": 33.60049788,
+      "address": {
+        "freeform": "Rue Nizar El Abidi",
+        "locality": "الدار البيضاء",
+        "postcode": "20250",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.ak47production.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/583104701771865"
+      ],
+      "emails": [
+        "ak47production.contact@gmail.com"
+      ],
+      "phones": [],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "583104701771865",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.27373531460762024
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "c264860c-f1f9-44dc-a1b7-df9cd49ceb9e",
+      "name": "AK47Squad Studio",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.7209107875823975,
+      "longitude": -7.65049,
+      "latitude": 33.52482,
+      "address": {
+        "freeform": "Lot. Dendoun Num 120, Rue 48, Sidi Maarouf, Casablanca",
+        "locality": "الدار البيضاء",
+        "postcode": "20280",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/191950224002837"
+      ],
+      "emails": [
+        "ak47squadrecords@gmail.com"
+      ],
+      "phones": [
+        "+212612937590"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "191950224002837",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.7209107875823975
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "b57fd6a9-f913-486c-8697-2bc6bdaf6f7c",
+      "name": "Armoney Entertainment",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.3778100907802582,
+      "longitude": -7.58013958,
+      "latitude": 33.58536892,
+      "address": {
+        "freeform": "Bd Ibn Tachfine",
+        "locality": "الدار البيضاء",
+        "postcode": "20302",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.armoneyentmt.com/"
+      ],
+      "socials": [
+        "https://www.facebook.com/107980778928314"
+      ],
+      "emails": [
+        "armoneyentmt@gmail.com"
+      ],
+      "phones": [
+        "+212662042323"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "107980778928314",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.3778100907802582
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "ebb75f99-65e5-469c-a28b-d0f715813fa1",
+      "name": "Azarar prod",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.28394192457199097,
+      "longitude": -7.6121815,
+      "latitude": 33.5875347,
+      "address": {
+        "freeform": "شارع الحرية 10",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://azararmedia.com/"
+      ],
+      "socials": [
+        "https://www.facebook.com/382552754930955"
+      ],
+      "emails": [
+        "azararprod@gmail.com"
+      ],
+      "phones": [
+        "+212612961335"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "382552754930955",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.28394192457199097
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "fdd21288-333b-4d85-9e81-d3aab46a6973",
+      "name": "BDR Studio",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.5841279625892639,
+      "longitude": -7.60050869,
+      "latitude": 33.59451022,
+      "address": {
+        "freeform": "37 Rue Aït Ba Amrane",
+        "locality": "الدار البيضاء",
+        "postcode": "20000",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.bdrstudio.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/179812181893523"
+      ],
+      "emails": [
+        "info@bdrstudio.ma"
+      ],
+      "phones": [
+        "+212600647373"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "179812181893523",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.5841279625892639
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "e2b39cff-0446-49ce-9539-6c49fef0f2df",
+      "name": "Brigade HQ",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.7529372572898865,
+      "longitude": -7.6210570335388,
+      "latitude": 33.585089320861,
+      "address": {
+        "freeform": "Brigade HQ, Rue des acacias",
+        "locality": "الدار البيضاء",
+        "postcode": "20000",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/527816847071712"
+      ],
+      "emails": [
+        "brigaderecords.label@gmail.com"
+      ],
+      "phones": [
+        "+212520774412"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "527816847071712",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.7529372572898865
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "28ea7d80-6146-4997-836d-986cb66ce77a",
+      "name": "Creanim Studio",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.5427138209342957,
+      "longitude": -7.61658616,
+      "latitude": 33.58601708,
+      "address": {
+        "freeform": "6eme etage، 113 Av. Mers Sultan",
+        "locality": "الدار البيضاء",
+        "postcode": "20000",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://creanimstudio.com/"
+      ],
+      "socials": [
+        "https://www.facebook.com/1663151577340052"
+      ],
+      "emails": [],
+      "phones": [
+        "+212600672679"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "1663151577340052",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.5427138209342957
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "efb62682-9bca-41f8-9616-521595d9130a",
+      "name": "DBF Studiod",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.8517405390739441,
+      "longitude": -7.64593695,
+      "latitude": 33.5755185,
+      "address": {
+        "freeform": "42, rue abou soufiane attouri maarif anfa, 20000",
+        "locality": "الدار البيضاء",
+        "postcode": "25634",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.dbfstudios.com/"
+      ],
+      "socials": [
+        "https://www.facebook.com/530029530411500"
+      ],
+      "emails": [
+        "contact@dbfstudios.com"
+      ],
+      "phones": [
+        "+212520010101"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "530029530411500",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.8517405390739441
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "4d29e8ec-469d-4faa-bb62-15157c4144bb",
+      "name": "Glob sound",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.41138872504234314,
+      "longitude": -7.61971146,
+      "latitude": 33.58697622,
+      "address": {
+        "freeform": "CV, 6 RUE DE NEUFCHATEAU ETG",
+        "locality": "الدار البيضاء",
+        "postcode": "20130",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.globsound.com/"
+      ],
+      "socials": [
+        "https://www.facebook.com/1862658250634298"
+      ],
+      "emails": [
+        "globsound@gmail.com"
+      ],
+      "phones": [
+        "+212661919075"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "1862658250634298",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.41138872504234314
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "67284a97-9887-4a82-be8f-47ee235f351e",
+      "name": "Go-Focus",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.20102928578853607,
+      "longitude": -7.64126387,
+      "latitude": 33.57178549,
+      "address": {
+        "freeform": "N 21, C.Com. Nadia, Bd Brahim Roudani, Rte d'El Jadida",
+        "locality": "الدار البيضاء",
+        "postcode": "20100",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/106949717604877"
+      ],
+      "emails": [
+        "go-focus@hotmail.com"
+      ],
+      "phones": [
+        "+212667209052"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "106949717604877",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.20102928578853607
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "8c6f6221-34af-4465-8922-7ea4018f68e7",
+      "name": "Hit Science Records",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.24256794154644012,
+      "longitude": -7.63771137,
+      "latitude": 33.60133353,
+      "address": {
+        "freeform": "61 Bd d'El Hank",
+        "locality": "الدار البيضاء",
+        "postcode": "20040",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://www.youtube.com/channel/UC661UQH7JFFAxtnIZmcIOoA"
+      ],
+      "socials": [
+        "https://www.facebook.com/554071834791030"
+      ],
+      "emails": [
+        "hitscience.contact@gmail.com"
+      ],
+      "phones": [],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "554071834791030",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.24256794154644012
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "1f8016d5-8e41-4320-ae0d-b4edb71cbf06",
+      "name": "Image Experience",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.2770043611526489,
+      "longitude": -7.61998347,
+      "latitude": 33.58392896,
+      "address": {
+        "freeform": "49 Rue Saad Bnou Abi Wakkas",
+        "locality": "الدار البيضاء",
+        "postcode": "20250",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.image-experience.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/123868837781021"
+      ],
+      "emails": [
+        "contact@image-experience.ma"
+      ],
+      "phones": [
+        "+212522472304"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "123868837781021",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.2770043611526489
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "884f981e-94ab-4ff5-b394-355846d7eb19",
+      "name": "Image Factory",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.5243780612945557,
+      "longitude": -7.63918451,
+      "latitude": 33.56445223,
+      "address": {
+        "freeform": "18 rue des Eperviers Riviéra Oasis",
+        "locality": "الدار البيضاء",
+        "postcode": "20410",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.imagefactory-maroc.com/"
+      ],
+      "socials": [
+        "https://www.facebook.com/171508759569663"
+      ],
+      "emails": [
+        "digital@imagefactory-maroc.com"
+      ],
+      "phones": [
+        "+212522995811"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "171508759569663",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.5243780612945557
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "a2b936b5-81b1-4faa-b2f2-b523e5969231",
+      "name": "Kaotic Studio Photographe Professionnel / Casablanca - Maroc",
+      "taxonomy": {
+        "primary": "photography_class",
+        "hierarchy": [
+          "education",
+          "place_of_learning",
+          "specialty_school",
+          "photography_class"
+        ],
+        "alternates": [],
+        "basicCategory": "specialty_school"
+      },
+      "confidence": 0.85,
+      "longitude": -7.5943191,
+      "latitude": 33.5908863,
+      "address": {
+        "freeform": "Residence Acacia, 650 Boulevard Mohamed V",
+        "locality": "Casablanca",
+        "postcode": "20250",
+        "region": "Casablanca",
+        "country": "MA"
+      },
+      "websites": [
+        "https://www.kaotic.it/"
+      ],
+      "socials": [],
+      "emails": [],
+      "phones": [
+        "0673769070"
+      ],
+      "sources": [
+        {
+          "dataset": "Microsoft",
+          "provider": "microsoft",
+          "recordId": "281474979271513",
+          "updateTime": "2022-06-01T23:18:39.920Z",
+          "confidence": 0.85
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "f9d8b236-688f-4dc5-b71c-dc053faf45c2",
+      "name": "L'Epicerie Sonore",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.5202511548995972,
+      "longitude": -7.6269125768568715,
+      "latitude": 33.59408878131807,
+      "address": {
+        "freeform": "Rue Abou Ahmed Al Ghazali",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://www.lepiceriesonore.com/"
+      ],
+      "socials": [
+        "https://www.facebook.com/459968184563160"
+      ],
+      "emails": [],
+      "phones": [
+        "+212707736857"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "459968184563160",
+          "updateTime": "2026-08-24T00:00:00.000Z",
+          "confidence": 0.5202511548995972
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "700be0ce-eb4f-4f26-a48a-5fc5e42b4a84",
+      "name": "L'Garage Production",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.8866346478462219,
+      "longitude": -7.65113529,
+      "latitude": 33.52852396,
+      "address": {
+        "freeform": "N° 68,Lot el-mostakbal ,Sidi Marrouf",
+        "locality": "الدار البيضاء",
+        "postcode": "20270",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.lgarage.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/395090147496503"
+      ],
+      "emails": [
+        "contact@lgarage.ma"
+      ],
+      "phones": [
+        "+212661262561"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "395090147496503",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.8866346478462219
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "6cef9421-cd3c-4b4a-ac2c-eea66b924666",
+      "name": "Labo Iskaf",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.38319605588912964,
+      "longitude": -7.68013319,
+      "latitude": 33.57524401,
+      "address": {
+        "freeform": "N, villa Rachida, 7 Bd Abdelhadi Boutaleb",
+        "locality": "الدار البيضاء",
+        "postcode": "20250",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/348341849275165"
+      ],
+      "emails": [
+        "laboiskaf@gmail.com"
+      ],
+      "phones": [
+        "+212522942260"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "348341849275165",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.38319605588912964
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "62711560-e1ae-49eb-ba5f-0cdc0d1a0e35",
+      "name": "Labo Photo ASSALAM",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.6029589772224426,
+      "longitude": -7.50581972,
+      "latitude": 33.60898226,
+      "address": {
+        "freeform": "زنقة 70 11",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://labophotoassalam.com/"
+      ],
+      "socials": [
+        "https://www.facebook.com/812292682146752"
+      ],
+      "emails": [
+        "laboalssalm@gmail.com"
+      ],
+      "phones": [
+        "+212670409630"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "812292682146752",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.6029589772224426
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "319f21be-0d3a-45c8-ace8-120f8d5f6012",
+      "name": "Labo Photo Atif Oufa",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.16790275275707245,
+      "longitude": -7.59123812,
+      "latitude": 33.53868753,
+      "address": {
+        "freeform": "BOULEVARD SMARA, 29 RUE 189",
+        "locality": "الدار البيضاء",
+        "postcode": "20154",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/154051711960808"
+      ],
+      "emails": [],
+      "phones": [
+        "+212603007710"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "154051711960808",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.16790275275707245
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "3115cc8d-d9c9-4872-991e-5df3ee34077b",
+      "name": "Labo photo bassir",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.3784804344177246,
+      "longitude": -7.63332424,
+      "latitude": 33.57761336,
+      "address": {
+        "freeform": "Av. Day Ouled Sidi Baba",
+        "locality": "الدار البيضاء",
+        "postcode": "20100",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/2152511105014497"
+      ],
+      "emails": [],
+      "phones": [
+        "+212520502822"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "2152511105014497",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.3784804344177246
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "9c66b542-3306-4e7f-9e9b-9f746b9f257e",
+      "name": "Labo Photo Kina",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.7482852935791016,
+      "longitude": -7.61323587,
+      "latitude": 33.58596871,
+      "address": {
+        "freeform": "Quartier Benjdia, 46 Rue de Nouakchott",
+        "locality": "الدار البيضاء",
+        "postcode": "20120",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://www.photokina.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/2257835391002336"
+      ],
+      "emails": [
+        "photokinamaroc@gmail.com"
+      ],
+      "phones": [
+        "+212522319150"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "2257835391002336",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.7482852935791016
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "44d6173b-fad6-4510-b8b5-f1e3cb8469f4",
+      "name": "Labo Photo Shop Majorelle",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.33379557728767395,
+      "longitude": -7.48430286,
+      "latitude": 33.61554551,
+      "address": {
+        "freeform": "9 Bd Imam Malik",
+        "locality": "الدار البيضاء",
+        "postcode": "20610",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/2025897954303750"
+      ],
+      "emails": [
+        "najimisaid@yahoo.fr"
+      ],
+      "phones": [
+        "+212661915708"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "2025897954303750",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.33379557728767395
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "019fa71b-11fd-44d9-a033-491c78814e9d",
+      "name": "labo photo talbi color",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.6598570942878723,
+      "longitude": -7.65662429,
+      "latitude": 33.51013589,
+      "address": {
+        "freeform": "boulvard abu, Av. Abou Bakr el Kadiri",
+        "locality": "الدار البيضاء",
+        "postcode": "20520",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/357241414949527"
+      ],
+      "emails": [
+        "phototalbicolor@gmail.com"
+      ],
+      "phones": [
+        "+212666450457"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "357241414949527",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.6598570942878723
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "f866048f-cc4a-4523-b5a6-581c008c3f16",
+      "name": "Labo Photo Usk Service",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.2973198890686035,
+      "longitude": -7.48367146,
+      "latitude": 33.60986397,
+      "address": {
+        "freeform": "RESIDENCE ALBADER GH 17 MAG 6 CASABLANCA, Rue 17, Casablanca 20250",
+        "locality": "الدار البيضاء",
+        "postcode": "20602",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/100326331758955"
+      ],
+      "emails": [],
+      "phones": [
+        "+212619395426"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "100326331758955",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.2973198890686035
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "1fd7d138-77d0-4d6a-b039-22a7eea71cbe",
+      "name": "Le Coin Photo",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.4000171720981598,
+      "longitude": -7.56719,
+      "latitude": 33.59275,
+      "address": {
+        "freeform": "زنقة التجزئة 130",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.lecoinphoto.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/103843909275351"
+      ],
+      "emails": [
+        "contact@lecoinphoto.ma"
+      ],
+      "phones": [
+        "+212529061697"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "103843909275351",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.4000171720981598
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "b6e45051-faf0-4da7-bb3d-f4210a773817",
+      "name": "M-Black Production",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.24172572791576385,
+      "longitude": -7.69774316,
+      "latitude": 33.54230078,
+      "address": {
+        "freeform": null,
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/513684638775497"
+      ],
+      "emails": [
+        "mblackproduction0@gmail.com"
+      ],
+      "phones": [
+        "+212625020415"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "513684638775497",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.24172572791576385
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "5dbfd08a-130e-4319-8b97-1f510288761d",
+      "name": "Mifa Musique Maroc",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.8202213644981384,
+      "longitude": -7.56772,
+      "latitude": 33.57957,
+      "address": {
+        "freeform": "شارع الحزام الكبير 18",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/446849301856205"
+      ],
+      "emails": [],
+      "phones": [
+        "+212522648183"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "446849301856205",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.8202213644981384
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "26214f04-cebe-403e-a63a-22fd10d982c0",
+      "name": "MKR - Moroccan Kind Records",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.30326423048973083,
+      "longitude": -7.6507759094238,
+      "latitude": 33.5865774551,
+      "address": {
+        "freeform": "Casablanca",
+        "locality": "الدار البيضاء",
+        "postcode": "20000",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.mkrstudio.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/282386861630598"
+      ],
+      "emails": [
+        "music@mkrstudio.ma"
+      ],
+      "phones": [],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "282386861630598",
+          "updateTime": "2026-08-24T00:00:00.000Z",
+          "confidence": 0.30326423048973083
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "9997521b-f994-44f4-825e-e5345c71ba4d",
+      "name": "Myk Studio",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.7543051242828369,
+      "longitude": -7.62566524,
+      "latitude": 33.56842264,
+      "address": {
+        "freeform": "4 Allée de Persée",
+        "locality": "الدار البيضاء",
+        "postcode": "20000",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.mykstudio.net/"
+      ],
+      "socials": [
+        "https://www.facebook.com/129439040796381"
+      ],
+      "emails": [
+        "contact@mykstudio.net"
+      ],
+      "phones": [
+        "+212522860988"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "129439040796381",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.7543051242828369
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "f5cac65a-b688-46df-a771-8e215812721e",
+      "name": "Nastudio photography",
+      "taxonomy": {
+        "primary": "professional_service",
+        "hierarchy": [
+          "services_and_business",
+          "professional_service"
+        ],
+        "alternates": [],
+        "basicCategory": "professional_service"
+      },
+      "confidence": 0.5390128493309021,
+      "longitude": -7.6751410961151,
+      "latitude": 33.554476327619,
+      "address": {
+        "freeform": "Oulfa,Rue 191",
+        "locality": "الدار البيضاء",
+        "postcode": "20220",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://nastudiophotography.business.site/"
+      ],
+      "socials": [
+        "https://www.facebook.com/106984990861283"
+      ],
+      "emails": [
+        "nastudio.photography@gmail.com"
+      ],
+      "phones": [
+        "+212643142397"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "106984990861283",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.5390128493309021
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "04eab7fb-00dd-4ee2-89c4-a164660da7fc",
+      "name": "Next Level Photo",
+      "taxonomy": {
+        "primary": "camera_and_photography_store",
+        "hierarchy": [
+          "shopping",
+          "specialty_store",
+          "electronics_store",
+          "camera_and_photography_store"
+        ],
+        "alternates": [],
+        "basicCategory": "electronics_store"
+      },
+      "confidence": 0.3105805218219757,
+      "longitude": -7.6078319,
+      "latitude": 33.5406288,
+      "address": {
+        "freeform": "21 Rue Bouiblane, Agdal à côté de KFC",
+        "locality": "الدار البيضاء",
+        "postcode": "10090",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://nextlevelphoto.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/814667335073466"
+      ],
+      "emails": [
+        "contact@nextlevelphoto.ma"
+      ],
+      "phones": [
+        "+212663608040"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "814667335073466",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.3105805218219757
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "2425790c-caea-43a3-8115-8c31264fd3b1",
+      "name": "Nomade Studios",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.5630507469177246,
+      "longitude": -7.61227926,
+      "latitude": 33.58754393,
+      "address": {
+        "freeform": "10 Bd de la Liberté",
+        "locality": "الدار البيضاء",
+        "postcode": "20250",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.nomadestudios.com/contact/"
+      ],
+      "socials": [
+        "https://www.facebook.com/114555235296194"
+      ],
+      "emails": [
+        "contact@nomadestudios.com"
+      ],
+      "phones": [
+        "+212522208458"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "114555235296194",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.5630507469177246
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "59b41a80-0730-49dc-8d5f-b78084917b7a",
+      "name": "Paris Photo",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.32118573784828186,
+      "longitude": -7.62075238,
+      "latitude": 33.59358855,
+      "address": {
+        "freeform": "18 Bd de Paris",
+        "locality": "الدار البيضاء",
+        "postcode": "20250",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/581136972090753"
+      ],
+      "emails": [],
+      "phones": [
+        "+212522270519"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "581136972090753",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.32118573784828186
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "abc9444c-5694-431d-adc7-2cc8bf8af90c",
+      "name": "Photo Ben Driss",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.12112210690975189,
+      "longitude": -7.6711498,
+      "latitude": 33.56996966,
+      "address": {
+        "freeform": "Résidence Ibnou Sina",
+        "locality": "الدار البيضاء",
+        "postcode": "20204",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://www.facebook.com/photobendriss.pro"
+      ],
+      "socials": [
+        "https://www.facebook.com/1493945460867700"
+      ],
+      "emails": [
+        "ben_driss1975@hotmail.fr"
+      ],
+      "phones": [
+        "+212613525150"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "1493945460867700",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.12112210690975189
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "ba916c68-3e6b-492c-9077-95ee5d4aa209",
+      "name": "Photo Najibi",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.33378323912620544,
+      "longitude": -7.5960274,
+      "latitude": 33.59445552,
+      "address": {
+        "freeform": "1 rue Catelet، 229 Bd Emile Zola",
+        "locality": "الدار البيضاء",
+        "postcode": "20082",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.photonajibi.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/111354708119274"
+      ],
+      "emails": [
+        "contact.najibi7@gmail.com"
+      ],
+      "phones": [
+        "+212522401640"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "111354708119274",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.33378323912620544
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "7a7ca7fb-a02c-4ea2-aac2-c2f6d33d2372",
+      "name": "Picxellence Studio Photographie",
+      "taxonomy": {
+        "primary": "professional_service",
+        "hierarchy": [
+          "services_and_business",
+          "professional_service"
+        ],
+        "alternates": [],
+        "basicCategory": "professional_service"
+      },
+      "confidence": 0.7436386346817017,
+      "longitude": -7.64718787,
+      "latitude": 33.57215022,
+      "address": {
+        "freeform": "159 Bd Yacoub El Mansour - Entrée B - 1er étage Bureau n°2",
+        "locality": "الدار البيضاء",
+        "postcode": "20026",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/1809831272463456"
+      ],
+      "emails": [
+        "picxellenceagency@gmail.com"
+      ],
+      "phones": [
+        "+212620426417"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "1809831272463456",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.7436386346817017
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "2e1a9b2f-3734-42bd-8928-3f986ad739a8",
+      "name": "Pixmart - Vente Materiel Photo FUJIFILM et Flash Studio ELINCHROM Casablanca Maroc",
+      "taxonomy": {
+        "primary": "camera_and_photography_store",
+        "hierarchy": [
+          "shopping",
+          "specialty_store",
+          "electronics_store",
+          "camera_and_photography_store"
+        ],
+        "alternates": [],
+        "basicCategory": "electronics_store"
+      },
+      "confidence": 0.85,
+      "longitude": -7.6302265,
+      "latitude": 33.5543192,
+      "address": {
+        "freeform": "Rèsidence Mimosa, Porte californie, Mag 117 Boulevard de La Mecque",
+        "locality": "Casablanca",
+        "postcode": null,
+        "region": "Casablanca",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.pixmart.ma/"
+      ],
+      "socials": [],
+      "emails": [],
+      "phones": [
+        "0661255554"
+      ],
+      "sources": [
+        {
+          "dataset": "Microsoft",
+          "provider": "microsoft",
+          "recordId": "562949965041461",
+          "updateTime": "2023-08-16T08:54:05.643Z",
+          "confidence": 0.85
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "45845708-0906-4902-901c-2c2235d425db",
+      "name": "Plein Les Oreilles",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.6365834474563599,
+      "longitude": -7.63345014,
+      "latitude": 33.58600227,
+      "address": {
+        "freeform": "زنقة المنازيز 5",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/332590386854645"
+      ],
+      "emails": [
+        "pleinlesoreilles@gmail.com"
+      ],
+      "phones": [
+        "+212661299502"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "332590386854645",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.6365834474563599
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "ca61b8da-2387-43f5-9e47-bb62d1a91613",
+      "name": "Poulpe Studios",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.29718151688575745,
+      "longitude": -7.64083307,
+      "latitude": 33.59823986,
+      "address": {
+        "freeform": "Etg 05, El Kadim, 55 BD Bourgogne Ang, Rue Moussa Al Kadim",
+        "locality": "الدار البيضاء",
+        "postcode": "20500",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/103184535969592"
+      ],
+      "emails": [
+        "poulpestudios@gmail.com"
+      ],
+      "phones": [
+        "+212530303635"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "103184535969592",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.29718151688575745
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "e8ccab44-b47b-44d8-b887-8e66e5c459a0",
+      "name": "Red Zone Records",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.5422073006629944,
+      "longitude": -7.555102925018,
+      "latitude": 33.583899500005,
+      "address": {
+        "freeform": "Hay Mohamedi",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/1076291369076728"
+      ],
+      "emails": [
+        "redzonewalid@gmail.com"
+      ],
+      "phones": [
+        "+212644994847"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "1076291369076728",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.5422073006629944
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "1a39bde2-25b6-467c-84a3-387cac692c6d",
+      "name": "SB Records",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.5699424743652344,
+      "longitude": -7.64003316477064,
+      "latitude": 33.58965120256881,
+      "address": {
+        "freeform": "زنقة أبو يعلى الافراني 6",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://www.instagram.com/sb.records.xiii/"
+      ],
+      "socials": [
+        "https://www.facebook.com/107547714949521"
+      ],
+      "emails": [
+        "contact.sbrecords@gmail.com"
+      ],
+      "phones": [],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "107547714949521",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.5699424743652344
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "9946fb0f-29b1-4c4c-8605-8c52b99f5656",
+      "name": "Studio Hiba",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.9308812022209167,
+      "longitude": -7.49410773,
+      "latitude": 33.59784656,
+      "address": {
+        "freeform": "P3006",
+        "locality": "الدار البيضاء",
+        "postcode": "20603",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://linktr.ee/studiohiba"
+      ],
+      "socials": [
+        "https://www.facebook.com/422147744602766"
+      ],
+      "emails": [
+        "contact@studiohiba.ma"
+      ],
+      "phones": [
+        "+212522737549"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "422147744602766",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.9308812022209167
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "a17cf53c-1c03-4bc4-8498-2f79b39917ac",
+      "name": "StudioLab",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.4902506470680237,
+      "longitude": -7.65357881,
+      "latitude": 33.56800547,
+      "address": {
+        "freeform": "Etg N°1, 26 Rue Erraihane Beauséjour",
+        "locality": "الدار البيضاء",
+        "postcode": "20200",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.studiolab.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/130408837875817"
+      ],
+      "emails": [],
+      "phones": [
+        "+212522943815"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "130408837875817",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.4902506470680237
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "3428d2ab-1795-43a5-a11e-2ee4a0929f44",
+      "name": "synchro productions",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.5004571080207825,
+      "longitude": -7.65151632,
+      "latitude": 33.56970149,
+      "address": {
+        "freeform": "1 er etage, 239 Bd Yacoub El Mansour",
+        "locality": "الدار البيضاء",
+        "postcode": "20250",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.synchroprod.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/112179383577683"
+      ],
+      "emails": [
+        "mouniraudio@gmail.com"
+      ],
+      "phones": [
+        "+212664945092"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "112179383577683",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.5004571080207825
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "00c7b135-8b1d-4ec3-9f16-b14f122096e4",
+      "name": "Tendance Studios",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.4488791525363922,
+      "longitude": -7.61913522,
+      "latitude": 33.56943865,
+      "address": {
+        "freeform": "2eme etage n° 26, et rue tabit bnou kourra, 95 Avenue d'anoual",
+        "locality": "الدار البيضاء",
+        "postcode": "20250",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://www.tendances.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/105711771833882"
+      ],
+      "emails": [
+        "contact@tendances.ma"
+      ],
+      "phones": [
+        "+212627369801"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "105711771833882",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.4488791525363922
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "5eab18e6-c67b-4490-9329-802d2bbc3996",
+      "name": "The Space Studio",
+      "taxonomy": {
+        "primary": "event_photography_service",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "photography_service",
+          "event_photography_service"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.671988844871521,
+      "longitude": -7.48539318,
+      "latitude": 33.61955801,
+      "address": {
+        "freeform": "131 Bd Ahmed Ibn Hanbal, Casablanca",
+        "locality": "الدار البيضاء",
+        "postcode": "20600",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "https://spacestudio.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/236043226264394"
+      ],
+      "emails": [
+        "contact@spacestudio.ma"
+      ],
+      "phones": [
+        "+212660187447"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "236043226264394",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.671988844871521
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "b629ffa4-6609-4a1b-a6c0-0be4d2dd2383",
+      "name": "Up Production Officiel",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.9164378046989441,
+      "longitude": -7.61145334,
+      "latitude": 33.59001176,
+      "address": {
+        "freeform": "شارع الجولان ب 4",
+        "locality": "الدار البيضاء",
+        "postcode": null,
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [
+        "http://www.upproduction.ma/"
+      ],
+      "socials": [
+        "https://www.facebook.com/364727120597660"
+      ],
+      "emails": [
+        "contact@upproduction.ma"
+      ],
+      "phones": [
+        "+212661310892"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "364727120597660",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.9164378046989441
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "390406b8-e40a-4e16-9c90-ce51c2eb4a6e",
+      "name": "Verdy Music Studio Production",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.40273138880729675,
+      "longitude": -7.63841332,
+      "latitude": 33.58324616,
+      "address": {
+        "freeform": "149 Rue Ibnou Faris",
+        "locality": "الدار البيضاء",
+        "postcode": "40000",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/106697556191176"
+      ],
+      "emails": [
+        "saadeddin1@gmail.com"
+      ],
+      "phones": [
+        "+212656660983"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "106697556191176",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.40273138880729675
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    },
+    {
+      "id": "6ebe17bc-5d61-4946-9220-3d8a50638dd9",
+      "name": "Woods Recording Studio",
+      "taxonomy": {
+        "primary": "music_production",
+        "hierarchy": [
+          "services_and_business",
+          "media_service",
+          "media_news_company",
+          "music_production"
+        ],
+        "alternates": [],
+        "basicCategory": "media_service"
+      },
+      "confidence": 0.6677215099334717,
+      "longitude": -7.7186787128448,
+      "latitude": 33.5377729439,
+      "address": {
+        "freeform": "Route Arrahma",
+        "locality": "الدار البيضاء",
+        "postcode": "20200",
+        "region": "06",
+        "country": "MA"
+      },
+      "websites": [],
+      "socials": [
+        "https://www.facebook.com/1800370056861356"
+      ],
+      "emails": [
+        "woodsrecordingstudio@gmail.com"
+      ],
+      "phones": [
+        "+212606665916"
+      ],
+      "sources": [
+        {
+          "dataset": "meta",
+          "provider": "meta",
+          "recordId": "1800370056861356",
+          "updateTime": "2026-09-14T00:00:00.000Z",
+          "confidence": 0.6677215099334717
+        },
+        {
+          "dataset": "Overture",
+          "provider": "overture",
+          "recordId": null,
+          "updateTime": "2026-09-17T22:52:12Z",
+          "confidence": 0
+        }
+      ]
+    }
+  ]
 }
