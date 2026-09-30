@@ -105,7 +105,7 @@ export default async function StudioDetailPage({
           ))}
         </div>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
+        <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_410px]">
           <div className="space-y-8">
             <section className="panel">
               <span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">About</span>
@@ -139,7 +139,26 @@ export default async function StudioDetailPage({
               </div>
             </section>
 
-            {mapPoints.length > 0 && <section><span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">Location</span><h2 className="mt-2 text-3xl font-black">{studio.neighborhood || studio.city}</h2><p className="mt-2 text-sm text-zinc-500">{studio.address || studio.city}</p><div className="mt-5"><StudioMap points={mapPoints} /></div></section>}
+            <section>
+              <span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">Location</span>
+              <h2 className="mt-2 text-3xl font-black">
+                {studio.neighborhood ? `${studio.neighborhood}, ${studio.city}` : studio.city}
+              </h2>
+              <div className="mt-4 flex items-start gap-3 rounded-2xl border border-zinc-900 bg-zinc-950/70 p-5">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-acid text-lg font-black text-black">⌖</div>
+                <div>
+                  <b className="text-sm">{studio.address || studio.city}</b>
+                  <p className="mt-1 text-xs leading-5 text-zinc-600">
+                    Exact location is shown here when the studio owner provides map coordinates.
+                  </p>
+                </div>
+              </div>
+              {mapPoints.length > 0 && (
+                <div className="mt-5">
+                  <StudioMap points={mapPoints} />
+                </div>
+              )}
+            </section>
 
             <section>
               <div className="flex items-end justify-between gap-4"><div><span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">Verified stays</span><h2 className="mt-2 text-3xl font-black">Reviews</h2></div>{average && <b className="text-xl text-acid">★ {average.toFixed(1)}</b>}</div>
@@ -156,12 +175,15 @@ export default async function StudioDetailPage({
           </div>
 
           <aside className="self-start lg:sticky lg:top-6">
-            <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl">
-              <span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">Live booking</span>
-              <h2 className="mt-2 text-2xl font-black">Reserve your session</h2>
-              <p className="mt-2 text-xs leading-5 text-zinc-600">Deposit {studio.depositPercent}% · Free cancellation up to {studio.freeCancellationHours}h before the session.</p>
-              <div className="mt-5">
-                <BookingWidget
+            <section className="rounded-3xl border border-zinc-800 bg-[#11120f] p-6 shadow-[0_24px_70px_rgba(0,0,0,.45)]">
+              <div className="mb-5">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">Instant booking</span>
+                <h2 className="mt-2 text-2xl font-black">Reserve your studio session</h2>
+                <p className="mt-2 text-xs leading-5 text-zinc-600">
+                  Deposit {studio.depositPercent}% · Free cancellation up to {studio.freeCancellationHours}h before the session.
+                </p>
+              </div>
+              <BookingWidget
                   rooms={studio.rooms.map((room) => ({ id: room.id, name: room.name, hourlyRateMad: room.hourlyRateMad, minimumHours: room.minimumHours, engineerIncluded: room.engineerIncluded }))}
                   addons={studio.addons.map((addon) => ({ id: addon.id, roomId: addon.roomId, name: addon.name, description: addon.description, unitPriceMad: addon.unitPriceMad, unitLabel: addon.unitLabel }))}
                   userRole={user?.role || null}
@@ -170,8 +192,8 @@ export default async function StudioDetailPage({
                   initialDate={safeDate(query.date)}
                   initialDurationHours={safeDuration(query.duration)}
                   initialStartAt={query.startAt}
+                  locationLabel={studio.neighborhood ? `${studio.neighborhood}, ${studio.city}` : studio.city}
                 />
-              </div>
             </section>
           </aside>
         </div>

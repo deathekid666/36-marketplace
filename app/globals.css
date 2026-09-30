@@ -50,3 +50,60 @@ body {
     @apply rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-xs font-black text-zinc-200 transition hover:border-zinc-600 hover:text-white;
   }
 }
+
+
+/* Marketplace map pins */
+.studio-map-marker-wrap {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.studio-map-marker {
+  display: grid;
+  place-items: center;
+  min-width: 46px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.24);
+  border-radius: 999px;
+  background: #11120f;
+  color: #f4f2ea;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+
+.studio-map-marker:hover {
+  border-color: #d9ff43;
+  color: #d9ff43;
+  transform: translateY(-1px);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #11120f !important;
+  color: #f4f2ea !important;
+}
+
+.studio-map-popup {
+  display: grid;
+  gap: 6px;
+  min-width: 150px;
+  font-family: inherit;
+}
+
+.studio-map-popup strong {
+  font-size: 13px;
+}
+
+.studio-map-popup span {
+  color: #a1a1aa;
+  font-size: 11px;
+}
+
+.studio-map-popup a {
+  color: #d9ff43;
+  font-size: 11px;
+  font-weight: 800;
+}

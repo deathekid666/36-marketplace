@@ -2,18 +2,30 @@
 
 import { useEffect, useRef } from "react";
 
-type Point = { id: string; name: string; lat: number; lng: number; href: string; price?: number | null };
+type Point = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  href: string;
+  price?: number | null;
+};
 
 declare global {
-  interface Window { L?: any }
+  interface Window {
+    L?: any;
+  }
 }
 
 export function StudioMap({ points }: { points: Point[] }) {
   const ref = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!ref.current || points.length === 0) return;
+
     let map: any;
     let cancelled = false;
+
     const load = async () => {
       if (!document.querySelector('link[data-leaflet="36"]')) {
         const link = document.createElement("link");
@@ -22,14 +34,21 @@ export function StudioMap({ points }: { points: Point[] }) {
         link.dataset.leaflet = "36";
         document.head.appendChild(link);
       }
+
       if (!window.L) {
         await new Promise<void>((resolve, reject) => {
-          const existing = document.querySelector('script[data-leaflet="36"]') as HTMLScriptElement | null;
+          const existing = document.querySelector(
+            'script[data-leaflet="36"]',
+          ) as HTMLScriptElement | null;
+
           if (existing) {
             existing.addEventListener("load", () => resolve(), { once: true });
-            existing.addEventListener("error", () => reject(new Error("Map library failed")), { once: true });
+            existing.addEventListener("error", () => reject(new Error("Map library failed")), {
+              once: true,
+            });
             return;
           }
+
           const script = document.createElement("script");
           script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
           script.dataset.leaflet = "36";
@@ -38,29 +57,79 @@ export function StudioMap({ points }: { points: Point[] }) {
           document.body.appendChild(script);
         });
       }
+
       if (cancelled || !ref.current || !window.L) return;
+
       const L = window.L;
-      map = L.map(ref.current, { scrollWheelZoom: false, attributionControl: true });
+      map = L.map(ref.current, {
+        scrollWheelZoom: false,
+        attributionControl: true,
+        zoomControl: true,
+      });
+
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
+
       const bounds = L.latLngBounds([]);
+
       points.forEach((point) => {
-        const marker = L.marker([point.lat, point.lng]).addTo(map);
-        marker.bindPopup(`<strong>${escapeHtml(point.name)}</strong>${point.price ? `<br>${point.price} MAD/h` : ""}<br><a href="${point.href}">Open studio</a>`);
+        const label = point.price ? `${point.price} MAD` : "36";
+        const marker = L.marker([point.lat, point.lng], {
+          icon: L.divIcon({
+            className: "studio-map-marker-wrap",
+            html: `<div class="studio-map-marker">${escapeHtml(label)}</div>`,
+            iconSize: point.price ? [86, 38] : [46, 46],
+            iconAnchor: point.price ? [43, 19] : [23, 23],
+          }),
+        }).addTo(map);
+
+        marker.bindPopup(
+          `<div class="studio-map-popup"><strong>${escapeHtml(point.name)}</strong>${
+            point.price ? `<span>${point.price} MAD / hour</span>` : ""
+          }<a href="${escapeHtml(point.href)}">View studio →</a></div>`,
+        );
+
         bounds.extend([point.lat, point.lng]);
       });
-      if (points.length === 1) map.setView([points[0].lat, points[0].lng], 14);
-      else map.fitBounds(bounds.pad(0.18));
+
+      if (points.length === 1) {
+        map.setView([points[0].lat, points[0].lng], 14);
+      } else {
+        map.fitBounds(bounds.pad(0.18));
+      }
     };
+
     load().catch(() => undefined);
-    return () => { cancelled = true; if (map) map.remove(); };
+
+    return () => {
+      cancelled = true;
+      if (map) map.remove();
+    };
   }, [points]);
+
   if (!points.length) return null;
-  return <div ref={ref} className="h-[360px] w-full overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950" aria-label="Studio locations map" />;
+
+  return (
+    <div
+      ref={ref}
+      className="h-[420px] w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950"
+      aria-label="Studio locations map"
+    />
+  );
 }
 
 function escapeHtml(value: string) {
-  return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char] || char));
+  return value.replace(
+    /[&<>'"]/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        '"': "&quot;",
+      })[char] || char,
+  );
 }
