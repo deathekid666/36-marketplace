@@ -374,6 +374,16 @@ export default async function AdminDiscoveryCandidatePage({
                           {transition.note}
                         </p>
                       )}
+                      {transition.metadata != null && (
+                        <details className="mt-3 rounded-xl border border-zinc-900 p-3">
+                          <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-600">
+                            Evidence metadata
+                          </summary>
+                          <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words text-[10px] leading-5 text-zinc-500">
+                            {JSON.stringify(transition.metadata, null, 2)}
+                          </pre>
+                        </details>
+                      )}
                     </article>
                   ))
                 )}

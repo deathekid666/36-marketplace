@@ -37,5 +37,10 @@ jobs:
           rm -rf .tmp-dedup-tests
           npx tsc scripts/test-discovery-deduplication.ts lib/discovery/deduplication.ts lib/discovery/normalization.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-dedup-tests --noEmit false --baseUrl .
           node .tmp-dedup-tests/scripts/test-discovery-deduplication.js
+      - name: Test OpenStreetMap provider fixtures
+        run: |
+          rm -rf .tmp-osm-tests
+          npx tsc scripts/test-openstreetmap-provider.ts lib/discovery/providers/openstreetmap.ts lib/discovery/normalization.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-osm-tests --noEmit false
+          node .tmp-osm-tests/scripts/test-openstreetmap-provider.js
       - name: Build Next.js
         run: npm run build

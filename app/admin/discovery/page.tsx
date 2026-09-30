@@ -1,6 +1,7 @@
 import { CandidateStudioStatus, Prisma } from "@prisma/client";
 import Link from "next/link";
 
+import { importOpenStreetMapAction } from "@/app/admin/discovery/import-actions";
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -45,7 +46,20 @@ function dateLabel(value: Date) {
 export default async function AdminDiscoveryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string; country?: string; page?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    q?: string;
+    country?: string;
+    page?: string;
+    imported?: string;
+    enriched?: string;
+    review?: string;
+    matched?: string;
+    refreshed?: string;
+    skipped?: string;
+    preset?: string;
+    importError?: string;
+  }>;
 }) {
   const user = await requireRole("ADMIN");
   const query = await searchParams;
@@ -149,6 +163,48 @@ export default async function AdminDiscoveryPage({
             ← Admin
           </Link>
         </div>
+
+        {query.imported && (
+          <div className="mt-7 rounded-xl border border-acid/30 bg-acid/[0.04] p-4 text-sm text-acid">
+            OpenStreetMap scan complete: {query.imported} usable records · {query.enriched || "0"} enriched · {query.review || "0"} review · {query.matched || "0"} matched · {query.refreshed || "0"} refreshed · {query.skipped || "0"} unnamed skipped.
+          </div>
+        )}
+        {query.importError && (
+          <div className="mt-7 rounded-xl border border-red-900/60 bg-red-950/20 p-4 text-sm text-red-300">
+            {query.importError === "scan-rate-limited"
+              ? "OpenStreetMap scans are limited to four per admin per hour."
+              : query.importError === "provider-busy"
+                ? "The Overpass provider is busy or throttling requests. Try again later."
+                : query.importError === "provider-timeout"
+                  ? "The Overpass provider timed out."
+                  : query.importError === "result-too-large"
+                    ? "The provider returned more data than the D6 safety limits allow."
+                    : "The OpenStreetMap import could not be completed."}
+          </div>
+        )}
+
+        <section className="mt-7 rounded-2xl border border-sky-900/40 bg-sky-950/10 p-5">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">
+                Provider pilot
+              </span>
+              <h2 className="mt-2 text-2xl font-black">OpenStreetMap · Casablanca</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
+                Manual high-precision scan for amenity=studio and shop=photo_studio. Results stay in CandidateStudio and never become bookable automatically.
+              </p>
+              <p className="mt-2 text-[10px] text-zinc-700">
+                Data © OpenStreetMap contributors · ODbL · manual scan only
+              </p>
+            </div>
+            <form action={importOpenStreetMapAction}>
+              <input type="hidden" name="preset" value="CASABLANCA" />
+              <button className="rounded-xl bg-sky-300 px-5 py-3 text-xs font-black text-black">
+                Scan Casablanca now
+              </button>
+            </form>
+          </div>
+        </section>
 
         <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {[
