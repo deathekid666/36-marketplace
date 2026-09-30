@@ -80,11 +80,16 @@ export default async function DiscoverStudiosPage({
   const verifiedOnly = query.verified === "1";
   const websiteOnly = query.website === "1";
   const emailOnly = query.email === "1";
-  const qualityFilters: Prisma.CandidateStudioWhereInput[] = [
-    ...(verifiedOnly ? [{ claims: { some: { status: "VERIFIED" } } }] : []),
-    ...(websiteOnly ? [{ website: { not: null } }] : []),
-    ...(emailOnly ? [{ email: { not: null } }] : []),
-  ];
+  const qualityFilters: Prisma.CandidateStudioWhereInput[] = [];
+  if (verifiedOnly) {
+    qualityFilters.push({ claims: { some: { status: "VERIFIED" } } });
+  }
+  if (websiteOnly) {
+    qualityFilters.push({ website: { not: null } });
+  }
+  if (emailOnly) {
+    qualityFilters.push({ email: { not: null } });
+  }
   const page = Math.max(
     1,
     Math.min(5000, Number.parseInt(String(query.page || "1"), 10) || 1),
