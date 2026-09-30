@@ -7,6 +7,7 @@ import {
 
 import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/notifications";
+import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 function studioCategory(value: DiscoveryStudioCategory): StudioCategory {
   switch (value) {
@@ -98,10 +99,9 @@ export async function startClaimedStudioOnboarding(input: {
         throw new Error("ONBOARDING_CANDIDATE_NOT_APPROVED");
       }
 
-      // The current booking engine is Morocco/Casablanca-time and MAD-based.
-      // Do not silently convert global discovery records until the marketplace
-      // itself has country/timezone/currency support.
-      if (candidate.countryCode !== "MA") {
+      // Conversion is allow-listed by D14 rollout scope. The current booking
+      // engine remains Morocco/Casablanca-time and MAD-based.
+      if (!isDiscoveryRolloutEnabled(candidate, "ONBOARDING")) {
         throw new Error("ONBOARDING_MARKET_NOT_SUPPORTED");
       }
 

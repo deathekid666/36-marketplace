@@ -21,6 +21,7 @@ function claimErrorCode(error: unknown) {
     CLAIM_EMAIL_VERIFICATION_REQUIRED: "verify-email",
     CLAIM_CANDIDATE_NOT_FOUND: "candidate-not-found",
     CLAIM_CANDIDATE_NOT_AVAILABLE: "candidate-not-available",
+    CLAIM_MARKET_NOT_LAUNCHED: "market-not-launched",
     CLAIM_ALREADY_VERIFIED: "already-verified",
     CLAIM_ALREADY_PENDING: "already-pending",
     CLAIM_BUSINESS_EMAIL_INVALID: "business-email-invalid",

@@ -14,6 +14,7 @@ import {
   discoveryCategoryLabel,
 } from "@/lib/discovery/search";
 import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
+import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
 import { categoryLabel, STUDIO_CATEGORIES } from "@/lib/studio";
 
@@ -110,6 +111,7 @@ export default async function StudiosPage({
     db.candidateStudio.findMany({
       where: {
         AND: [
+          discoveryRolloutWhere("PUBLIC_DISCOVERY"),
           {
             OR: [
               { status: "CONVERTED" },

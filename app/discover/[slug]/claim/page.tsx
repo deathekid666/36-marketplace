@@ -5,6 +5,7 @@ import { submitCandidateClaimAction } from "@/app/discover/[slug]/claim/actions"
 import { AppHeader } from "@/components/AppHeader";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 export const metadata = { title: "Claim studio · 36" };
 
@@ -12,6 +13,7 @@ const ERRORS: Record<string, string> = {
   "invalid-form": "Complete the required claim fields.",
   "verify-email": "Verify your account email before submitting an ownership claim.",
   "candidate-not-available": "This discovery listing is no longer available for claiming.",
+  "market-not-launched": "Studio claiming is not launched for this market yet.",
   "already-verified": "Ownership for this discovery listing has already been verified.",
   "already-pending": "You already have a claim waiting for review.",
   "business-email-invalid": "Enter a valid business email address.",
@@ -46,7 +48,13 @@ export default async function ClaimDiscoveryStudioPage({
     },
   });
 
-  if (!candidate || candidate.status !== "APPROVED") notFound();
+  if (
+    !candidate ||
+    candidate.status !== "APPROVED" ||
+    !isDiscoveryRolloutEnabled(candidate, "CLAIMS")
+  ) {
+    notFound();
+  }
 
   if (user.role !== "STUDIO_OWNER") {
     return (

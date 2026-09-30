@@ -10,6 +10,7 @@ import {
   discoveryFreshnessClass,
   discoveryFreshnessLabel,
 } from "@/lib/discovery/freshness";
+import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 export const metadata = {
   title: "Discovery listing · 36",
@@ -66,6 +67,7 @@ export default async function DiscoveryStudioPage({
   }
 
   if (candidate.status !== "APPROVED" && candidate.status !== "CONVERTED") notFound();
+  if (!isDiscoveryRolloutEnabled(candidate, "PUBLIC_DISCOVERY")) notFound();
 
   const freshness = discoveryFreshness(candidate.lastCheckedAt);
   if (candidate.status === "APPROVED" && (freshness === "STALE" || freshness === "UNKNOWN")) {

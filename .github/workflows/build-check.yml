@@ -47,5 +47,10 @@ jobs:
           rm -rf .tmp-quality-tests
           npx tsc scripts/test-discovery-quality.ts lib/discovery/quality.ts lib/discovery/freshness.ts lib/discovery/security.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-quality-tests --noEmit false --baseUrl .
           node .tmp-quality-tests/scripts/test-discovery-quality.js
+      - name: Test controlled discovery rollout fixtures
+        run: |
+          rm -rf .tmp-rollout-tests
+          npx tsc scripts/test-discovery-rollout.ts lib/discovery/rollout.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-rollout-tests --noEmit false
+          node .tmp-rollout-tests/scripts/test-discovery-rollout.js
       - name: Build Next.js
         run: npm run build

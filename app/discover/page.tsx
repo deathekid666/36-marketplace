@@ -5,6 +5,7 @@ import { StudioMap } from "@/components/StudioMap";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
+import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
 
 export const metadata = {
   title: "Discover studios · 36",
@@ -33,6 +34,7 @@ export default async function DiscoverStudiosPage({
   const candidates = await db.candidateStudio.findMany({
     where: {
       AND: [
+        discoveryRolloutWhere("PUBLIC_DISCOVERY"),
         {
           OR: [
             { status: "CONVERTED" },
@@ -75,11 +77,16 @@ export default async function DiscoverStudiosPage({
   const cityRows = await db.candidateStudio.groupBy({
     by: ["city"],
     where: {
-      OR: [
-        { status: "CONVERTED" },
-        { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+      AND: [
+        discoveryRolloutWhere("PUBLIC_DISCOVERY"),
+        {
+          OR: [
+            { status: "CONVERTED" },
+            { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+          ],
+        },
+        { city: { not: null } },
       ],
-      city: { not: null },
     },
     _count: { city: true },
     orderBy: { _count: { city: "desc" } },

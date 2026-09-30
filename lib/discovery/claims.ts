@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/notifications";
 import { normalizeEmail, validateEmail } from "@/lib/validation";
 import { isUnsafeDiscoveryProofUrl } from "@/lib/discovery/security";
+import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 export type SubmitCandidateClaimInput = {
   candidateStudioId: string;
@@ -87,11 +88,16 @@ export async function submitCandidateClaim(input: SubmitCandidateClaimInput) {
           name: true,
           slug: true,
           status: true,
+          countryCode: true,
+          city: true,
         },
       });
 
       if (!candidate) throw new Error("CLAIM_CANDIDATE_NOT_FOUND");
       if (candidate.status !== "APPROVED") throw new Error("CLAIM_CANDIDATE_NOT_AVAILABLE");
+      if (!isDiscoveryRolloutEnabled(candidate, "CLAIMS")) {
+        throw new Error("CLAIM_MARKET_NOT_LAUNCHED");
+      }
 
       const existingVerified = await tx.candidateStudioClaim.findFirst({
         where: {

@@ -18,6 +18,7 @@ import {
 import { getOpenStreetMapSnapshotInfo } from "@/lib/discovery/providers/openstreetmap-snapshot";
 import { getOvertureSnapshotInfo } from "@/lib/discovery/providers/overture";
 import { DISCOVERY_PROVIDERS } from "@/lib/discovery/providers/registry";
+import { DISCOVERY_ROLLOUT_SCOPES } from "@/lib/discovery/rollout";
 
 export const metadata = { title: "Discovery · 36 Admin" };
 
@@ -230,6 +231,33 @@ export default async function AdminDiscoveryPage({
                   : "The provider import could not be completed."}
           </div>
         )}
+
+        <section className="mt-7 rounded-2xl border border-acid/20 bg-acid/[0.03] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">
+                Rollout control
+              </span>
+              <h2 className="mt-2 text-2xl font-black">Public launch scopes</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
+                Provider discovery may collect broader geography, but only explicitly allow-listed markets can appear publicly, accept claims or start bookable-studio onboarding.
+              </p>
+            </div>
+            <span className="rounded-full border border-acid/20 px-3 py-1 text-xs font-black text-acid">
+              {DISCOVERY_ROLLOUT_SCOPES.length} active scope{DISCOVERY_ROLLOUT_SCOPES.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {DISCOVERY_ROLLOUT_SCOPES.map((scope) => (
+              <div key={scope.countryCode + ":" + scope.city} className="rounded-xl border border-zinc-900 bg-zinc-950/70 p-4">
+                <b className="text-sm">{scope.city} · {scope.countryCode}</b>
+                <p className="mt-2 text-xs leading-5 text-zinc-600">
+                  Public {scope.publicDiscovery ? "✓" : "—"} · Claims {scope.claims ? "✓" : "—"} · Onboarding {scope.onboarding ? "✓" : "—"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section className="mt-7">
           <div className="flex flex-wrap items-end justify-between gap-3">
