@@ -150,6 +150,11 @@ enum DiscoveryStudioCategory {
   OTHER
 }
 
+enum CandidateStudioTransitionActor {
+  SYSTEM
+  ADMIN
+}
+
 model User {
   id                      String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                   String        @unique
@@ -182,6 +187,7 @@ model User {
   promoRedemptions        PromoRedemption[]
   referralsInvited        Referral[] @relation("ReferralInviter")
   referralAsInvitee       Referral? @relation("ReferralInvitee")
+  candidateStudioTransitions CandidateStudioTransition[]
 
   @@index([role])
 }
@@ -822,6 +828,7 @@ model CandidateStudio {
   updatedAt         DateTime                  @updatedAt @db.Timestamp(3)
   convertedStudio   Studio?                   @relation(fields: [convertedStudioId], references: [id], onDelete: SetNull)
   sources           CandidateStudioSource[]
+  transitions       CandidateStudioTransition[]
 
   @@index([normalizedName])
   @@index([status, countryCode, city])
@@ -848,4 +855,24 @@ model CandidateStudioSource {
   @@unique([provider, sourceKey])
   @@index([candidateStudioId])
   @@index([provider, externalId])
+}
+
+
+model CandidateStudioTransition {
+  id                String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidateStudioId String                         @db.Uuid
+  fromStatus        CandidateStudioStatus?
+  toStatus          CandidateStudioStatus
+  actor             CandidateStudioTransitionActor @default(SYSTEM)
+  actorUserId       String?                        @db.Uuid
+  reasonCode        String
+  note              String                         @default("")
+  metadata          Json?
+  createdAt         DateTime                       @default(now()) @db.Timestamp(3)
+  candidateStudio   CandidateStudio                @relation(fields: [candidateStudioId], references: [id], onDelete: Cascade)
+  actorUser         User?                          @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([candidateStudioId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([toStatus, createdAt])
 }
