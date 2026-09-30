@@ -135,13 +135,11 @@ WHERE
   AND (
     regexp_matches(
       lower(coalesce(taxonomy.primary, '')),
-      'recording|podcast|photograph|music_production|video_production|film_production|media_production|rehearsal|post_production|voice_over'
+      'recording_studio|podcast_studio|photo_studio|photography_studio|music_studio|audio_studio|sound_studio|video_studio|film_studio|rehearsal_studio|voice_over_studio'
     )
-    OR (
-      regexp_matches(
-        lower(names.primary),
-        'recording studio|music studio|audio studio|sound studio|podcast studio|photo studio|photography studio|video studio|film studio|production studio|rehearsal studio|estudio de grabaci|studio enregistrement|استوديو تسجيل|студия звукозаписи|レコーディングスタジオ|녹음 스튜디오'
-      )
+    OR regexp_matches(
+      lower(names.primary),
+      'studio|studios|estudio|estudios|estúdio|estúdios|recording|rehearsal|podcast|mixing|mastering|voice[ _-]?over|grabaci[oó]n|enregistrement|tonstudio|fotostudio|aufnahmestudio|استوديو|تسجيل|студия|звукозапис|スタジオ|レコーディング|스튜디오|녹음|录音棚|录音室|錄音室|摄影棚|攝影棚'
     )
   )
 """

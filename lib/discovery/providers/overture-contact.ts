@@ -3,6 +3,10 @@ import { Prisma } from "@prisma/client";
 import type { DiscoveryProviderStudioRecord } from "../ingest";
 import { normalizeCandidateDraft } from "../normalization";
 import {
+  hasDirectoryStudioNameSignal,
+  hasDirectoryStudioTaxonomySignal,
+} from "../public-eligibility";
+import {
   OVERTURE_ATTRIBUTION,
   OVERTURE_EXPLORER_URL,
   OVERTURE_LICENSE_URL,
@@ -162,6 +166,15 @@ export function overtureGlobalContactRecord(
   });
 
   const issues = [...normalized.issues];
+  const providerCategories = [primary, basicCategory, ...hierarchy, ...alternates];
+
+  if (
+    !hasDirectoryStudioNameSignal(name) &&
+    !hasDirectoryStudioTaxonomySignal(providerCategories)
+  ) {
+    issues.push("STUDIO_IDENTITY_WEAK");
+  }
+
   if (confidence != null && confidence < 0.45) {
     issues.push("PROVIDER_LOW_CONFIDENCE");
   }

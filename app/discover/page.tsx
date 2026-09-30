@@ -6,6 +6,7 @@ import { StudioMap } from "@/components/StudioMap";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
+import { directoryStudioIdentityWhere } from "@/lib/discovery/public-eligibility";
 import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
 
 export const metadata = {
@@ -77,7 +78,12 @@ export default async function DiscoverStudiosPage({
           { status: "CONVERTED" },
           { claims: { some: { status: "VERIFIED" } } },
           { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
-          { status: "ENRICHED", lastCheckedAt: { gte: staleCutoff } },
+          {
+            AND: [
+              { status: "ENRICHED", lastCheckedAt: { gte: staleCutoff } },
+              directoryStudioIdentityWhere(),
+            ],
+          },
         ],
       },
       ...(q
@@ -111,7 +117,12 @@ export default async function DiscoverStudiosPage({
           { status: "CONVERTED" },
           { claims: { some: { status: "VERIFIED" } } },
           { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
-          { status: "ENRICHED", lastCheckedAt: { gte: staleCutoff } },
+          {
+            AND: [
+              { status: "ENRICHED", lastCheckedAt: { gte: staleCutoff } },
+              directoryStudioIdentityWhere(),
+            ],
+          },
         ],
       },
     ],

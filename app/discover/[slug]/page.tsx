@@ -11,6 +11,7 @@ import {
   discoveryFreshnessClass,
   discoveryFreshnessLabel,
 } from "@/lib/discovery/freshness";
+import { isDirectoryStudioIdentity } from "@/lib/discovery/public-eligibility";
 import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 export const metadata = {
@@ -103,6 +104,18 @@ export default async function DiscoveryStudioPage({
 
   const freshness = discoveryFreshness(candidate.lastCheckedAt);
   const ownershipVerified = candidate.claims.length > 0;
+  const studioIdentity = isDirectoryStudioIdentity({
+    name: candidate.name,
+    providerCategories: candidate.sources.map((source) => source.providerCategory),
+  });
+
+  if (
+    candidate.status === "ENRICHED" &&
+    !ownershipVerified &&
+    !studioIdentity
+  ) {
+    notFound();
+  }
 
   if (
     candidate.status !== "CONVERTED" &&
