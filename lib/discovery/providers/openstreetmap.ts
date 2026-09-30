@@ -130,8 +130,19 @@ function addressFromTags(tags: Record<string, string>) {
 }
 
 function providerCategoryFromTags(tags: Record<string, string>) {
-  if (tags.shop === "photo_studio") return "shop=photo_studio";
-  if (tags.amenity === "studio" && tags.studio) return `amenity=studio; studio=${tags.studio}`;
+  if (tags.shop === "photo_studio") return "Photography Studio";
+
+  const studioType = tags.studio?.trim().toLowerCase();
+  if (studioType === "audio") return "Recording Studio";
+  if (studioType === "video") return "Video Studio";
+  if (studioType === "television") return "Television Video Studio";
+  if (studioType === "radio") return "Radio Studio";
+  if (studioType === "podcast") return "Podcast Studio";
+  if (studioType === "photo" || studioType === "photography") return "Photo Studio";
+
+  if (tags.amenity === "studio" && tags.studio) {
+    return `amenity=studio; studio=${tags.studio}`;
+  }
   if (tags.amenity === "studio") return "amenity=studio";
   if (tags.studio) return `studio=${tags.studio}`;
   return "studio";
