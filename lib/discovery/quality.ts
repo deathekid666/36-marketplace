@@ -1,7 +1,7 @@
 import {
   discoveryFreshness,
   type DiscoveryFreshness,
-} from "@/lib/discovery/freshness";
+} from "./freshness";
 
 export type DiscoveryQualityBand = "STRONG" | "REVIEW" | "WEAK";
 
