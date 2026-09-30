@@ -24,19 +24,42 @@ type AddonOption = {
 
 type Slot = { startAt: string; endAt: string; label: string };
 
+function toLocalDateValue(date: Date) {
+  return [
+    String(date.getFullYear()).padStart(4, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 function defaultDate() {
-  const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  return d.toISOString().slice(0, 10);
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return toLocalDateValue(date);
 }
 
 function friendlyDate(value: string) {
-  const [y, m, d] = value.split("-").map(Number);
-  if (!y || !m || !d) return "Choose date";
+  const parts = value.split("-").map(Number);
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
+  if (!year || !month || !day) return "Choose date";
+
   return new Intl.DateTimeFormat("en", {
     weekday: "short",
     month: "short",
     day: "numeric",
-  }).format(new Date(y, m - 1, d));
+  }).format(new Date(year, month - 1, day));
+}
+
+function friendlyStartTime(startAt: string) {
+  if (!startAt) return "Choose time";
+  return new Intl.DateTimeFormat("en", {
+    timeZone: "Africa/Casablanca",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(startAt));
 }
 
 export function BookingWidget({
@@ -62,51 +85,106 @@ export function BookingWidget({
 }) {
   const router = useRouter();
   const [roomId, setRoomId] = useState(rooms[0]?.id || "");
-  const room = useMemo(() => rooms.find((x) => x.id === roomId) || rooms[0], [rooms, roomId]);
+  const room = useMemo(
+    () => rooms.find((item) => item.id === roomId) || rooms[0],
+    [rooms, roomId],
+  );
   const applicableAddons = useMemo(
-    () => addons.filter((x) => !x.roomId || x.roomId === roomId),
+    () => addons.filter((item) => !item.roomId || item.roomId === roomId),
     [addons, roomId],
   );
+
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const [date, setDate] = useState(initialDate || defaultDate());
   const [durationHours, setDurationHours] = useState(
     Math.max(room?.minimumHours || 1, initialDurationHours || 1),
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarAvailability, setCalendarAvailability] = useState<Record<string, number>>({});
+  const [calendarLoading, setCalendarLoading] = useState(false);
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [selected, setSelected] = useState<string>("");
+  const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
   const [message, setMessage] = useState("");
   const [promoCode, setPromoCode] = useState("");
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const today = useMemo(() => toLocalDateValue(new Date()), []);
+  const maxDate = useMemo(() => {
+    const value = new Date();
+    value.setDate(value.getDate() + 119);
+    return toLocalDateValue(value);
+  }, []);
 
   useEffect(() => {
     if (!room) return;
+
     setDurationHours((current) => Math.max(room.minimumHours, current));
     setSelectedAddons((current) =>
       Object.fromEntries(
-        Object.entries(current).filter(([id]) => applicableAddons.some((x) => x.id === id)),
+        Object.entries(current).filter(([id]) =>
+          applicableAddons.some((item) => item.id === id),
+        ),
       ),
     );
   }, [room, applicableAddons]);
 
   useEffect(() => {
+    if (!roomId) return;
+
+    const controller = new AbortController();
+    setCalendarLoading(true);
+
+    const params = new URLSearchParams({
+      roomId,
+      startDate: today,
+      days: "120",
+      durationMinutes: String(durationHours * 60),
+    });
+
+    fetch("/api/availability/calendar?" + params.toString(), {
+      signal: controller.signal,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        const dates =
+          data && typeof data.dates === "object" && data.dates ? data.dates : {};
+        setCalendarAvailability(dates);
+      })
+      .catch((error) => {
+        if (error?.name !== "AbortError") setCalendarAvailability({});
+      })
+      .finally(() => setCalendarLoading(false));
+
+    return () => controller.abort();
+  }, [roomId, durationHours, today]);
+
+  useEffect(() => {
     if (!roomId || !date) return;
+
     const controller = new AbortController();
     setLoading(true);
     setSelected("");
     setMessage("");
 
-    fetch(
-      `/api/availability?roomId=${encodeURIComponent(roomId)}&date=${encodeURIComponent(date)}&durationMinutes=${durationHours * 60}`,
-      { signal: controller.signal },
-    )
-      .then((r) => r.json())
+    const params = new URLSearchParams({
+      roomId,
+      date,
+      durationMinutes: String(durationHours * 60),
+    });
+
+    fetch("/api/availability?" + params.toString(), {
+      signal: controller.signal,
+    })
+      .then((response) => response.json())
       .then((data) => {
         const next = Array.isArray(data.slots) ? data.slots : [];
         setSlots(next);
-        if (initialStartAt && next.some((slot: Slot) => slot.startAt === initialStartAt)) {
+
+        if (
+          initialStartAt &&
+          next.some((slot: Slot) => slot.startAt === initialStartAt)
+        ) {
           setSelected(initialStartAt);
         }
       })
@@ -119,10 +197,15 @@ export function BookingWidget({
   }, [roomId, date, durationHours, initialStartAt]);
 
   async function book() {
-    if (!selected) return;
+    if (!selected) {
+      setCalendarOpen(true);
+      return;
+    }
 
     if (!userRole) {
-      router.push(`/auth/login?next=${encodeURIComponent(window.location.pathname)}`);
+      router.push(
+        "/auth/login?next=" + encodeURIComponent(window.location.pathname),
+      );
       return;
     }
 
@@ -167,13 +250,16 @@ export function BookingWidget({
 
   const roomTotal = room.hourlyRateMad * durationHours;
   const addonTotal = applicableAddons.reduce(
-    (sum, addon) => sum + addon.unitPriceMad * (selectedAddons[addon.id] || 0),
+    (sum, addon) =>
+      sum + addon.unitPriceMad * (selectedAddons[addon.id] || 0),
     0,
   );
   const subtotal = roomTotal + addonTotal;
   const estimatedTax = Math.round((subtotal * taxRateBps) / 10000);
   const estimatedTotal = subtotal + estimatedTax;
-  const estimatedDeposit = Math.round((estimatedTotal * depositPercent) / 100);
+  const estimatedDeposit = Math.round(
+    (estimatedTotal * depositPercent) / 100,
+  );
 
   return (
     <div>
@@ -187,7 +273,7 @@ export function BookingWidget({
         </span>
       </div>
 
-      <div className="relative overflow-visible rounded-2xl border border-zinc-700 bg-[#0c0d0b]">
+      <div className="rounded-2xl border border-zinc-700 bg-[#0c0d0b]">
         <label className="block border-b border-zinc-800 px-4 py-3">
           <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
             Studio room
@@ -195,7 +281,7 @@ export function BookingWidget({
           <select
             className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
             value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
+            onChange={(event) => setRoomId(event.target.value)}
           >
             {rooms.map((item) => (
               <option key={item.id} value={item.id} className="bg-zinc-950">
@@ -220,27 +306,29 @@ export function BookingWidget({
         <div className="grid grid-cols-2">
           <button
             type="button"
-            onClick={() => setCalendarOpen((open) => !open)}
-            className="border-r border-zinc-800 px-4 py-3 text-left transition hover:bg-zinc-900/60"
+            onClick={() => setCalendarOpen(true)}
+            className="px-4 py-3 text-left transition hover:bg-zinc-900/60"
           >
             <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
               Date
             </span>
-            <span className="mt-1 block text-sm font-semibold text-white">{friendlyDate(date)}</span>
+            <span className="mt-1 block text-sm font-semibold text-white">
+              {friendlyDate(date)}
+            </span>
           </button>
 
-          <label className="px-4 py-3">
+          <label className="border-l border-zinc-800 px-4 py-3">
             <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
               Duration
             </span>
             <select
               className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
               value={durationHours}
-              onChange={(e) => setDurationHours(Number(e.target.value))}
+              onChange={(event) => setDurationHours(Number(event.target.value))}
             >
               {Array.from(
                 { length: Math.max(1, 13 - room.minimumHours) },
-                (_, i) => room.minimumHours + i,
+                (_, index) => room.minimumHours + index,
               )
                 .filter((hours) => hours <= 12)
                 .map((hours) => (
@@ -252,51 +340,146 @@ export function BookingWidget({
           </label>
         </div>
 
-        {calendarOpen && (
-          <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[320px] sm:w-[360px]">
-            <DateCalendar
-              value={date}
-              min={today}
-              onChange={(value) => {
-                setDate(value);
-                setCalendarOpen(false);
-              }}
-            />
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => setCalendarOpen(true)}
+          className="flex w-full items-center justify-between border-t border-zinc-800 px-4 py-3 text-left transition hover:bg-zinc-900/60"
+        >
+          <span>
+            <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
+              Start time
+            </span>
+            <span
+              className={
+                "mt-1 block text-sm font-semibold " +
+                (selected ? "text-white" : "text-zinc-600")
+              }
+            >
+              {loading
+                ? "Checking availability…"
+                : selected
+                  ? friendlyStartTime(selected)
+                  : slots.length
+                    ? "Choose after selecting date"
+                    : "No times available"}
+            </span>
+          </span>
+          <span className="text-xs text-zinc-600">Casablanca time</span>
+        </button>
       </div>
 
-      <div className="mt-5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-black">Choose a start time</span>
-          <span className="text-[10px] text-zinc-600">Casablanca time</span>
-        </div>
+      {calendarOpen && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/65 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+          <button
+            type="button"
+            aria-label="Close calendar"
+            className="absolute inset-0"
+            onClick={() => setCalendarOpen(false)}
+          />
 
-        {loading ? (
-          <p className="mt-3 text-xs text-zinc-600">Checking live availability…</p>
-        ) : slots.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-dashed border-zinc-800 p-4 text-xs leading-5 text-zinc-600">
-            No available {durationHours}h slot for this date.
-          </p>
-        ) : (
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {slots.map((slot) => (
+          <div className="relative z-10 w-full max-w-[760px] rounded-t-[30px] bg-[#11120f] sm:rounded-[30px]">
+            <div className="flex items-center justify-between px-5 pt-5 sm:px-6">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+                  Select date
+                </span>
+                <h3 className="mt-1 text-xl font-black">
+                  When do you want the studio?
+                </h3>
+              </div>
               <button
-                key={slot.startAt}
                 type="button"
-                onClick={() => setSelected(slot.startAt)}
-                className={[
-                  "rounded-xl border px-3 py-2.5 text-xs font-bold transition",
-                  selected === slot.startAt
-                    ? "border-acid bg-acid text-black"
-                    : "border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-600",
-                ].join(" ")}
+                onClick={() => setCalendarOpen(false)}
+                className="grid h-10 w-10 place-items-center rounded-full border border-zinc-800 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                aria-label="Close"
               >
-                {slot.label}
+                ×
               </button>
-            ))}
+            </div>
+
+            <div className="p-3 sm:p-4">
+              <DateCalendar
+                value={date}
+                min={today}
+                max={maxDate}
+                twoMonths
+                availability={calendarAvailability}
+                loadingAvailability={calendarLoading}
+                onChange={(value) => {
+                  setDate(value);
+                  setSelected("");
+                }}
+                footer={
+                  <span className="text-[10px] text-zinc-600">
+                    {calendarLoading
+                      ? "Loading live dates…"
+                      : "120-day booking window · Casablanca time"}
+                  </span>
+                }
+              />
+            </div>
+
+            <div className="border-t border-zinc-900 px-5 py-4 sm:px-6">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <label>
+                  <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+                    Available start time · {friendlyDate(date)}
+                  </span>
+                  <select
+                    className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-semibold text-white outline-none disabled:text-zinc-700"
+                    value={selected}
+                    disabled={loading || slots.length === 0}
+                    onChange={(event) => setSelected(event.target.value)}
+                  >
+                    <option value="">
+                      {loading
+                        ? "Checking times…"
+                        : slots.length
+                          ? "Select a start time"
+                          : "No start times for this date"}
+                    </option>
+                    {slots.map((slot) => (
+                      <option key={slot.startAt} value={slot.startAt}>
+                        {slot.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button
+                  type="button"
+                  disabled={!selected}
+                  onClick={() => setCalendarOpen(false)}
+                  className="rounded-xl bg-white px-6 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
+      )}
+
+      <div className="mt-4 rounded-xl border border-zinc-900 bg-black/20 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+              Your session
+            </span>
+            <p className="mt-1 text-sm font-semibold">
+              {friendlyDate(date)}
+              {selected ? " · " + friendlyStartTime(selected) : ""}
+              {" · " + durationHours + "h"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCalendarOpen(true)}
+            className="text-xs font-black text-white underline decoration-zinc-600 underline-offset-4"
+          >
+            Change
+          </button>
+        </div>
       </div>
 
       {applicableAddons.length > 0 && (
@@ -307,10 +490,16 @@ export function BookingWidget({
           <div className="mt-3 space-y-2">
             {applicableAddons.map((addon) => {
               const qty = selectedAddons[addon.id] || 0;
+
               return (
                 <div
                   key={addon.id}
-                  className={`rounded-xl border p-3 ${qty ? "border-acid/40 bg-acid/[0.03]" : "border-zinc-900"}`}
+                  className={
+                    "rounded-xl border p-3 " +
+                    (qty
+                      ? "border-acid/40 bg-acid/[0.03]"
+                      : "border-zinc-900")
+                  }
                 >
                   <div className="flex items-start justify-between gap-3">
                     <label className="flex cursor-pointer items-start gap-3">
@@ -318,38 +507,42 @@ export function BookingWidget({
                         type="checkbox"
                         className="mt-1 accent-[#d9ff43]"
                         checked={qty > 0}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           setSelectedAddons((current) => ({
                             ...current,
-                            [addon.id]: e.target.checked ? 1 : 0,
+                            [addon.id]: event.target.checked ? 1 : 0,
                           }))
                         }
                       />
                       <span>
                         <b className="block text-xs">{addon.name}</b>
                         <span className="mt-1 block text-[10px] leading-4 text-zinc-600">
-                          {addon.description || `${addon.unitPriceMad} MAD / ${addon.unitLabel}`}
+                          {addon.description ||
+                            addon.unitPriceMad + " MAD / " + addon.unitLabel}
                         </span>
                       </span>
                     </label>
-                    <b className="text-xs text-acid">+{addon.unitPriceMad} MAD</b>
+                    <b className="text-xs text-acid">
+                      +{addon.unitPriceMad} MAD
+                    </b>
                   </div>
+
                   {qty > 0 && (
                     <div className="mt-2 flex items-center justify-end gap-2">
                       <span className="text-[10px] text-zinc-600">Qty</span>
                       <select
                         className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs"
                         value={qty}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           setSelectedAddons((current) => ({
                             ...current,
-                            [addon.id]: Number(e.target.value),
+                            [addon.id]: Number(event.target.value),
                           }))
                         }
                       >
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <option key={n} value={n}>
-                            {n}
+                        {[1, 2, 3, 4, 5].map((number) => (
+                          <option key={number} value={number}>
+                            {number}
                           </option>
                         ))}
                       </select>
@@ -366,7 +559,7 @@ export function BookingWidget({
         <input
           className="field"
           value={promoCode}
-          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+          onChange={(event) => setPromoCode(event.target.value.toUpperCase())}
           maxLength={32}
           placeholder="Promo code (optional)"
         />
@@ -374,18 +567,26 @@ export function BookingWidget({
 
       <button
         type="button"
-        disabled={!selected || booking}
+        disabled={booking}
         onClick={book}
         className="mt-4 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
       >
-        {booking ? "Reserving…" : !userRole ? "Log in to reserve" : "Reserve"}
+        {booking
+          ? "Reserving…"
+          : !selected
+            ? "Choose date & time"
+            : !userRole
+              ? "Log in to reserve"
+              : "Reserve"}
       </button>
 
       <p className="mt-3 text-center text-[10px] text-zinc-600">
         You won&apos;t be charged until the payment step.
       </p>
 
-      {message && <p className="mt-3 text-xs leading-5 text-amber-300">{message}</p>}
+      {message && (
+        <p className="mt-3 text-xs leading-5 text-amber-300">{message}</p>
+      )}
 
       <div className="mt-5 space-y-3 text-sm">
         <div className="flex justify-between">
@@ -394,24 +595,30 @@ export function BookingWidget({
           </span>
           <span>{roomTotal} MAD</span>
         </div>
+
         {addonTotal > 0 && (
           <div className="flex justify-between">
             <span className="text-zinc-500">Add-ons</span>
             <span>{addonTotal} MAD</span>
           </div>
         )}
+
         {estimatedTax > 0 && (
           <div className="flex justify-between">
             <span className="text-zinc-500">Estimated tax</span>
             <span>{estimatedTax} MAD</span>
           </div>
         )}
+
         <div className="flex justify-between border-t border-zinc-800 pt-3 font-black">
           <span>Total</span>
           <span>{estimatedTotal} MAD</span>
         </div>
+
         <div className="flex justify-between text-xs">
-          <span className="text-zinc-500">Deposit due ({depositPercent}%)</span>
+          <span className="text-zinc-500">
+            Deposit due ({depositPercent}%)
+          </span>
           <b className="text-acid">{estimatedDeposit} MAD</b>
         </div>
       </div>

@@ -139,6 +139,124 @@ export async function getRoomAvailability(roomId: string, dateValue: string, dur
   return slots;
 }
 
+export async function getRoomAvailabilityCalendar(
+  roomId: string,
+  startDateValue: string,
+  days: number,
+  durationMinutes: number,
+) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDateValue)) return {};
+  if (!Number.isFinite(days) || days < 1 || days > 120) return {};
+  if (
+    !Number.isFinite(durationMinutes) ||
+    durationMinutes < 30 ||
+    durationMinutes > 12 * 60 ||
+    durationMinutes % 30 !== 0
+  ) {
+    return {};
+  }
+
+  const room = await db.room.findFirst({
+    where: { id: roomId, active: true, studio: { status: "VERIFIED" } },
+    include: { studio: { include: { openingHours: true } } },
+  });
+
+  if (!room || durationMinutes < room.minimumHours * 60) return {};
+
+  const [startYear, startMonth, startDay] = startDateValue.split("-").map(Number);
+  const startUtc = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+
+  const dateKeys = Array.from({ length: days }, (_, index) => {
+    const date = new Date(startUtc.getTime() + index * 24 * 60 * 60 * 1000);
+    return [
+      String(date.getUTCFullYear()).padStart(4, "0"),
+      String(date.getUTCMonth() + 1).padStart(2, "0"),
+      String(date.getUTCDate()).padStart(2, "0"),
+    ].join("-");
+  });
+
+  const firstDate = dateKeys[0];
+  const lastDate = dateKeys[dateKeys.length - 1];
+  const queryStart = zonedLocalToUtc(firstDate, "00:00");
+  const nextDayUtc = new Date(startUtc.getTime() + days * 24 * 60 * 60 * 1000);
+  const nextDate = [
+    String(nextDayUtc.getUTCFullYear()).padStart(4, "0"),
+    String(nextDayUtc.getUTCMonth() + 1).padStart(2, "0"),
+    String(nextDayUtc.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+  const queryEnd = zonedLocalToUtc(nextDate, "00:00");
+
+  if (!queryStart || !queryEnd) return {};
+
+  const [blocked, bookings] = await Promise.all([
+    db.blockedSlot.findMany({
+      where: {
+        roomId,
+        startAt: { lt: queryEnd },
+        endAt: { gt: queryStart },
+      },
+      select: { startAt: true, endAt: true },
+    }),
+    db.booking.findMany({
+      where: {
+        roomId,
+        startAt: { lt: queryEnd },
+        endAt: { gt: queryStart },
+        OR: [
+          { status: "CONFIRMED" },
+          { status: "PENDING_DEPOSIT", expiresAt: { gt: new Date() } },
+        ],
+      },
+      select: { startAt: true, endAt: true },
+    }),
+  ]);
+
+  const busy = [...blocked, ...bookings];
+  const now = new Date();
+  const result: Record<string, number> = {};
+
+  for (const dateValue of dateKeys) {
+    const opening = room.studio.openingHours.find(
+      (hour) => hour.dayOfWeek === mondayIndexForDateKey(dateValue),
+    );
+
+    if (!opening || opening.closed) {
+      result[dateValue] = 0;
+      continue;
+    }
+
+    const openAt = zonedLocalToUtc(dateValue, opening.opensAt);
+    const closeAt = zonedLocalToUtc(dateValue, opening.closesAt);
+
+    if (!openAt || !closeAt || closeAt <= openAt) {
+      result[dateValue] = 0;
+      continue;
+    }
+
+    let slotCount = 0;
+
+    for (
+      let cursor = openAt.getTime();
+      cursor + durationMinutes * 60000 <= closeAt.getTime();
+      cursor += 30 * 60000
+    ) {
+      const startAt = new Date(cursor);
+      const endAt = new Date(cursor + durationMinutes * 60000);
+
+      if (startAt <= now) continue;
+      if (busy.some((item) => overlaps(startAt, endAt, item.startAt, item.endAt))) {
+        continue;
+      }
+
+      slotCount += 1;
+    }
+
+    result[dateValue] = slotCount;
+  }
+
+  return result;
+}
+
 export type CreateBookingInput = {
   creatorId: string;
   roomId: string;
