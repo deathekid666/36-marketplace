@@ -5,6 +5,7 @@ import { startClaimedStudioOnboardingAction } from "@/app/owner/claims/onboardin
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 export const metadata = { title: "Studio claims · 36" };
 
@@ -33,6 +34,7 @@ export default async function OwnerClaimsPage({
           slug: true,
           city: true,
           district: true,
+          countryCode: true,
           category: true,
           status: true,
           convertedStudioId: true,
@@ -146,29 +148,43 @@ export default async function OwnerClaimsPage({
 
                 {claim.status === "VERIFIED" && claim.candidateStudio.convertedStudio ? (
                   <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
-                    <b className="text-sm text-emerald-300">Onboarding started</b>
+                    <b className="text-sm text-emerald-300">Booking onboarding started</b>
                     <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      A private 36 Studio draft now exists. Complete the listing and submit it for marketplace verification.
+                      A private 36 Studio draft exists. Complete its rooms, pricing, availability and marketplace verification.
                     </p>
                     <Link
                       href={`/owner/studios/${claim.candidateStudio.convertedStudio.id}`}
                       className="button-dark mt-3 inline-flex"
                     >
-                      Continue studio onboarding →
+                      Continue booking onboarding →
                     </Link>
                   </div>
                 ) : claim.status === "VERIFIED" ? (
                   <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
                     <b className="text-sm text-emerald-300">Ownership verified</b>
                     <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      Start a private 36 Studio draft from this verified claim. It will not be bookable until you complete onboarding and pass listing verification.
+                      You can manage the public directory profile now. This does not create prices, rooms, availability or bookings.
                     </p>
-                    <form action={startClaimedStudioOnboardingAction} className="mt-3">
-                      <input type="hidden" name="claimId" value={claim.id} />
-                      <button className="rounded-xl bg-acid px-5 py-3 text-xs font-black text-black">
-                        Start 36 onboarding
-                      </button>
-                    </form>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Link
+                        href={`/owner/claims/${claim.id}/profile`}
+                        className="rounded-xl bg-sky-300 px-5 py-3 text-xs font-black text-black"
+                      >
+                        Manage public profile
+                      </Link>
+                      {isDiscoveryRolloutEnabled(claim.candidateStudio, "ONBOARDING") ? (
+                        <form action={startClaimedStudioOnboardingAction}>
+                          <input type="hidden" name="claimId" value={claim.id} />
+                          <button className="rounded-xl bg-acid px-5 py-3 text-xs font-black text-black">
+                            Start booking onboarding
+                          </button>
+                        </form>
+                      ) : (
+                        <span className="rounded-xl border border-zinc-800 px-4 py-3 text-xs font-bold text-zinc-500">
+                          Booking onboarding not launched in this market
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ) : null}
               </article>

@@ -63,6 +63,7 @@ export default async function DiscoverStudiosPage({
       {
         OR: [
           { status: "CONVERTED" },
+          { claims: { some: { status: "VERIFIED" } } },
           { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
           { status: "ENRICHED", lastCheckedAt: { gte: staleCutoff } },
         ],
@@ -96,6 +97,7 @@ export default async function DiscoverStudiosPage({
       {
         OR: [
           { status: "CONVERTED" },
+          { claims: { some: { status: "VERIFIED" } } },
           { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
           { status: "ENRICHED", lastCheckedAt: { gte: staleCutoff } },
         ],

@@ -50,7 +50,7 @@ export default async function ClaimDiscoveryStudioPage({
 
   if (
     !candidate ||
-    candidate.status !== "APPROVED" ||
+    (candidate.status !== "ENRICHED" && candidate.status !== "APPROVED") ||
     !isDiscoveryRolloutEnabled(candidate, "CLAIMS")
   ) {
     notFound();
@@ -94,7 +94,7 @@ export default async function ClaimDiscoveryStudioPage({
           </span>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em]">Claim {candidate.name}</h1>
           <p className="mt-3 text-sm leading-7 text-zinc-500">
-            Tell 36 how you are connected to this studio. A claim only verifies ownership; it does not make the studio bookable. Onboarding and listing verification happen afterward.
+            Tell 36 how you are connected to this studio. Claims are available globally for fresh directory records. Verification lets you manage the public directory profile; it does not make the studio bookable.
           </p>
         </div>
 
@@ -118,7 +118,7 @@ export default async function ClaimDiscoveryStudioPage({
           <div className="mt-8 rounded-2xl border border-emerald-900/50 bg-emerald-950/10 p-6">
             <b className="text-emerald-300">Ownership verified</b>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
-              This claim is verified. The next step is 36 studio onboarding; the discovery listing is still not bookable yet.
+              This claim is verified. You can now manage the public directory profile. Booking onboarding is a separate optional step and is only available in supported markets.
             </p>
             <Link href="/owner/claims" className="button-dark mt-4 inline-flex">
               View your claims

@@ -95,7 +95,9 @@ export async function submitCandidateClaim(input: SubmitCandidateClaimInput) {
       });
 
       if (!candidate) throw new Error("CLAIM_CANDIDATE_NOT_FOUND");
-      if (candidate.status !== "APPROVED") throw new Error("CLAIM_CANDIDATE_NOT_AVAILABLE");
+      if (candidate.status !== "ENRICHED" && candidate.status !== "APPROVED") {
+        throw new Error("CLAIM_CANDIDATE_NOT_AVAILABLE");
+      }
       if (!isDiscoveryRolloutEnabled(candidate, "CLAIMS")) {
         throw new Error("CLAIM_MARKET_NOT_LAUNCHED");
       }
@@ -255,7 +257,10 @@ export async function reviewCandidateClaim(input: {
       if (claim.status !== CandidateStudioClaimStatus.SUBMITTED) {
         throw new Error("CLAIM_REVIEW_NOT_ALLOWED");
       }
-      if (claim.candidateStudio.status !== "APPROVED") {
+      if (
+        claim.candidateStudio.status !== "ENRICHED" &&
+        claim.candidateStudio.status !== "APPROVED"
+      ) {
         throw new Error("CLAIM_CANDIDATE_NOT_AVAILABLE");
       }
 
@@ -313,7 +318,7 @@ export async function reviewCandidateClaim(input: {
         : "Your studio claim needs changes",
     body:
       result.claim.status === CandidateStudioClaimStatus.VERIFIED
-        ? `Ownership of ${result.candidateName} is verified. The listing is still not bookable until the 36 onboarding step is completed.`
+        ? `Ownership of ${result.candidateName} is verified. You can now manage its public directory profile. Booking remains a separate optional onboarding step where supported.`
         : `Your claim for ${result.candidateName} was not verified. Review the admin note and submit stronger evidence if needed.`,
     href: "/owner/claims",
   });

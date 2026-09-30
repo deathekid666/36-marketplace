@@ -75,7 +75,7 @@ const RESULT_MESSAGES: Record<string, string> = {
   archived: "Candidate archived.",
   "review-required": "Candidate moved to human review.",
   enriched: "Candidate marked enriched.",
-  "claim-verified": "Ownership claim verified. The candidate is still not bookable until D9 onboarding/conversion.",
+  "claim-verified": "Ownership claim verified. The owner can now manage the public directory profile; booking remains separate.",
   "claim-rejected": "Ownership claim rejected.",
 };
 
@@ -471,7 +471,9 @@ export default async function AdminDiscoveryCandidatePage({
                           <p className="mt-2 text-xs leading-5 text-zinc-500">Admin note: {claim.adminNote}</p>
                         )}
 
-                        {claim.status === "SUBMITTED" && candidate.status === CandidateStudioStatus.APPROVED && (
+                        {claim.status === "SUBMITTED" &&
+                          (candidate.status === CandidateStudioStatus.ENRICHED ||
+                            candidate.status === CandidateStudioStatus.APPROVED) && (
                           <div className="mt-5 grid gap-3 sm:grid-cols-2">
                             <form action={verifyCandidateClaimAction}>
                               <input type="hidden" name="claimId" value={claim.id} />
@@ -536,7 +538,9 @@ export default async function AdminDiscoveryCandidatePage({
                       <p className="mt-3 text-xs text-zinc-500">
                         {transition.actor === "ADMIN"
                           ? `Admin · ${transition.actorUser?.name || transition.actorUser?.email || "Unknown admin"}`
-                          : "System"}
+                          : transition.actorUser?.role === "STUDIO_OWNER"
+                            ? `Verified owner · ${transition.actorUser.name || transition.actorUser.email}`
+                            : "System"}
                       </p>
                       {transition.note && (
                         <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-400">

@@ -11,9 +11,10 @@ export type DiscoveryRolloutScope = {
   onboarding: boolean;
 };
 
-// Contact-only discovery is global. Claiming and bookable onboarding remain
-// explicitly controlled by the city allow-list below.
+// Contact-only discovery and ownership claiming are global.
+// Bookable onboarding remains explicitly controlled by the city allow-list below.
 export const GLOBAL_PUBLIC_CONTACT_DIRECTORY = true;
+export const GLOBAL_DIRECTORY_CLAIMS = true;
 
 export const DISCOVERY_ROLLOUT_SCOPES: readonly DiscoveryRolloutScope[] = [
   {
@@ -63,6 +64,10 @@ export function isDiscoveryRolloutEnabled(
     return /^[A-Z]{2}$/.test(countryCode);
   }
 
+  if (capability === "CLAIMS" && GLOBAL_DIRECTORY_CLAIMS) {
+    return /^[A-Z]{2}$/.test(countryCode);
+  }
+
   const city = normalizeLocation(location.city);
   if (!countryCode || !city) return false;
 
@@ -77,6 +82,12 @@ export function discoveryRolloutWhere(
   capability: DiscoveryRolloutCapability,
 ) {
   if (capability === "PUBLIC_DISCOVERY" && GLOBAL_PUBLIC_CONTACT_DIRECTORY) {
+    return {
+      countryCode: { not: null },
+    };
+  }
+
+  if (capability === "CLAIMS" && GLOBAL_DIRECTORY_CLAIMS) {
     return {
       countryCode: { not: null },
     };

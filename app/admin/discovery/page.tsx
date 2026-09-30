@@ -314,7 +314,7 @@ export default async function AdminDiscoveryPage({
               </span>
               <h2 className="mt-2 text-2xl font-black">Public launch scopes</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
-                Provider discovery may collect broader geography, but only explicitly allow-listed markets can appear publicly, accept claims or start bookable-studio onboarding.
+                Public contact discovery and ownership claims are global. Only bookable-studio onboarding remains restricted to explicitly supported booking markets.
               </p>
             </div>
             <span className="rounded-full border border-acid/20 px-3 py-1 text-xs font-black text-acid">

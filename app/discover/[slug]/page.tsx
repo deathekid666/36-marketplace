@@ -60,7 +60,7 @@ export default async function DiscoveryStudioPage({
       },
       claims: {
         where: { status: "VERIFIED" },
-        select: { id: true },
+        select: { id: true, claimantId: true },
         take: 1,
       },
     },
@@ -86,15 +86,18 @@ export default async function DiscoveryStudioPage({
   if (!isDiscoveryRolloutEnabled(candidate, "PUBLIC_DISCOVERY")) notFound();
 
   const freshness = discoveryFreshness(candidate.lastCheckedAt);
+  const ownershipVerified = candidate.claims.length > 0;
+
   if (
     candidate.status !== "CONVERTED" &&
+    !ownershipVerified &&
     (freshness === "STALE" || freshness === "UNKNOWN")
   ) {
     notFound();
   }
 
   const claimsEnabled =
-    candidate.status === "APPROVED" &&
+    (candidate.status === "ENRICHED" || candidate.status === "APPROVED") &&
     isDiscoveryRolloutEnabled(candidate, "CLAIMS");
 
   const mapPoints =
@@ -112,7 +115,9 @@ export default async function DiscoveryStudioPage({
       : [];
 
   const website = safeExternalUrl(candidate.website);
-  const ownershipVerified = candidate.claims.length > 0;
+  const verifiedClaim = candidate.claims[0] || null;
+  const ownedByCurrentUser =
+    Boolean(user && verifiedClaim && user.id === verifiedClaim.claimantId);
   const onboardingInProgress =
     candidate.status === "CONVERTED" &&
     candidate.convertedStudio?.status !== "VERIFIED";
@@ -143,7 +148,11 @@ export default async function DiscoveryStudioPage({
                     : "border-zinc-800 text-zinc-400")
                 }
               >
-                {reviewed ? "Reviewed contact" : "Provider-sourced contact"}
+                {ownershipVerified
+                  ? "Owner verified"
+                  : reviewed
+                    ? "Reviewed contact"
+                    : "Provider-sourced contact"}
               </span>
               <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-700">
                 {labelCategory(candidate.category)}
@@ -332,6 +341,17 @@ export default async function DiscoveryStudioPage({
                   <b className="text-sm text-emerald-300">
                     Ownership claim verified
                   </b>
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    Contact details may now be maintained by a verified studio representative.
+                  </p>
+                  {ownedByCurrentUser && verifiedClaim ? (
+                    <Link
+                      href={"/owner/claims/" + verifiedClaim.id + "/profile"}
+                      className="button-dark mt-3 inline-flex w-full justify-center"
+                    >
+                      Manage public profile
+                    </Link>
+                  ) : null}
                 </div>
               ) : claimsEnabled && user?.role === "STUDIO_OWNER" ? (
                 <Link
