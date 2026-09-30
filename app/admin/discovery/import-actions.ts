@@ -5,10 +5,8 @@ import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth";
 import { ingestOpenStreetMapStudio } from "@/lib/discovery/ingest";
-import {
-  fetchOpenStreetMapStudios,
-  OSM_SCAN_PRESETS,
-} from "@/lib/discovery/providers/openstreetmap";
+import { OSM_SCAN_PRESETS } from "@/lib/discovery/providers/openstreetmap";
+import { loadOpenStreetMapSnapshot } from "@/lib/discovery/providers/openstreetmap-snapshot";
 import { consumeRateLimit } from "@/lib/rate-limit";
 
 function text(form: FormData, name: string, max = 80) {
@@ -17,9 +15,8 @@ function text(form: FormData, name: string, max = 80) {
 
 function importErrorCode(error: unknown) {
   const message = error instanceof Error ? error.message : "OSM_IMPORT_FAILED";
-  if (message === "OSM_RATE_LIMITED") return "provider-busy";
-  if (message === "OSM_REQUEST_TIMEOUT") return "provider-timeout";
-  if (message === "OSM_REQUEST_FAILED") return "provider-unreachable";
+  if (message === "OSM_SNAPSHOT_NOT_READY") return "snapshot-not-ready";
+  if (message === "OSM_SNAPSHOT_PRESET_UNSUPPORTED") return "invalid-preset";
   if (message === "OSM_RESPONSE_TOO_LARGE" || message === "OSM_RESULT_SET_TOO_LARGE") {
     return "result-too-large";
   }
@@ -49,7 +46,7 @@ export async function importOpenStreetMapAction(form: FormData) {
   let destination = "/admin/discovery?importError=import-failed";
 
   try {
-    const scan = await fetchOpenStreetMapStudios(preset);
+    const scan = loadOpenStreetMapSnapshot(preset);
 
     const stats = {
       enriched: 0,

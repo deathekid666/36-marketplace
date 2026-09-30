@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
+import { getOpenStreetMapSnapshotInfo } from "@/lib/discovery/providers/openstreetmap-snapshot";
 
 export const metadata = { title: "Discovery · 36 Admin" };
 
@@ -72,6 +73,7 @@ export default async function AdminDiscoveryPage({
     : "";
   const page = Math.max(1, Math.min(1000, Number.parseInt(String(query.page || "1"), 10) || 1));
   const pageSize = 40;
+  const osmSnapshot = getOpenStreetMapSnapshotInfo();
 
   const where: Prisma.CandidateStudioWhereInput = {
     ...(status ? { status } : {}),
@@ -172,14 +174,12 @@ export default async function AdminDiscoveryPage({
         {query.importError && (
           <div className="mt-7 rounded-xl border border-red-900/60 bg-red-950/20 p-4 text-sm text-red-300">
             {query.importError === "scan-rate-limited"
-              ? "OpenStreetMap scans are limited to four per admin per hour."
-              : query.importError === "provider-busy"
-                ? "The Overpass provider is busy or throttling requests. Try again later."
-                : query.importError === "provider-timeout"
-                  ? "The Overpass provider timed out."
-                  : query.importError === "result-too-large"
-                    ? "The provider returned more data than the D6 safety limits allow."
-                    : "The OpenStreetMap import could not be completed."}
+              ? "OpenStreetMap imports are limited to four per admin per hour."
+              : query.importError === "snapshot-not-ready"
+                ? "The Casablanca OpenStreetMap snapshot has not been generated yet."
+                : query.importError === "result-too-large"
+                  ? "The snapshot contains more data than the D6 safety limits allow."
+                  : "The OpenStreetMap import could not be completed."}
           </div>
         )}
 
@@ -191,16 +191,16 @@ export default async function AdminDiscoveryPage({
               </span>
               <h2 className="mt-2 text-2xl font-black">OpenStreetMap · Casablanca</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
-                Manual high-precision scan for amenity=studio and shop=photo_studio. Results stay in CandidateStudio and never become bookable automatically.
+                Controlled import from a Casablanca snapshot built from Geofabrik&apos;s Morocco OpenStreetMap extract. Results stay in CandidateStudio and never become bookable automatically.
               </p>
               <p className="mt-2 text-[10px] text-zinc-700">
-                Data © OpenStreetMap contributors · ODbL · manual scan only
+                Data © OpenStreetMap contributors · ODbL · snapshot {osmSnapshot.generatedAt ? `generated ${new Date(osmSnapshot.generatedAt).toLocaleString("en", { timeZone: "UTC" })} UTC · ${osmSnapshot.rawElementCount} raw features` : "not generated yet"}
               </p>
             </div>
             <form action={importOpenStreetMapAction}>
               <input type="hidden" name="preset" value="CASABLANCA" />
               <button className="rounded-xl bg-sky-300 px-5 py-3 text-xs font-black text-black">
-                Scan Casablanca now
+                Import Casablanca snapshot
               </button>
             </form>
           </div>

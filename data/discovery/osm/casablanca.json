@@ -1,0 +1,7 @@
+{
+  "provider": "OPENSTREETMAP",
+  "delivery": "GEOFABRIK_PBF",
+  "sourceUrl": "https://download.geofabrik.de/africa/morocco-latest.osm.pbf",
+  "generatedAt": null,
+  "elements": []
+}

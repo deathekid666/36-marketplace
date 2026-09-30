@@ -1,0 +1,79 @@
+name: D6 OSM snapshot
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/d6-osm-snapshot.yml"
+      - "scripts/build-d6-osm-snapshot.mjs"
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Osmium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osmium-tool
+
+      - name: Download Morocco OpenStreetMap extract
+        run: |
+          mkdir -p tmp
+          curl --fail --location --retry 3 --retry-delay 2 \
+            https://download.geofabrik.de/africa/morocco-latest.osm.pbf \
+            --output tmp/morocco-latest.osm.pbf
+
+      - name: Extract Casablanca pilot area
+        run: |
+          osmium extract \
+            --strategy=complete_ways \
+            --bbox=-7.75,33.45,-7.45,33.70 \
+            tmp/morocco-latest.osm.pbf \
+            --output=tmp/casablanca.osm.pbf \
+            --overwrite
+
+      - name: Filter studio features
+        run: |
+          osmium tags-filter \
+            tmp/casablanca.osm.pbf \
+            nwr/amenity=studio \
+            nwr/shop=photo_studio \
+            --output=tmp/studios.osm.pbf \
+            --overwrite
+
+          osmium export \
+            tmp/studios.osm.pbf \
+            --output=tmp/studios.geojson \
+            --overwrite
+
+      - name: Build application snapshot
+        run: node scripts/build-d6-osm-snapshot.mjs tmp/studios.geojson data/discovery/osm/casablanca.json
+
+      - name: Show snapshot summary
+        run: |
+          node -e 'const x=require("./data/discovery/osm/casablanca.json"); console.log({generatedAt:x.generatedAt,elements:x.elements.length})'
+
+      - name: Commit refreshed snapshot
+        run: |
+          if git diff --quiet -- data/discovery/osm/casablanca.json; then
+            echo "Snapshot unchanged."
+            exit 0
+          fi
+
+          git config user.name "36 discovery bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/discovery/osm/casablanca.json
+          git commit -m "data: refresh Casablanca OSM studio snapshot"
+          git push
