@@ -125,8 +125,22 @@ export default async function AdminDiscoveryPage({
   const where: Prisma.CandidateStudioWhereInput =
     filters.length > 0 ? { AND: filters } : {};
 
-  const [candidates, filteredCount, total, discovered, review, approved, converted, staleCount, countryRows, providerRows] =
-    await Promise.all([
+  const [
+    candidates,
+    filteredCount,
+    total,
+    discovered,
+    enriched,
+    review,
+    approved,
+    converted,
+    withPhone,
+    withWebsite,
+    withEmail,
+    staleCount,
+    countryRows,
+    providerRows,
+  ] = await Promise.all([
       db.candidateStudio.findMany({
         where,
         orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
@@ -150,9 +164,13 @@ export default async function AdminDiscoveryPage({
       db.candidateStudio.count({ where }),
       db.candidateStudio.count(),
       db.candidateStudio.count({ where: { status: "DISCOVERED" } }),
+      db.candidateStudio.count({ where: { status: "ENRICHED" } }),
       db.candidateStudio.count({ where: { status: "REVIEW_REQUIRED" } }),
       db.candidateStudio.count({ where: { status: "APPROVED" } }),
       db.candidateStudio.count({ where: { status: "CONVERTED" } }),
+      db.candidateStudio.count({ where: { phone: { not: null } } }),
+      db.candidateStudio.count({ where: { website: { not: null } } }),
+      db.candidateStudio.count({ where: { email: { not: null } } }),
       db.candidateStudio.count({
         where: {
           status: { not: "CONVERTED" },
@@ -232,6 +250,62 @@ export default async function AdminDiscoveryPage({
           </div>
         )}
 
+        <section className="mt-7 rounded-2xl border border-sky-900/40 bg-sky-950/[0.08] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-3xl">
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">
+                Global contact directory
+              </span>
+              <h2 className="mt-2 text-2xl font-black">Live import coverage</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                These numbers come directly from the discovery database and update as global
+                contact batches land. Imported contacts remain directory-only: they do not
+                create rooms, prices, availability, payments or bookings.
+              </p>
+            </div>
+            <Link href="/discover" className="text-xs font-black text-sky-300 hover:text-white">
+              Open public directory →
+            </Link>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {[
+              ["All candidates", total],
+              ["With public phone", withPhone],
+              ["With website", withWebsite],
+              ["With email", withEmail],
+              ["Enriched", enriched],
+              ["Needs review", review],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
+                <span className="text-[10px] font-bold uppercase tracking-[0.11em] text-zinc-600">
+                  {label}
+                </span>
+                <b className="mt-2 block text-2xl font-black">{value}</b>
+              </div>
+            ))}
+          </div>
+
+          {countryRows.length > 0 && (
+            <div className="mt-5 border-t border-zinc-900 pt-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-600">
+                Top countries in the discovery database
+              </span>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {countryRows.slice(0, 12).map((row) => (
+                  <Link
+                    key={row.countryCode!}
+                    href={"/admin/discovery?country=" + row.countryCode}
+                    className="rounded-full border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition hover:border-sky-900 hover:text-sky-300"
+                  >
+                    {row.countryCode} · {row._count.countryCode}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="mt-7 rounded-2xl border border-acid/20 bg-acid/[0.03] p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -282,16 +356,18 @@ export default async function AdminDiscoveryPage({
                   {providerSourceCounts.get("OVERTURE") || 0} source rows
                 </span>
               </div>
-              <h3 className="mt-4 text-xl font-black">Overture Maps · Casablanca</h3>
+              <h3 className="mt-4 text-xl font-black">Overture Maps · Global contacts</h3>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Structured global Places snapshot. Every record still passes 36 normalization, deduplication and human lifecycle review.
+                The full global contact-only importer reads the latest Overture Places release
+                and feeds public business contacts into the same normalization and deduplication
+                pipeline. The repository snapshot below remains a small Casablanca seed tool.
               </p>
               <p className="mt-3 text-[10px] leading-5 text-zinc-700">
                 Snapshot {overtureSnapshot.generatedAt ? `generated ${new Date(overtureSnapshot.generatedAt).toLocaleString("en", { timeZone: "UTC" })} UTC · ${overtureSnapshot.recordCount} candidates from ${overtureSnapshot.totalPlacesInBbox} places` : "not generated yet"}
               </p>
               <form action={importOvertureAction} className="mt-4">
                 <button className="rounded-xl bg-sky-300 px-5 py-3 text-xs font-black text-black">
-                  Import Overture snapshot
+                  Import Casablanca snapshot
                 </button>
               </form>
             </article>
@@ -324,10 +400,11 @@ export default async function AdminDiscoveryPage({
           </div>
         </section>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
           {[
             ["All candidates", total, "ALL"],
             ["Discovered", discovered, "DISCOVERED"],
+            ["Enriched", enriched, "ENRICHED"],
             ["Needs review", review, "REVIEW_REQUIRED"],
             ["Approved", approved, "APPROVED"],
             ["Converted", converted, "CONVERTED"],
