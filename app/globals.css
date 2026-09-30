@@ -107,3 +107,15 @@ body {
   font-size: 11px;
   font-weight: 800;
 }
+
+
+/* Discovery list ↔ map selection */
+[data-directory-card][data-map-active="true"] {
+  border-color: rgba(125, 211, 252, 0.72);
+  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.16), 0 22px 55px rgba(0, 0, 0, 0.28);
+  background: rgba(14, 116, 144, 0.07);
+}
+
+[data-directory-card][data-map-active="true"] h2 {
+  color: #bae6fd;
+}

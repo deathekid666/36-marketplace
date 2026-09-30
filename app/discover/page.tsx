@@ -2,6 +2,11 @@ import { DiscoveryStudioCategory, Prisma } from "@prisma/client";
 import Link from "next/link";
 
 import { AppHeader } from "@/components/AppHeader";
+import {
+  DirectoryLocationPicker,
+  type DirectoryLocationOption,
+} from "@/components/DirectoryLocationPicker";
+import { MapFocusButton } from "@/components/MapFocusButton";
 import { StudioMap } from "@/components/StudioMap";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -39,6 +44,36 @@ function safeExternalUrl(value: string | null) {
   }
 }
 
+function parseCoordinate(
+  value: string | undefined,
+  min: number,
+  max: number,
+) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= min && parsed <= max
+    ? parsed
+    : null;
+}
+
+function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+) {
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  const deltaLat = radians(lat2 - lat1);
+  const deltaLng = radians(lng2 - lng1);
+  const a =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(radians(lat1)) *
+      Math.cos(radians(lat2)) *
+      Math.sin(deltaLng / 2) ** 2;
+
+  return 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
 
 function countryName(code: string | null | undefined) {
@@ -62,6 +97,13 @@ export default async function DiscoverStudiosPage({
     verified?: string;
     website?: string;
     email?: string;
+    lat?: string;
+    lng?: string;
+    radius?: string;
+    north?: string;
+    south?: string;
+    east?: string;
+    west?: string;
     page?: string;
   }>;
 }) {
@@ -80,6 +122,28 @@ export default async function DiscoverStudiosPage({
   const verifiedOnly = query.verified === "1";
   const websiteOnly = query.website === "1";
   const emailOnly = query.email === "1";
+  const centerLat = parseCoordinate(query.lat, -90, 90);
+  const centerLng = parseCoordinate(query.lng, -180, 180);
+  const radiusValue = Number.parseInt(String(query.radius || ""), 10);
+  const radiusKm = [5, 10, 25, 50, 100].includes(radiusValue)
+    ? radiusValue
+    : null;
+  const north = parseCoordinate(query.north, -90, 90);
+  const south = parseCoordinate(query.south, -90, 90);
+  const east = parseCoordinate(query.east, -180, 180);
+  const west = parseCoordinate(query.west, -180, 180);
+  const mapBoundsActive =
+    north != null &&
+    south != null &&
+    east != null &&
+    west != null &&
+    north > south &&
+    east > west;
+  const radiusActive =
+    !mapBoundsActive &&
+    radiusKm != null &&
+    centerLat != null &&
+    centerLng != null;
   const qualityFilters: Prisma.CandidateStudioWhereInput[] = [];
   if (verifiedOnly) {
     qualityFilters.push({ claims: { some: { status: "VERIFIED" } } });
@@ -96,6 +160,63 @@ export default async function DiscoverStudiosPage({
   );
   const pageSize = 48;
   const staleCutoff = discoveryStaleCutoff();
+
+  let radiusCandidateIds: string[] | null = null;
+  if (radiusActive && centerLat != null && centerLng != null && radiusKm != null) {
+    const latDelta = radiusKm / 111.32;
+    const longitudeScale = Math.max(
+      0.15,
+      Math.cos((centerLat * Math.PI) / 180),
+    );
+    const lngDelta = radiusKm / (111.32 * longitudeScale);
+
+    const coordinateCandidates = await db.candidateStudio.findMany({
+      where: {
+        latitude: {
+          gte: centerLat - latDelta,
+          lte: centerLat + latDelta,
+        },
+        longitude: {
+          gte: centerLng - lngDelta,
+          lte: centerLng + lngDelta,
+        },
+      },
+      select: { id: true, latitude: true, longitude: true },
+      take: 20_000,
+    });
+
+    radiusCandidateIds = coordinateCandidates
+      .filter((candidate) => {
+        if (candidate.latitude == null || candidate.longitude == null) return false;
+        return (
+          haversineKm(
+            centerLat,
+            centerLng,
+            Number(candidate.latitude),
+            Number(candidate.longitude),
+          ) <= radiusKm
+        );
+      })
+      .map((candidate) => candidate.id);
+  }
+
+  const geoFilters: Prisma.CandidateStudioWhereInput[] = [];
+  if (mapBoundsActive) {
+    geoFilters.push(
+      { latitude: { gte: south!, lte: north! } },
+      { longitude: { gte: west!, lte: east! } },
+    );
+  } else {
+    if (country) geoFilters.push({ countryCode: country });
+    if (city) {
+      geoFilters.push({
+        city: { contains: city, mode: "insensitive" as const },
+      });
+    }
+    if (radiusCandidateIds) {
+      geoFilters.push({ id: { in: radiusCandidateIds } });
+    }
+  }
 
   const visibility: Prisma.CandidateStudioWhereInput = {
     AND: [
@@ -128,10 +249,7 @@ export default async function DiscoverStudiosPage({
             },
           ]
         : []),
-      ...(country ? [{ countryCode: country }] : []),
-      ...(city
-        ? [{ city: { contains: city, mode: "insensitive" as const } }]
-        : []),
+      ...geoFilters,
       ...(category ? [{ category }] : []),
       ...qualityFilters,
     ],
@@ -194,19 +312,54 @@ export default async function DiscoverStudiosPage({
       take: 150,
     }),
     db.candidateStudio.groupBy({
-      by: ["city"],
+      by: ["city", "countryCode"],
       where: {
         AND: [
           geographyVisibility,
           { city: { not: null } },
-          ...(country ? [{ countryCode: country }] : []),
+          { countryCode: { not: null } },
+          { latitude: { not: null } },
+          { longitude: { not: null } },
         ],
       },
       _count: { city: true },
+      _avg: { latitude: true, longitude: true },
       orderBy: { _count: { city: "desc" } },
-      take: 80,
+      take: 250,
     }),
   ]);
+
+  const locationOptions: DirectoryLocationOption[] = [
+    ...cityRows
+      .filter(
+        (row) =>
+          row.city &&
+          row.countryCode &&
+          row._avg.latitude != null &&
+          row._avg.longitude != null,
+      )
+      .map((row) => ({
+        key: "city:" + row.countryCode + ":" + row.city,
+        label:
+          row.city +
+          ", " +
+          countryName(row.countryCode),
+        city: row.city || "",
+        countryCode: row.countryCode || "",
+        lat: row._avg.latitude == null ? null : Number(row._avg.latitude),
+        lng: row._avg.longitude == null ? null : Number(row._avg.longitude),
+        count: row._count.city,
+      })),
+    ...countryRows.map((row) => ({
+      key: "country:" + row.countryCode,
+      label: countryName(row.countryCode),
+      city: "",
+      countryCode: row.countryCode || "",
+      lat: null,
+      lng: null,
+      count: row._count.countryCode,
+    })),
+  ];
 
   const visibleCandidates = candidates.filter(
     (candidate) => candidate.convertedStudio?.status !== "VERIFIED",
@@ -257,6 +410,17 @@ export default async function DiscoverStudiosPage({
     if (verifiedOnly) params.set("verified", "1");
     if (websiteOnly) params.set("website", "1");
     if (emailOnly) params.set("email", "1");
+    if (radiusActive && centerLat != null && centerLng != null && radiusKm != null) {
+      params.set("lat", String(centerLat));
+      params.set("lng", String(centerLng));
+      params.set("radius", String(radiusKm));
+    }
+    if (mapBoundsActive) {
+      params.set("north", String(north));
+      params.set("south", String(south));
+      params.set("east", String(east));
+      params.set("west", String(west));
+    }
     if (target > 1) params.set("page", String(target));
     return "/discover" + (params.toString() ? "?" + params.toString() : "");
   }
@@ -283,7 +447,7 @@ export default async function DiscoverStudiosPage({
         <form
           action="/discover"
           method="GET"
-          className="mt-8 grid gap-3 rounded-3xl border border-zinc-800 bg-[#11120f] p-3 lg:grid-cols-[1fr_150px_190px_190px_auto]"
+          className="mt-8 grid gap-3 rounded-3xl border border-zinc-800 bg-[#11120f] p-3 lg:grid-cols-[minmax(220px,1fr)_minmax(250px,1fr)_190px_auto]"
         >
           <label className="rounded-2xl px-4 py-2">
             <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
@@ -297,49 +461,15 @@ export default async function DiscoverStudiosPage({
             />
           </label>
 
-          <label className="rounded-2xl border-t border-zinc-900 px-4 py-2 lg:border-l lg:border-t-0">
-            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
-              Country
-            </span>
-            <select
-              name="country"
-              defaultValue={country}
-              className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
-            >
-              <option value="" className="bg-zinc-950">
-                All countries
-              </option>
-              {countryRows.map((row) => (
-                <option
-                  key={row.countryCode!}
-                  value={row.countryCode!}
-                  className="bg-zinc-950"
-                >
-                  {countryName(row.countryCode)} · {row._count.countryCode}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="rounded-2xl border-t border-zinc-900 px-4 py-2 lg:border-l lg:border-t-0">
-            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
-              City
-            </span>
-            <select
-              name="city"
-              defaultValue={city}
-              className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
-            >
-              <option value="" className="bg-zinc-950">
-                All cities
-              </option>
-              {cityRows.map((row) => (
-                <option key={row.city!} value={row.city!} className="bg-zinc-950">
-                  {row.city} · {row._count.city}
-                </option>
-              ))}
-            </select>
-          </label>
+          <DirectoryLocationPicker
+            options={locationOptions}
+            defaultCity={mapBoundsActive ? "" : city}
+            defaultCountryCode={mapBoundsActive ? "" : country}
+            defaultLat={radiusActive ? centerLat : null}
+            defaultLng={radiusActive ? centerLng : null}
+            defaultRadius={radiusActive ? radiusKm : null}
+            mapAreaActive={mapBoundsActive}
+          />
 
           <label className="rounded-2xl border-t border-zinc-900 px-4 py-2 lg:border-l lg:border-t-0">
             <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
@@ -401,8 +531,13 @@ export default async function DiscoverStudiosPage({
           <p className="text-sm text-zinc-500">
             <b className="text-zinc-200">{total}</b> contact listing
             {total === 1 ? "" : "s"}
-            {country ? " in " + countryName(country) : ""}
-            {city ? " · " + city : ""}
+            {mapBoundsActive
+              ? " · Map area"
+              : country
+                ? " in " + countryName(country)
+                : ""}
+            {!mapBoundsActive && city ? " · " + city : ""}
+            {radiusActive && radiusKm ? " · within " + radiusKm + " km" : ""}
             {category ? " · " + labelCategory(category) : ""}
             {verifiedOnly ? " · Owner verified" : ""}
             {websiteOnly ? " · Website" : ""}
@@ -436,10 +571,24 @@ export default async function DiscoverStudiosPage({
                 : "mt-7"
             }
           >
+            {mapPoints.length > 0 && (
+              <aside className="order-1 xl:order-2">
+                <div className="sticky top-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <b className="text-sm">Map</b>
+                    <span className="text-xs text-zinc-600">
+                      {mapPoints.length} locations on this page
+                    </span>
+                  </div>
+                  <StudioMap points={mapPoints} searchArea />
+                </div>
+              </aside>
+            )}
+
             <div
               className={
                 mapPoints.length > 0
-                  ? "grid gap-5 md:grid-cols-2"
+                  ? "order-2 grid gap-5 md:grid-cols-2 xl:order-1"
                   : "grid gap-5 md:grid-cols-2 xl:grid-cols-3"
               }
             >
@@ -453,7 +602,11 @@ export default async function DiscoverStudiosPage({
                 return (
                   <article
                     key={candidate.id}
-                    className="rounded-3xl border border-zinc-900 bg-zinc-950/60 p-5"
+                    id={"studio-card-" + candidate.id}
+                    data-directory-card
+                    data-studio-id={candidate.id}
+                    data-map-active="false"
+                    className="rounded-3xl border border-zinc-900 bg-zinc-950/60 p-5 transition"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <span
@@ -541,36 +694,26 @@ export default async function DiscoverStudiosPage({
                       ))}
                     </div>
 
-                    <Link
-                      href={"/discover/" + candidate.slug}
-                      className="mt-5 inline-flex text-xs font-black text-sky-300 hover:text-white"
-                    >
-                      View contact listing →
-                    </Link>
+                    <div className="mt-5 flex items-center justify-between gap-3">
+                      <Link
+                        href={"/discover/" + candidate.slug}
+                        className="inline-flex text-xs font-black text-sky-300 hover:text-white"
+                      >
+                        View contact listing →
+                      </Link>
+                      <MapFocusButton
+                        studioId={candidate.id}
+                        hasCoordinates={
+                          candidate.latitude != null &&
+                          candidate.longitude != null
+                        }
+                      />
+                    </div>
                   </article>
                 );
               })}
             </div>
 
-            {mapPoints.length > 0 && (
-              <aside className="hidden xl:block">
-                <div className="sticky top-5">
-                  <div className="mb-3 flex items-center justify-between">
-                    <b className="text-sm">Map</b>
-                    <span className="text-xs text-zinc-600">
-                      {mapPoints.length} locations on this page
-                    </span>
-                  </div>
-                  <StudioMap points={mapPoints} />
-                </div>
-              </aside>
-            )}
-
-            {mapPoints.length > 0 && (
-              <div className="xl:hidden">
-                <StudioMap points={mapPoints} />
-              </div>
-            )}
           </div>
         )}
 

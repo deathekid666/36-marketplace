@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 type Point = {
   id: string;
@@ -17,14 +18,41 @@ declare global {
   }
 }
 
-export function StudioMap({ points }: { points: Point[] }) {
+type Bounds = {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+};
+
+export function StudioMap({
+  points,
+  searchArea = false,
+}: {
+  points: Point[];
+  searchArea?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [areaBounds, setAreaBounds] = useState<Bounds | null>(null);
 
   useEffect(() => {
     if (!ref.current || points.length === 0) return;
 
     let map: any;
     let cancelled = false;
+    let readyForAreaSearch = false;
+    const markerById = new Map<string, any>();
+
+    function highlightCard(studioId: string) {
+      document
+        .querySelectorAll<HTMLElement>("[data-directory-card]")
+        .forEach((card) => {
+          card.dataset.mapActive =
+            card.dataset.studioId === studioId ? "true" : "false";
+        });
+    }
 
     const load = async () => {
       if (!document.querySelector('link[data-leaflet="36"]')) {
@@ -43,9 +71,11 @@ export function StudioMap({ points }: { points: Point[] }) {
 
           if (existing) {
             existing.addEventListener("load", () => resolve(), { once: true });
-            existing.addEventListener("error", () => reject(new Error("Map library failed")), {
-              once: true,
-            });
+            existing.addEventListener(
+              "error",
+              () => reject(new Error("Map library failed")),
+              { once: true },
+            );
             return;
           }
 
@@ -91,6 +121,16 @@ export function StudioMap({ points }: { points: Point[] }) {
           }<a href="${escapeHtml(point.href)}">View studio →</a></div>`,
         );
 
+        marker.on("click", () => {
+          highlightCard(point.id);
+          document
+            .querySelector<HTMLElement>(
+              `[data-directory-card][data-studio-id="${cssEscape(point.id)}"]`,
+            )
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+
+        markerById.set(point.id, marker);
         bounds.extend([point.lat, point.lng]);
       });
 
@@ -99,25 +139,110 @@ export function StudioMap({ points }: { points: Point[] }) {
       } else {
         map.fitBounds(bounds.pad(0.18));
       }
+
+      window.setTimeout(() => {
+        readyForAreaSearch = true;
+      }, 450);
+
+      const captureBounds = () => {
+        if (!searchArea || !readyForAreaSearch || !map) return;
+        const next = map.getBounds();
+        setAreaBounds({
+          north: next.getNorth(),
+          south: next.getSouth(),
+          east: next.getEast(),
+          west: next.getWest(),
+        });
+      };
+
+      map.on("dragend", captureBounds);
+      map.on("zoomend", captureBounds);
+
+      const focusListener = (event: Event) => {
+        const custom = event as CustomEvent<{ studioId?: string }>;
+        const studioId = custom.detail?.studioId;
+        if (!studioId) return;
+
+        const marker = markerById.get(studioId);
+        const point = points.find((item) => item.id === studioId);
+        if (!marker || !point) return;
+
+        highlightCard(studioId);
+        readyForAreaSearch = false;
+        map.setView([point.lat, point.lng], Math.max(map.getZoom(), 14), {
+          animate: true,
+        });
+        marker.openPopup();
+        window.setTimeout(() => {
+          readyForAreaSearch = true;
+        }, 450);
+      };
+
+      window.addEventListener("36:focus-studio", focusListener);
+
+      return () => {
+        window.removeEventListener("36:focus-studio", focusListener);
+      };
     };
 
-    load().catch(() => undefined);
+    let detach: (() => void) | undefined;
+    load()
+      .then((cleanup) => {
+        detach = cleanup;
+      })
+      .catch(() => undefined);
 
     return () => {
       cancelled = true;
+      detach?.();
       if (map) map.remove();
     };
-  }, [points]);
+  }, [points, searchArea]);
+
+  function applyAreaSearch() {
+    if (!areaBounds) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("north", areaBounds.north.toFixed(5));
+    params.set("south", areaBounds.south.toFixed(5));
+    params.set("east", areaBounds.east.toFixed(5));
+    params.set("west", areaBounds.west.toFixed(5));
+    params.delete("city");
+    params.delete("country");
+    params.delete("lat");
+    params.delete("lng");
+    params.delete("radius");
+    params.delete("page");
+
+    router.push("/discover?" + params.toString());
+    setAreaBounds(null);
+  }
 
   if (!points.length) return null;
 
   return (
-    <div
-      ref={ref}
-      className="h-[420px] w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950"
-      aria-label="Studio locations map"
-    />
+    <div id="directory-map" className="relative">
+      <div
+        ref={ref}
+        className="h-[520px] w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 xl:h-[680px]"
+        aria-label="Studio locations map"
+      />
+      {searchArea && areaBounds && (
+        <button
+          type="button"
+          onClick={applyAreaSearch}
+          className="absolute left-1/2 top-4 z-[1000] -translate-x-1/2 rounded-full border border-zinc-700 bg-zinc-950/95 px-5 py-2.5 text-xs font-black text-white shadow-2xl backdrop-blur hover:border-sky-500 hover:text-sky-300"
+        >
+          Search this area
+        </button>
+      )}
+    </div>
   );
+}
+
+function cssEscape(value: string) {
+  if (typeof CSS !== "undefined" && CSS.escape) return CSS.escape(value);
+  return value.replace(/["\\]/g, "\\$&");
 }
 
 function escapeHtml(value: string) {
