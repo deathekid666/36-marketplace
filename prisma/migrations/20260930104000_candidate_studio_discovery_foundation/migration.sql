@@ -60,9 +60,9 @@ CREATE TABLE "CandidateStudio" (
     )
   ),
   CONSTRAINT "CandidateStudio_conversion_consistent" CHECK (
-    ("convertedStudioId" IS NULL AND "convertedAt" IS NULL AND "status" <> 'CONVERTED')
+    ("status" <> 'CONVERTED' AND "convertedStudioId" IS NULL AND "convertedAt" IS NULL)
     OR
-    ("convertedStudioId" IS NOT NULL AND "convertedAt" IS NOT NULL AND "status" = 'CONVERTED')
+    ("status" = 'CONVERTED' AND "convertedAt" IS NOT NULL)
   )
 );
 
