@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
+import { directoryStudioIdentityWhere } from "@/lib/discovery/public-eligibility";
 import {
   discoveryFreshness,
   discoveryFreshnessClass,
@@ -140,6 +141,10 @@ export default async function AdminDiscoveryPage({
     staleCount,
     countryRows,
     providerRows,
+    duplicateMerges,
+    contactReports30d,
+    verifiedClaims,
+    hiddenWeakIdentity,
   ] = await Promise.all([
       db.candidateStudio.findMany({
         where,
@@ -191,6 +196,30 @@ export default async function AdminDiscoveryPage({
         by: ["provider"],
         _count: { provider: true },
         orderBy: { _count: { provider: "desc" } },
+      }),
+      db.candidateStudioTransition.count({
+        where: { reasonCode: "DUPLICATE_AUTO_MERGED" },
+      }),
+      db.marketplaceEvent.count({
+        where: {
+          eventType: "DISCOVERY_CONTACT_REPORTED",
+          createdAt: {
+            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          },
+        },
+      }),
+      db.candidateStudioClaim.count({
+        where: { status: "VERIFIED" },
+      }),
+      db.candidateStudio.count({
+        where: {
+          status: "ENRICHED",
+          convertedStudioId: null,
+          phone: { not: null },
+          lastCheckedAt: { gte: staleCutoff },
+          claims: { none: { status: "VERIFIED" } },
+          NOT: directoryStudioIdentityWhere(),
+        },
       }),
     ]);
 
@@ -304,6 +333,52 @@ export default async function AdminDiscoveryPage({
               </div>
             </div>
           )}
+          <div className="mt-5 grid gap-3 border-t border-zinc-900 pt-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.11em] text-zinc-600">
+                Safe duplicate merges
+              </span>
+              <b className="mt-2 block text-2xl font-black text-emerald-300">
+                {duplicateMerges}
+              </b>
+              <p className="mt-1 text-[11px] leading-5 text-zinc-600">
+                Conservative automatic merges recorded in the audit trail.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.11em] text-zinc-600">
+                Hidden weak matches
+              </span>
+              <b className="mt-2 block text-2xl font-black text-amber-300">
+                {hiddenWeakIdentity}
+              </b>
+              <p className="mt-1 text-[11px] leading-5 text-zinc-600">
+                Fresh enriched contacts withheld from public search by the studio-identity gate.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.11em] text-zinc-600">
+                Owner verified
+              </span>
+              <b className="mt-2 block text-2xl font-black text-sky-300">
+                {verifiedClaims}
+              </b>
+              <p className="mt-1 text-[11px] leading-5 text-zinc-600">
+                Directory ownership claims approved by an admin.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.11em] text-zinc-600">
+                Reports · 30 days
+              </span>
+              <b className="mt-2 block text-2xl font-black">
+                {contactReports30d}
+              </b>
+              <p className="mt-1 text-[11px] leading-5 text-zinc-600">
+                User reports about wrong phones, closed businesses, duplicates or bad listing data.
+              </p>
+            </div>
+          </div>
         </section>
 
         <section className="mt-7 rounded-2xl border border-acid/20 bg-acid/[0.03] p-5">
