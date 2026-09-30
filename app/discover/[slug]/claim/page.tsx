@@ -16,6 +16,8 @@ const ERRORS: Record<string, string> = {
   "already-pending": "You already have a claim waiting for review.",
   "business-email-invalid": "Enter a valid business email address.",
   "proof-url-invalid": "The proof URL must be a valid http or https link.",
+  "proof-url-unsafe": "Use a normal public website as proof. Local/private-network URLs and URLs containing credentials are not accepted.",
+  "claim-rate-limited": "Too many ownership-claim attempts. Try again after the daily limit resets.",
   "evidence-required": "Add a proof link or explain your ownership/management evidence in at least 20 characters.",
   "claim-failed": "The claim could not be submitted.",
 };

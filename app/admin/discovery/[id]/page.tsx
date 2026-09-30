@@ -21,6 +21,10 @@ import {
   discoveryFreshnessClass,
   discoveryFreshnessLabel,
 } from "@/lib/discovery/freshness";
+import {
+  assessDiscoveryQuality,
+  discoveryQualityClass,
+} from "@/lib/discovery/quality";
 
 export const metadata = { title: "Discovery candidate · 36 Admin" };
 
@@ -173,6 +177,20 @@ export default async function AdminDiscoveryCandidatePage({
     candidate.status === CandidateStudioStatus.REVIEW_REQUIRED;
 
   const freshness = discoveryFreshness(candidate.lastCheckedAt);
+  const quality = assessDiscoveryQuality({
+    name: candidate.name,
+    normalizedName: candidate.normalizedName,
+    category: candidate.category,
+    countryCode: candidate.countryCode,
+    city: candidate.city,
+    address: candidate.address,
+    latitude: candidate.latitude,
+    longitude: candidate.longitude,
+    phone: candidate.phone,
+    website: candidate.website,
+    activeSourceCount: candidate.sources.filter((source) => source.active).length,
+    lastCheckedAt: candidate.lastCheckedAt,
+  });
 
   const qualityChecks = [
     ["Identity", candidate.name.trim().length >= 2 && candidate.normalizedName.trim().length >= 2],
@@ -543,6 +561,38 @@ export default async function AdminDiscoveryCandidatePage({
           </div>
 
           <aside className="space-y-6">
+            <section className="rounded-2xl border border-zinc-900 bg-zinc-950 p-6">
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-violet-300">
+                Data quality
+              </span>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-black">Evidence assessment</h2>
+                  <p className="mt-1 text-xs text-zinc-600">Admin decision support only · never auto-approves</p>
+                </div>
+                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${discoveryQualityClass(quality.band)}`}>
+                  {quality.band} · {quality.score}/100
+                </span>
+              </div>
+              {quality.blockers.length > 0 ? (
+                <div className="mt-4 space-y-2">
+                  {quality.blockers.map((blocker) => (
+                    <div key={blocker} className="rounded-xl border border-red-950 px-3 py-2 text-xs text-red-300">
+                      {blocker}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-xs text-emerald-300">No derived quality blocker detected.</p>
+              )}
+              <details className="mt-4 rounded-xl border border-zinc-900 p-3">
+                <summary className="cursor-pointer text-xs font-bold text-zinc-500">Positive evidence</summary>
+                <div className="mt-3 space-y-1 text-xs text-zinc-600">
+                  {quality.positives.map((positive) => <p key={positive}>✓ {positive}</p>)}
+                </div>
+              </details>
+            </section>
+
             <section className="rounded-2xl border border-zinc-900 bg-zinc-950 p-6">
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">
                 Freshness

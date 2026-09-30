@@ -42,5 +42,10 @@ jobs:
           rm -rf .tmp-osm-tests
           npx tsc scripts/test-openstreetmap-provider.ts lib/discovery/providers/openstreetmap.ts lib/discovery/normalization.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-osm-tests --noEmit false
           node .tmp-osm-tests/scripts/test-openstreetmap-provider.js
+      - name: Test discovery quality and proof URL fixtures
+        run: |
+          rm -rf .tmp-quality-tests
+          npx tsc scripts/test-discovery-quality.ts lib/discovery/quality.ts lib/discovery/freshness.ts lib/discovery/security.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-quality-tests --noEmit false --baseUrl .
+          node .tmp-quality-tests/scripts/test-discovery-quality.js
       - name: Build Next.js
         run: npm run build

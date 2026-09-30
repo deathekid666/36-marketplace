@@ -7,6 +7,7 @@ import {
 import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/notifications";
 import { normalizeEmail, validateEmail } from "@/lib/validation";
+import { isUnsafeDiscoveryProofUrl } from "@/lib/discovery/security";
 
 export type SubmitCandidateClaimInput = {
   candidateStudioId: string;
@@ -35,6 +36,10 @@ function cleanProofUrl(value: string | undefined) {
 
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new Error("CLAIM_PROOF_URL_INVALID");
+  }
+
+  if (isUnsafeDiscoveryProofUrl(parsed.toString())) {
+    throw new Error("CLAIM_PROOF_URL_UNSAFE");
   }
 
   return parsed.toString();

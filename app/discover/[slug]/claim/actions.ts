@@ -8,6 +8,7 @@ import {
   parseClaimRelationship,
   submitCandidateClaim,
 } from "@/lib/discovery/claims";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 function text(form: FormData, name: string, max: number) {
   return String(form.get(name) || "").trim().slice(0, max);
@@ -24,6 +25,7 @@ function claimErrorCode(error: unknown) {
     CLAIM_ALREADY_PENDING: "already-pending",
     CLAIM_BUSINESS_EMAIL_INVALID: "business-email-invalid",
     CLAIM_PROOF_URL_INVALID: "proof-url-invalid",
+    CLAIM_PROOF_URL_UNSAFE: "proof-url-unsafe",
     CLAIM_EVIDENCE_REQUIRED: "evidence-required",
   };
   return map[message] || "claim-failed";
@@ -40,6 +42,25 @@ export async function submitCandidateClaimAction(form: FormData) {
   }
 
   let destination = `/discover/${slug}/claim?error=claim-failed`;
+
+  const [ownerRate, candidateRate] = await Promise.all([
+    consumeRateLimit({
+      key: `discovery-claim-owner:${user.id}`,
+      action: "DISCOVERY_CLAIM_OWNER_DAY",
+      limit: 10,
+      windowSeconds: 24 * 60 * 60,
+    }),
+    consumeRateLimit({
+      key: `discovery-claim-candidate:${user.id}:${candidateStudioId}`,
+      action: "DISCOVERY_CLAIM_CANDIDATE_DAY",
+      limit: 3,
+      windowSeconds: 24 * 60 * 60,
+    }),
+  ]);
+
+  if (!ownerRate.allowed || !candidateRate.allowed) {
+    redirect(`/discover/${slug}/claim?error=claim-rate-limited`);
+  }
 
   try {
     await submitCandidateClaim({
