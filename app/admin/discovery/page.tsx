@@ -1,12 +1,12 @@
 import { CandidateStudioStatus, Prisma } from "@prisma/client";
 import Link from "next/link";
 
-import { importOpenStreetMapAction } from "@/app/admin/discovery/import-actions";
+import { importOvertureAction } from "@/app/admin/discovery/import-actions";
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
-import { getOpenStreetMapSnapshotInfo } from "@/lib/discovery/providers/openstreetmap-snapshot";
+import { getOvertureSnapshotInfo } from "@/lib/discovery/providers/overture";
 
 export const metadata = { title: "Discovery · 36 Admin" };
 
@@ -73,7 +73,7 @@ export default async function AdminDiscoveryPage({
     : "";
   const page = Math.max(1, Math.min(1000, Number.parseInt(String(query.page || "1"), 10) || 1));
   const pageSize = 40;
-  const osmSnapshot = getOpenStreetMapSnapshotInfo();
+  const overtureSnapshot = getOvertureSnapshotInfo();
 
   const where: Prisma.CandidateStudioWhereInput = {
     ...(status ? { status } : {}),
@@ -168,18 +168,18 @@ export default async function AdminDiscoveryPage({
 
         {query.imported && (
           <div className="mt-7 rounded-xl border border-acid/30 bg-acid/[0.04] p-4 text-sm text-acid">
-            OpenStreetMap scan complete: {query.imported} usable records · {query.enriched || "0"} enriched · {query.review || "0"} review · {query.matched || "0"} matched · {query.refreshed || "0"} refreshed · {query.skipped || "0"} unnamed skipped.
+            Overture import complete: {query.imported} studio candidates · {query.enriched || "0"} enriched · {query.review || "0"} review · {query.matched || "0"} matched · {query.refreshed || "0"} refreshed.
           </div>
         )}
         {query.importError && (
           <div className="mt-7 rounded-xl border border-red-900/60 bg-red-950/20 p-4 text-sm text-red-300">
             {query.importError === "scan-rate-limited"
-              ? "OpenStreetMap imports are limited to four per admin per hour."
+              ? "Overture imports are limited to four per admin per hour."
               : query.importError === "snapshot-not-ready"
-                ? "The Casablanca OpenStreetMap snapshot has not been generated yet."
-                : query.importError === "result-too-large"
-                  ? "The snapshot contains more data than the D6 safety limits allow."
-                  : "The OpenStreetMap import could not be completed."}
+                ? "The Casablanca Overture snapshot has not been generated yet."
+                : query.importError === "snapshot-empty"
+                  ? "The Casablanca Overture snapshot contains no studio candidates."
+                  : "The Overture import could not be completed."}
           </div>
         )}
 
@@ -189,16 +189,15 @@ export default async function AdminDiscoveryPage({
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">
                 Provider pilot
               </span>
-              <h2 className="mt-2 text-2xl font-black">OpenStreetMap · Casablanca</h2>
+              <h2 className="mt-2 text-2xl font-black">Overture Maps · Casablanca</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
-                Controlled import from a Casablanca snapshot built from Geofabrik&apos;s Morocco OpenStreetMap extract. Results stay in CandidateStudio and never become bookable automatically.
+                Controlled studio shortlist from Overture&apos;s global Places dataset. Every record still passes 36 normalization, deduplication and lifecycle review before it can go any further.
               </p>
               <p className="mt-2 text-[10px] text-zinc-700">
-                Data © OpenStreetMap contributors · ODbL · snapshot {osmSnapshot.generatedAt ? `generated ${new Date(osmSnapshot.generatedAt).toLocaleString("en", { timeZone: "UTC" })} UTC · ${osmSnapshot.rawElementCount} raw features` : "not generated yet"}
+                Overture Places · snapshot {overtureSnapshot.generatedAt ? `generated ${new Date(overtureSnapshot.generatedAt).toLocaleString("en", { timeZone: "UTC" })} UTC · ${overtureSnapshot.recordCount} candidates from ${overtureSnapshot.totalPlacesInBbox} places` : "not generated yet"}
               </p>
             </div>
-            <form action={importOpenStreetMapAction}>
-              <input type="hidden" name="preset" value="CASABLANCA" />
+            <form action={importOvertureAction}>
               <button className="rounded-xl bg-sky-300 px-5 py-3 text-xs font-black text-black">
                 Import Casablanca snapshot
               </button>

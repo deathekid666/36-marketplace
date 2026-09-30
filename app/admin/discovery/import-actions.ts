@@ -4,37 +4,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth";
-import { ingestOpenStreetMapStudio } from "@/lib/discovery/ingest";
-import { OSM_SCAN_PRESETS } from "@/lib/discovery/providers/openstreetmap";
-import { loadOpenStreetMapSnapshot } from "@/lib/discovery/providers/openstreetmap-snapshot";
+import { ingestDiscoveryStudio } from "@/lib/discovery/ingest";
+import { loadOvertureSnapshot } from "@/lib/discovery/providers/overture";
 import { consumeRateLimit } from "@/lib/rate-limit";
 
-function text(form: FormData, name: string, max = 80) {
-  return String(form.get(name) ?? "").trim().slice(0, max);
-}
-
 function importErrorCode(error: unknown) {
-  const message = error instanceof Error ? error.message : "OSM_IMPORT_FAILED";
-  if (message === "OSM_SNAPSHOT_NOT_READY") return "snapshot-not-ready";
-  if (message === "OSM_SNAPSHOT_PRESET_UNSUPPORTED") return "invalid-preset";
-  if (message === "OSM_RESPONSE_TOO_LARGE" || message === "OSM_RESULT_SET_TOO_LARGE") {
-    return "result-too-large";
-  }
-  if (message.startsWith("OSM_HTTP_")) return "provider-error";
-  if (message.startsWith("OSM_")) return "provider-error";
+  const message = error instanceof Error ? error.message : "OVERTURE_IMPORT_FAILED";
+  if (message === "OVERTURE_SNAPSHOT_NOT_READY") return "snapshot-not-ready";
+  if (message === "OVERTURE_SNAPSHOT_EMPTY") return "snapshot-empty";
   return "import-failed";
 }
 
-export async function importOpenStreetMapAction(form: FormData) {
+export async function importOvertureAction() {
   const admin = await requireRole("ADMIN");
-  const presetKey = text(form, "preset", 40).toUpperCase();
-  const preset = OSM_SCAN_PRESETS[presetKey];
-
-  if (!preset) redirect("/admin/discovery?importError=invalid-preset");
 
   const rate = await consumeRateLimit({
-    key: `discovery-osm:${admin.id}`,
-    action: "OPENSTREETMAP_ADMIN_SCAN",
+    key: `discovery-overture:${admin.id}`,
+    action: "OVERTURE_ADMIN_IMPORT",
     limit: 4,
     windowSeconds: 60 * 60,
   });
@@ -46,7 +32,7 @@ export async function importOpenStreetMapAction(form: FormData) {
   let destination = "/admin/discovery?importError=import-failed";
 
   try {
-    const scan = loadOpenStreetMapSnapshot(preset);
+    const scan = loadOvertureSnapshot();
 
     const stats = {
       enriched: 0,
@@ -56,7 +42,7 @@ export async function importOpenStreetMapAction(form: FormData) {
     };
 
     for (const record of scan.records) {
-      const result = await ingestOpenStreetMapStudio(record);
+      const result = await ingestDiscoveryStudio(record);
       if (result.outcome === "CREATED_ENRICHED") stats.enriched += 1;
       if (result.outcome === "CREATED_REVIEW") stats.review += 1;
       if (result.outcome === "AUTO_MATCHED") stats.matched += 1;
@@ -67,13 +53,12 @@ export async function importOpenStreetMapAction(form: FormData) {
     revalidatePath("/admin/discovery");
 
     const params = new URLSearchParams({
+      provider: "OVERTURE",
       imported: String(scan.records.length),
       enriched: String(stats.enriched),
       review: String(stats.review),
       matched: String(stats.matched),
       refreshed: String(stats.refreshed),
-      skipped: String(scan.skippedWithoutName),
-      preset: preset.key,
     });
 
     destination = `/admin/discovery?${params.toString()}`;

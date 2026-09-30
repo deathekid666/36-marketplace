@@ -1,6 +1,7 @@
 import {
   CandidateStudioStatus,
   CandidateStudioTransitionActor,
+  DiscoveryStudioCategory,
   Prisma,
 } from "@prisma/client";
 
@@ -25,6 +26,38 @@ export type DiscoveryIngestResult = {
   sourceKey: string;
 };
 
+export type DiscoveryProviderStudioRecord = {
+  provider: string;
+  sourceKey: string;
+  externalId: string;
+  sourceUrl: string | null;
+  providerCategory: string | null;
+  attribution: string | null;
+  licenseUrl: string | null;
+  name: string;
+  normalizedName: string;
+  category: DiscoveryStudioCategory;
+  categoryConfidence?: string | null;
+  categoryEvidence?: string[];
+  categoryAlternatives?: DiscoveryStudioCategory[];
+  countryCode: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  district: string | null;
+  postalCode: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  instagram: string | null;
+  issues: string[];
+  metadata?: Prisma.InputJsonValue;
+  slugHint?: string | null;
+};
+
 function decimalNumber(value: Prisma.Decimal | null) {
   return value == null ? null : Number(value.toString());
 }
@@ -33,7 +66,7 @@ function candidateForDedup(candidate: {
   id: string;
   name: string;
   normalizedName: string;
-  category: OpenStreetMapStudioRecord["category"];
+  category: DiscoveryStudioCategory;
   countryCode: string | null;
   city: string | null;
   district: string | null;
@@ -63,20 +96,24 @@ function candidateForDedup(candidate: {
   };
 }
 
-function sourceMetadata(record: OpenStreetMapStudioRecord) {
-  return {
+function sourceMetadata(record: DiscoveryProviderStudioRecord): Prisma.InputJsonObject {
+  const metadata: Prisma.InputJsonObject = {
     provider: record.provider,
     sourceKey: record.sourceKey,
     externalId: record.externalId,
     sourceUrl: record.sourceUrl,
     providerCategory: record.providerCategory,
-    osmTimestamp: record.osmTimestamp,
-    categoryConfidence: record.categoryConfidence,
-    categoryEvidence: record.categoryEvidence,
-    categoryAlternatives: record.categoryAlternatives,
+    categoryConfidence: record.categoryConfidence ?? null,
+    categoryEvidence: record.categoryEvidence || [],
+    categoryAlternatives: record.categoryAlternatives || [],
     issues: record.issues,
-    tags: record.tags,
-  } satisfies Prisma.InputJsonValue;
+  };
+
+  if (record.metadata !== undefined) {
+    metadata.providerMetadata = record.metadata;
+  }
+
+  return metadata;
 }
 
 function slugBase(value: string) {
@@ -84,16 +121,20 @@ function slugBase(value: string) {
     .normalize("NFKD")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 55);
+    .slice(0, 70);
 
   return ascii || "studio";
 }
 
-function candidateSlug(record: OpenStreetMapStudioRecord) {
-  return `${slugBase(record.name)}-osm-${record.osmType}-${record.osmId}`;
+function candidateSlug(record: DiscoveryProviderStudioRecord) {
+  const provider = slugBase(record.provider).slice(0, 20);
+  const identity = slugBase(record.slugHint || record.externalId || record.sourceKey).slice(-48);
+  return `${slugBase(record.name).slice(0, 58)}-${provider}-${identity}`;
 }
 
-function shortlistWhere(record: OpenStreetMapStudioRecord): Prisma.CandidateStudioWhereInput {
+function shortlistWhere(
+  record: DiscoveryProviderStudioRecord,
+): Prisma.CandidateStudioWhereInput {
   const or: Prisma.CandidateStudioWhereInput[] = [
     { normalizedName: record.normalizedName },
   ];
@@ -104,6 +145,7 @@ function shortlistWhere(record: OpenStreetMapStudioRecord): Prisma.CandidateStud
       city: { equals: record.city, mode: "insensitive" },
     });
   }
+
   if (record.phone) or.push({ phone: record.phone });
   if (record.website) or.push({ website: record.website });
   if (record.instagram) or.push({ instagram: record.instagram });
@@ -114,7 +156,7 @@ function shortlistWhere(record: OpenStreetMapStudioRecord): Prisma.CandidateStud
 async function createSource(
   tx: Prisma.TransactionClient,
   candidateStudioId: string,
-  record: OpenStreetMapStudioRecord,
+  record: DiscoveryProviderStudioRecord,
   now: Date,
 ) {
   return tx.candidateStudioSource.create({
@@ -134,8 +176,8 @@ async function createSource(
   });
 }
 
-export async function ingestOpenStreetMapStudio(
-  record: OpenStreetMapStudioRecord,
+export async function ingestDiscoveryStudio(
+  record: DiscoveryProviderStudioRecord,
 ): Promise<DiscoveryIngestResult> {
   const now = new Date();
 
@@ -249,6 +291,7 @@ export async function ingestOpenStreetMapStudio(
           },
           select: { candidateStudioId: true },
         });
+
         if (raced) {
           return {
             outcome: "REFRESHED",
@@ -257,6 +300,7 @@ export async function ingestOpenStreetMapStudio(
           };
         }
       }
+
       throw error;
     }
 
@@ -365,4 +409,43 @@ export async function ingestOpenStreetMapStudio(
     candidateId: candidate.id,
     sourceKey: record.sourceKey,
   };
+}
+
+export async function ingestOpenStreetMapStudio(
+  record: OpenStreetMapStudioRecord,
+): Promise<DiscoveryIngestResult> {
+  return ingestDiscoveryStudio({
+    provider: record.provider,
+    sourceKey: record.sourceKey,
+    externalId: record.externalId,
+    sourceUrl: record.sourceUrl,
+    providerCategory: record.providerCategory,
+    attribution: record.attribution,
+    licenseUrl: record.licenseUrl,
+    name: record.name,
+    normalizedName: record.normalizedName,
+    category: record.category,
+    categoryConfidence: record.categoryConfidence,
+    categoryEvidence: record.categoryEvidence,
+    categoryAlternatives: record.categoryAlternatives,
+    countryCode: record.countryCode,
+    country: record.country,
+    region: record.region,
+    city: record.city,
+    district: record.district,
+    postalCode: record.postalCode,
+    address: record.address,
+    latitude: record.latitude,
+    longitude: record.longitude,
+    phone: record.phone,
+    email: record.email,
+    website: record.website,
+    instagram: record.instagram,
+    issues: record.issues,
+    slugHint: `${record.osmType}-${record.osmId}`,
+    metadata: {
+      osmTimestamp: record.osmTimestamp,
+      tags: record.tags,
+    },
+  });
 }
