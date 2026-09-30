@@ -11,6 +11,7 @@ import {
   parseDirectoryProfileV2,
 } from "@/lib/discovery/profile-v2";
 import { isUnsafeDiscoveryProofUrl } from "@/lib/discovery/security";
+import { deleteManagedStudioPhotos } from "@/lib/discovery/studio-photo-storage";
 import { normalizeEmail, validateEmail } from "@/lib/validation";
 
 export type UpdateClaimedDirectoryProfileInput = {
@@ -190,14 +191,34 @@ export async function updateClaimedDirectoryProfile(
       },
     });
 
+    const removedPhotoUrls = currentProfileV2.photoUrls.filter(
+      (url) => !profileV2.photoUrls.includes(url),
+    );
+
     return {
       claimId: claim.id,
       candidateId: candidate.id,
       slug: candidate.slug,
       name,
       changedFields,
+      removedPhotoUrls,
     };
   });
+
+  if (result.removedPhotoUrls.length > 0) {
+    try {
+      await deleteManagedStudioPhotos(
+        result.removedPhotoUrls,
+        result.claimId,
+      );
+    } catch (error) {
+      console.error("studio-photo-cleanup-after-save-failed", {
+        claimId: result.claimId,
+        count: result.removedPhotoUrls.length,
+        message: error instanceof Error ? error.message : "DELETE_FAILED",
+      });
+    }
+  }
 
   await trackMarketplaceEvent({
     eventType: "DISCOVERY_OWNER_PROFILE_UPDATED",

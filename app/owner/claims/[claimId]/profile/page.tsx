@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { updateClaimedDirectoryProfileAction } from "@/app/owner/claims/[claimId]/profile/actions";
 import { AppHeader } from "@/components/AppHeader";
+import { StudioPhotoUploader } from "@/components/StudioPhotoUploader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDirectoryProfileV2 } from "@/lib/discovery/profile-v2";
@@ -292,18 +293,10 @@ export default async function ClaimedDirectoryProfilePage({
                   />
                 </label>
 
-                <label className="sm:col-span-2">
-                  <span className="label">Photo URLs</span>
-                  <textarea
-                    name="photoUrls"
-                    defaultValue={profileV2.photoUrls.join("\n")}
-                    className="field min-h-36"
-                    placeholder={"https://.../studio-main.jpg\nhttps://.../control-room.jpg"}
-                  />
-                  <span className="mt-1 block text-[10px] text-zinc-700">
-                    Up to 6 public image URLs. These are shown only on the owner-verified directory profile.
-                  </span>
-                </label>
+                <StudioPhotoUploader
+                  claimId={claim.id}
+                  initialUrls={profileV2.photoUrls}
+                />
               </div>
             </div>
 
