@@ -6,6 +6,7 @@ import { updateClaimedDirectoryProfileAction } from "@/app/owner/claims/[claimId
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDirectoryProfileV2 } from "@/lib/discovery/profile-v2";
 import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 export const metadata = { title: "Manage directory profile · 36" };
@@ -16,6 +17,8 @@ const ERRORS: Record<string, string> = {
   "email-invalid": "Enter a valid public business email or leave it empty.",
   "url-invalid": "Website and Instagram fields must be valid http or https URLs.",
   "url-unsafe": "Local/private-network URLs and URLs containing credentials are not accepted.",
+  "photo-url-invalid": "Every photo must be a valid public http or https image URL.",
+  "whatsapp-invalid": "Enter a valid WhatsApp phone number or leave it empty.",
   "claim-not-verified": "Ownership must be verified before you can edit this directory profile.",
   "candidate-unavailable": "This directory listing can no longer be edited.",
   "use-booking-listing": "This studio has already moved into booking onboarding. Edit the 36 Studio listing instead.",
@@ -60,6 +63,12 @@ export default async function ClaimedDirectoryProfilePage({
             orderBy: { collectedAt: "desc" },
             take: 4,
           },
+          transitions: {
+            where: { reasonCode: "VERIFIED_OWNER_PROFILE_UPDATE" },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { metadata: true },
+          },
         },
       },
     },
@@ -68,6 +77,9 @@ export default async function ClaimedDirectoryProfilePage({
   if (!claim) notFound();
 
   const candidate = claim.candidateStudio;
+  const profileV2 = parseDirectoryProfileV2(
+    candidate.transitions[0]?.metadata,
+  );
   const canStartBooking =
     candidate.status !== "CONVERTED" &&
     isDiscoveryRolloutEnabled(candidate, "ONBOARDING");
@@ -200,6 +212,99 @@ export default async function ClaimedDirectoryProfilePage({
                 <span className="label">Address</span>
                 <textarea name="address" defaultValue={candidate.address || ""} className="field min-h-24" />
               </label>
+            </div>
+
+            <div className="border-t border-zinc-900 pt-6">
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-sky-300">
+                Rich public profile
+              </span>
+              <p className="mt-2 text-xs leading-5 text-zinc-600">
+                These fields make the contact page feel like a real studio profile while remaining separate from booking.
+              </p>
+
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <label className="sm:col-span-2">
+                  <span className="label">Studio description</span>
+                  <textarea
+                    name="description"
+                    maxLength={2400}
+                    defaultValue={profileV2.description}
+                    className="field min-h-32"
+                    placeholder="Describe the studio, the kind of work you do, rooms, sound, atmosphere and who it is for."
+                  />
+                </label>
+
+                <label>
+                  <span className="label">WhatsApp number</span>
+                  <input
+                    name="whatsapp"
+                    maxLength={80}
+                    defaultValue={profileV2.whatsapp}
+                    className="field"
+                    placeholder="+212..."
+                  />
+                </label>
+
+                <label>
+                  <span className="label">Languages</span>
+                  <input
+                    name="languages"
+                    defaultValue={profileV2.languages.join(", ")}
+                    className="field"
+                    placeholder="Arabic, French, English"
+                  />
+                </label>
+
+                <label>
+                  <span className="label">Services</span>
+                  <textarea
+                    name="services"
+                    defaultValue={profileV2.services.join("\n")}
+                    className="field min-h-32"
+                    placeholder={"Recording\nMixing\nMastering\nPodcast production"}
+                  />
+                  <span className="mt-1 block text-[10px] text-zinc-700">
+                    One per line or comma-separated.
+                  </span>
+                </label>
+
+                <label>
+                  <span className="label">Equipment</span>
+                  <textarea
+                    name="equipment"
+                    defaultValue={profileV2.equipment.join("\n")}
+                    className="field min-h-32"
+                    placeholder={"Neumann U87\nApollo x8\nYamaha HS8"}
+                  />
+                  <span className="mt-1 block text-[10px] text-zinc-700">
+                    One per line or comma-separated.
+                  </span>
+                </label>
+
+                <label className="sm:col-span-2">
+                  <span className="label">Opening hours</span>
+                  <textarea
+                    name="openingHours"
+                    maxLength={1000}
+                    defaultValue={profileV2.openingHours}
+                    className="field min-h-24"
+                    placeholder={"Mon–Fri 10:00–22:00\nSat–Sun 12:00–20:00"}
+                  />
+                </label>
+
+                <label className="sm:col-span-2">
+                  <span className="label">Photo URLs</span>
+                  <textarea
+                    name="photoUrls"
+                    defaultValue={profileV2.photoUrls.join("\n")}
+                    className="field min-h-36"
+                    placeholder={"https://.../studio-main.jpg\nhttps://.../control-room.jpg"}
+                  />
+                  <span className="mt-1 block text-[10px] text-zinc-700">
+                    Up to 6 public image URLs. These are shown only on the owner-verified directory profile.
+                  </span>
+                </label>
+              </div>
             </div>
 
             <button className="w-full rounded-xl bg-sky-300 px-5 py-4 text-sm font-black text-black">

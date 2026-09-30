@@ -6,6 +6,10 @@ import {
 import { trackMarketplaceEvent } from "@/lib/analytics";
 import { db } from "@/lib/db";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
+import {
+  buildDirectoryProfileV2,
+  parseDirectoryProfileV2,
+} from "@/lib/discovery/profile-v2";
 import { isUnsafeDiscoveryProofUrl } from "@/lib/discovery/security";
 import { normalizeEmail, validateEmail } from "@/lib/validation";
 
@@ -23,6 +27,13 @@ export type UpdateClaimedDirectoryProfileInput = {
   district?: string;
   postalCode?: string;
   address?: string;
+  description?: string;
+  whatsapp?: string;
+  services?: string;
+  equipment?: string;
+  languages?: string;
+  openingHours?: string;
+  photoUrls?: string;
 };
 
 function clean(value: string | undefined, max: number) {
@@ -61,6 +72,15 @@ export async function updateClaimedDirectoryProfile(
   const district = clean(input.district, 160) || null;
   const postalCode = clean(input.postalCode, 40) || null;
   const address = clean(input.address, 500) || null;
+  const profileV2 = buildDirectoryProfileV2({
+    description: input.description,
+    whatsapp: input.whatsapp,
+    services: input.services,
+    equipment: input.equipment,
+    languages: input.languages,
+    openingHours: input.openingHours,
+    photoUrls: input.photoUrls,
+  });
 
   if (name.length < 2) throw new Error("OWNER_PROFILE_NAME_REQUIRED");
   if (phone.length < 5) throw new Error("OWNER_PROFILE_PHONE_REQUIRED");
@@ -88,13 +108,26 @@ export async function updateClaimedDirectoryProfile(
         status: "VERIFIED",
       },
       include: {
-        candidateStudio: true,
+        candidateStudio: {
+          include: {
+            transitions: {
+              where: { reasonCode: "VERIFIED_OWNER_PROFILE_UPDATE" },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: { metadata: true },
+            },
+          },
+        },
       },
     });
 
     if (!claim) throw new Error("OWNER_PROFILE_CLAIM_NOT_VERIFIED");
 
     const candidate = claim.candidateStudio;
+    const currentProfileV2 = parseDirectoryProfileV2(
+      candidate.transitions[0]?.metadata,
+    );
+
     if (candidate.status === "CONVERTED") {
       throw new Error("OWNER_PROFILE_USE_BOOKING_LISTING");
     }
@@ -125,6 +158,13 @@ export async function updateClaimedDirectoryProfile(
       if (normalizedCurrent !== normalizedNext) changedFields.push(key);
     }
 
+    for (const [key, value] of Object.entries(profileV2)) {
+      const current = currentProfileV2[key as keyof typeof currentProfileV2];
+      if (JSON.stringify(current) !== JSON.stringify(value)) {
+        changedFields.push("profileV2." + key);
+      }
+    }
+
     await tx.candidateStudio.update({
       where: { id: candidate.id },
       data: proposed,
@@ -145,6 +185,7 @@ export async function updateClaimedDirectoryProfile(
         metadata: {
           claimId: claim.id,
           changedFields,
+          profileV2,
         },
       },
     });

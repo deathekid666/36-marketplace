@@ -12,6 +12,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
 import { directoryStudioIdentityWhere } from "@/lib/discovery/public-eligibility";
+import {
+  parseDirectoryProfileV2,
+  profileV2Completeness,
+} from "@/lib/discovery/profile-v2";
 import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
 
 export const metadata = {
@@ -298,6 +302,12 @@ export default async function DiscoverStudiosPage({
           select: { id: true },
           take: 1,
         },
+        transitions: {
+          where: { reasonCode: "VERIFIED_OWNER_PROFILE_UPDATE" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { metadata: true },
+        },
       },
       orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
       skip: (page - 1) * pageSize,
@@ -368,7 +378,13 @@ export default async function DiscoverStudiosPage({
   const rankedCandidates = [...visibleCandidates].sort((a, b) => {
     function score(candidate: (typeof visibleCandidates)[number]) {
       let value = 0;
-      if (candidate.claims.length > 0) value += 100;
+      if (candidate.claims.length > 0) {
+        value += 100;
+        value +=
+          profileV2Completeness(
+            parseDirectoryProfileV2(candidate.transitions[0]?.metadata),
+          ) * 4;
+      }
       if (candidate.status === "CONVERTED") value += 55;
       else if (candidate.status === "APPROVED") value += 35;
       if (candidate.website) value += 12;
@@ -594,6 +610,10 @@ export default async function DiscoverStudiosPage({
             >
               {rankedCandidates.map((candidate) => {
                 const ownershipVerified = candidate.claims.length > 0;
+                const profileV2 = ownershipVerified
+                  ? parseDirectoryProfileV2(candidate.transitions[0]?.metadata)
+                  : parseDirectoryProfileV2(null);
+                const heroPhoto = profileV2.photoUrls[0] || null;
                 const website = safeExternalUrl(candidate.website);
                 const reviewed =
                   candidate.status === "APPROVED" ||
@@ -608,6 +628,21 @@ export default async function DiscoverStudiosPage({
                     data-map-active="false"
                     className="rounded-3xl border border-zinc-900 bg-zinc-950/60 p-5 transition"
                   >
+                    {heroPhoto && (
+                      <a
+                        href={"/discover/" + candidate.slug}
+                        className="-mx-5 -mt-5 mb-5 block overflow-hidden rounded-t-3xl border-b border-zinc-900"
+                      >
+                        <img
+                          src={heroPhoto}
+                          alt={candidate.name + " studio"}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          className="h-48 w-full object-cover transition duration-300 hover:scale-[1.02]"
+                        />
+                      </a>
+                    )}
+
                     <div className="flex items-start justify-between gap-3">
                       <span
                         className={
@@ -644,6 +679,30 @@ export default async function DiscoverStudiosPage({
                         .filter(Boolean)
                         .join(" · ") || "Location available"}
                     </p>
+
+                    {profileV2.description && (
+                      <p className="mt-3 line-clamp-2 text-xs leading-5 text-zinc-500">
+                        {profileV2.description}
+                      </p>
+                    )}
+
+                    {profileV2.services.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {profileV2.services.slice(0, 3).map((service) => (
+                          <span
+                            key={service}
+                            className="rounded-full border border-sky-900/30 bg-sky-950/10 px-2 py-1 text-[9px] font-bold text-sky-300"
+                          >
+                            {service}
+                          </span>
+                        ))}
+                        {profileV2.services.length > 3 && (
+                          <span className="rounded-full border border-zinc-900 px-2 py-1 text-[9px] text-zinc-600">
+                            +{profileV2.services.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {candidate.phone && (
                       <a

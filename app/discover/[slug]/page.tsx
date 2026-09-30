@@ -12,6 +12,11 @@ import {
   discoveryFreshnessLabel,
 } from "@/lib/discovery/freshness";
 import { isDirectoryStudioIdentity } from "@/lib/discovery/public-eligibility";
+import {
+  parseDirectoryProfileV2,
+  profileV2Completeness,
+  whatsappUrl,
+} from "@/lib/discovery/profile-v2";
 import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 export const metadata = {
@@ -80,6 +85,12 @@ export default async function DiscoveryStudioPage({
         select: { id: true, claimantId: true },
         take: 1,
       },
+      transitions: {
+        where: { reasonCode: "VERIFIED_OWNER_PROFILE_UPDATE" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { metadata: true },
+      },
     },
   });
 
@@ -144,7 +155,13 @@ export default async function DiscoveryStudioPage({
       : [];
 
   const website = safeExternalUrl(candidate.website);
+  const instagram = safeExternalUrl(candidate.instagram);
   const verifiedClaim = candidate.claims[0] || null;
+  const profileV2 = ownershipVerified
+    ? parseDirectoryProfileV2(candidate.transitions[0]?.metadata)
+    : parseDirectoryProfileV2(null);
+  const richProfileScore = profileV2Completeness(profileV2);
+  const whatsapp = whatsappUrl(profileV2.whatsapp);
   const ownedByCurrentUser =
     Boolean(user && verifiedClaim && user.id === verifiedClaim.claimantId);
   const onboardingInProgress =
@@ -226,6 +243,56 @@ export default async function DiscoveryStudioPage({
           </div>
         </div>
 
+        {ownershipVerified && profileV2.photoUrls.length > 0 && (
+          <section className="mt-8 overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/60">
+            <div className="grid gap-1 sm:grid-cols-2">
+              <a
+                href={profileV2.photoUrls[0]}
+                target="_blank"
+                rel="noreferrer noopener"
+                className={profileV2.photoUrls.length === 1 ? "sm:col-span-2" : ""}
+              >
+                <img
+                  src={profileV2.photoUrls[0]}
+                  alt={candidate.name + " studio"}
+                  loading="eager"
+                  referrerPolicy="no-referrer"
+                  className="h-72 w-full object-cover sm:h-[420px]"
+                />
+              </a>
+              {profileV2.photoUrls.length > 1 && (
+                <div className="grid grid-cols-2 gap-1">
+                  {profileV2.photoUrls.slice(1, 5).map((photo, index) => (
+                    <a
+                      key={photo}
+                      href={photo}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className={profileV2.photoUrls.length === 2 ? "col-span-2" : ""}
+                    >
+                      <img
+                        src={photo}
+                        alt={candidate.name + " studio photo " + (index + 2)}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="h-36 w-full object-cover sm:h-[208px]"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-900 px-5 py-3">
+              <span className="text-xs font-bold text-emerald-300">
+                Photos maintained by verified owner
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-600">
+                {profileV2.photoUrls.length} photo{profileV2.photoUrls.length === 1 ? "" : "s"}
+              </span>
+            </div>
+          </section>
+        )}
+
         {query.report === "submitted" && (
           <div className="mt-6 rounded-xl border border-emerald-900/50 bg-emerald-950/10 p-4 text-sm text-emerald-300">
             Thanks. The directory issue was sent to the 36 admin review queue.
@@ -257,17 +324,119 @@ export default async function DiscoveryStudioPage({
                 <b className="text-lg text-sky-300">{candidate.phone}</b>
               </a>
 
-              {website && (
-                <a
-                  href={website}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="button-dark mt-3 inline-flex"
-                >
-                  Visit public website ↗
-                </a>
-              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {whatsapp && (
+                  <a
+                    href={whatsapp}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="rounded-xl border border-emerald-900/50 bg-emerald-950/10 px-4 py-3 text-xs font-black text-emerald-300 hover:border-emerald-700"
+                  >
+                    WhatsApp ↗
+                  </a>
+                )}
+                {candidate.email && (
+                  <a href={"mailto:" + candidate.email} className="button-dark">
+                    Email
+                  </a>
+                )}
+                {website && (
+                  <a
+                    href={website}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="button-dark"
+                  >
+                    Website ↗
+                  </a>
+                )}
+                {instagram && (
+                  <a
+                    href={instagram}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="button-dark"
+                  >
+                    Instagram ↗
+                  </a>
+                )}
+              </div>
             </section>
+
+            {ownershipVerified && richProfileScore > 0 && (
+              <section className="panel">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">
+                    Verified owner profile
+                  </span>
+                  <span className="rounded-full border border-emerald-900/40 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-300">
+                    Owner maintained
+                  </span>
+                </div>
+
+                {profileV2.description && (
+                  <>
+                    <h2 className="mt-3 text-2xl font-black">About this studio</h2>
+                    <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-400">
+                      {profileV2.description}
+                    </p>
+                  </>
+                )}
+
+                {profileV2.services.length > 0 && (
+                  <div className="mt-6">
+                    <span className="label">Services</span>
+                    <div className="flex flex-wrap gap-2">
+                      {profileV2.services.map((service) => (
+                        <span
+                          key={service}
+                          className="rounded-full border border-sky-900/40 bg-sky-950/10 px-3 py-1.5 text-xs font-bold text-sky-300"
+                        >
+                          {service}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {profileV2.equipment.length > 0 && (
+                  <div className="mt-6">
+                    <span className="label">Equipment</span>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {profileV2.equipment.map((item) => (
+                        <div
+                          key={item}
+                          className="rounded-xl border border-zinc-900 bg-black/20 px-4 py-3 text-sm text-zinc-300"
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(profileV2.languages.length > 0 || profileV2.openingHours) && (
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                    {profileV2.languages.length > 0 && (
+                      <div className="rounded-2xl border border-zinc-900 p-4">
+                        <span className="label">Languages</span>
+                        <p className="text-sm leading-6 text-zinc-300">
+                          {profileV2.languages.join(" · ")}
+                        </p>
+                      </div>
+                    )}
+                    {profileV2.openingHours && (
+                      <div className="rounded-2xl border border-zinc-900 p-4">
+                        <span className="label">Opening hours</span>
+                        <p className="whitespace-pre-line text-sm leading-6 text-zinc-300">
+                          {profileV2.openingHours}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
 
             <section className="panel">
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">
@@ -414,12 +583,24 @@ export default async function DiscoveryStudioPage({
                 contact information.
               </p>
 
-              <a
-                href={cleanPhoneHref(candidate.phone)}
-                className="mt-5 inline-flex w-full justify-center rounded-xl bg-sky-300 px-5 py-3.5 text-sm font-black text-black"
-              >
-                Call {candidate.phone}
-              </a>
+              <div className="mt-5 grid gap-2">
+                <a
+                  href={cleanPhoneHref(candidate.phone)}
+                  className="inline-flex w-full justify-center rounded-xl bg-sky-300 px-5 py-3.5 text-sm font-black text-black"
+                >
+                  Call {candidate.phone}
+                </a>
+                {whatsapp && (
+                  <a
+                    href={whatsapp}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="inline-flex w-full justify-center rounded-xl border border-emerald-900/50 bg-emerald-950/10 px-5 py-3.5 text-sm font-black text-emerald-300"
+                  >
+                    Message on WhatsApp
+                  </a>
+                )}
+              </div>
 
               {onboardingInProgress ? (
                 <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">

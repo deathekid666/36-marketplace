@@ -28,6 +28,8 @@ function errorCode(error: unknown) {
     OWNER_PROFILE_EMAIL_INVALID: "email-invalid",
     OWNER_PROFILE_URL_INVALID: "url-invalid",
     OWNER_PROFILE_URL_UNSAFE: "url-unsafe",
+    OWNER_PROFILE_PHOTO_URL_INVALID: "photo-url-invalid",
+    OWNER_PROFILE_WHATSAPP_INVALID: "whatsapp-invalid",
     OWNER_PROFILE_CLAIM_NOT_VERIFIED: "claim-not-verified",
     OWNER_PROFILE_CANDIDATE_UNAVAILABLE: "candidate-unavailable",
     OWNER_PROFILE_USE_BOOKING_LISTING: "use-booking-listing",
@@ -60,6 +62,13 @@ export async function updateClaimedDirectoryProfileAction(form: FormData) {
       district: text(form, "district", 160),
       postalCode: text(form, "postalCode", 40),
       address: text(form, "address", 500),
+      description: text(form, "description", 2400),
+      whatsapp: text(form, "whatsapp", 80),
+      services: text(form, "services", 2200),
+      equipment: text(form, "equipment", 3600),
+      languages: text(form, "languages", 800),
+      openingHours: text(form, "openingHours", 1000),
+      photoUrls: text(form, "photoUrls", 5000),
     });
 
     revalidatePath("/discover");
