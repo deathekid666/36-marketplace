@@ -16,6 +16,7 @@ import urllib.request
 import duckdb
 
 API_URL = "https://36-marketplace.vercel.app/api/internal/discovery/global-contacts"
+CONSOLIDATE_URL = "https://36-marketplace.vercel.app/api/internal/discovery/consolidate"
 AUDIENCE = "36-marketplace-global-contacts"
 MAX_RECORDS = max(0, int(os.environ.get("MAX_RECORDS", "0") or "0"))
 BATCH_SIZE = 12
@@ -60,13 +61,13 @@ def oidc_token():
     return token
 
 
-def post_batch(release, records):
-    body = json.dumps({"release": release, "records": records}, separators=(",", ":")).encode()
+def post_json(url, payload, timeout=75):
+    body = json.dumps(payload, separators=(",", ":")).encode()
     last_error = None
 
     for attempt in range(5):
         request = urllib.request.Request(
-            API_URL,
+            url,
             method="POST",
             data=body,
             headers={
@@ -77,11 +78,11 @@ def post_batch(release, records):
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=75) as response:
-                payload = json.load(response)
-            if payload.get("ok"):
-                return payload
-            raise RuntimeError(str(payload))
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                result = json.load(response)
+            if result.get("ok"):
+                return result
+            raise RuntimeError(str(result))
         except urllib.error.HTTPError as error:
             detail = error.read().decode("utf-8", "replace")
             last_error = RuntimeError(f"HTTP {error.code}: {detail}")
@@ -92,7 +93,35 @@ def post_batch(release, records):
 
         time.sleep(min(20, 2 ** (attempt + 1)))
 
-    raise RuntimeError(f"Batch failed: {last_error}")
+    raise RuntimeError(f"Request failed: {last_error}")
+
+
+def post_batch(release, records):
+    return post_json(API_URL, {"release": release, "records": records})
+
+
+def consolidate_duplicates():
+    total_merged = 0
+
+    for round_index in range(12):
+        result = post_json(CONSOLIDATE_URL, {"maxMerges": 20}, timeout=75)
+        merged = int(result.get("merged") or 0)
+        total_merged += merged
+        print(
+            json.dumps(
+                {
+                    "consolidationRound": round_index + 1,
+                    "scanned": int(result.get("scanned") or 0),
+                    "proposals": int(result.get("proposals") or 0),
+                    "merged": merged,
+                    "totalMerged": total_merged,
+                }
+            )
+        )
+        if merged == 0:
+            break
+
+    return total_merged
 
 
 release = latest_release()
@@ -224,3 +253,6 @@ while not stop:
 
 flush()
 print(json.dumps({"release": release, "selected": selected, "totals": totals}, indent=2))
+
+merged_duplicates = consolidate_duplicates()
+print(json.dumps({"duplicateConsolidationMerged": merged_duplicates}))

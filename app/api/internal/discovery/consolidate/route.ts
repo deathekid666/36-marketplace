@@ -35,5 +35,10 @@ export async function POST(request: Request) {
   }
 
   const result = await consolidateSafeDiscoveryDuplicates(maxMerges);
+  console.info("discovery-duplicate-consolidation", {
+    scanned: result.scanned,
+    proposals: result.proposals,
+    merged: result.merged,
+  });
   return NextResponse.json({ ok: true, ...result });
 }
