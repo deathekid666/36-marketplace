@@ -1,7 +1,7 @@
 {
   "provider": "OPENSTREETMAP",
-  "delivery": "GEOFABRIK_PBF",
+  "delivery": "OSM_PBF_SNAPSHOT",
   "sourceUrl": "https://download.openstreetmap.fr/extracts/africa/morocco-latest.osm.pbf",
-  "generatedAt": "2026-09-30T13:22:50.885Z",
+  "generatedAt": "2026-09-30T13:26:26.875Z",
   "elements": []
 }
