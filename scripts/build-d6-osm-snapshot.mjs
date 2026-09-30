@@ -99,7 +99,9 @@ elements.sort((a, b) => {
 const snapshot = {
   provider: "OPENSTREETMAP",
   delivery: "GEOFABRIK_PBF",
-  sourceUrl: "https://download.geofabrik.de/africa/morocco-latest.osm.pbf",
+  sourceUrl:
+    process.env.OSM_SOURCE_URL ||
+    "https://download.geofabrik.de/africa/morocco-latest.osm.pbf",
   generatedAt: new Date().toISOString(),
   elements,
 };
