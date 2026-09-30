@@ -5,6 +5,11 @@ import { AppHeader } from "@/components/AppHeader";
 import { StudioMap } from "@/components/StudioMap";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  discoveryFreshness,
+  discoveryFreshnessClass,
+  discoveryFreshnessLabel,
+} from "@/lib/discovery/freshness";
 
 export const metadata = {
   title: "Discovery listing · 36",
@@ -62,6 +67,11 @@ export default async function DiscoveryStudioPage({
 
   if (candidate.status !== "APPROVED" && candidate.status !== "CONVERTED") notFound();
 
+  const freshness = discoveryFreshness(candidate.lastCheckedAt);
+  if (candidate.status === "APPROVED" && (freshness === "STALE" || freshness === "UNKNOWN")) {
+    notFound();
+  }
+
   const mapPoints =
     candidate.latitude != null && candidate.longitude != null
       ? [
@@ -100,6 +110,11 @@ export default async function DiscoveryStudioPage({
               <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-700">
                 {labelCategory(candidate.category)}
               </span>
+              {candidate.status === "APPROVED" && (
+                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${discoveryFreshnessClass(freshness)}`}>
+                  {discoveryFreshnessLabel(freshness)}
+                </span>
+              )}
             </div>
             <h1 className="mt-4 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
               {candidate.name}

@@ -16,6 +16,11 @@ import {
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  discoveryFreshness,
+  discoveryFreshnessClass,
+  discoveryFreshnessLabel,
+} from "@/lib/discovery/freshness";
 
 export const metadata = { title: "Discovery candidate · 36 Admin" };
 
@@ -166,6 +171,8 @@ export default async function AdminDiscoveryCandidatePage({
   const canMarkEnriched =
     candidate.status === CandidateStudioStatus.DISCOVERED ||
     candidate.status === CandidateStudioStatus.REVIEW_REQUIRED;
+
+  const freshness = discoveryFreshness(candidate.lastCheckedAt);
 
   const qualityChecks = [
     ["Identity", candidate.name.trim().length >= 2 && candidate.normalizedName.trim().length >= 2],
@@ -536,6 +543,21 @@ export default async function AdminDiscoveryCandidatePage({
           </div>
 
           <aside className="space-y-6">
+            <section className="rounded-2xl border border-zinc-900 bg-zinc-950 p-6">
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">
+                Freshness
+              </span>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <h2 className="text-xl font-black">Provider evidence</h2>
+                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${discoveryFreshnessClass(freshness)}`}>
+                  {discoveryFreshnessLabel(freshness)}
+                </span>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-zinc-600">
+                Last checked {dateTime(candidate.lastCheckedAt)}. Approved discovery records older than 90 days are hidden from public discovery until a provider refresh sees them again. Converted owner listings are not hidden by provider staleness.
+              </p>
+            </section>
+
             <section className="rounded-2xl border border-zinc-900 bg-zinc-950 p-6">
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">
                 Quality gate

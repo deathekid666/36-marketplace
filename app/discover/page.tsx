@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { StudioMap } from "@/components/StudioMap";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
 
 export const metadata = {
   title: "Discover studios · 36",
@@ -27,22 +28,30 @@ export default async function DiscoverStudiosPage({
   const query = await searchParams;
   const q = String(query.q || "").trim().slice(0, 120);
   const city = String(query.city || "").trim().slice(0, 120);
+  const staleCutoff = discoveryStaleCutoff();
 
   const candidates = await db.candidateStudio.findMany({
     where: {
-      status: { in: ["APPROVED", "CONVERTED"] },
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { normalizedName: { contains: q, mode: "insensitive" } },
-              { city: { contains: q, mode: "insensitive" } },
-              { district: { contains: q, mode: "insensitive" } },
-              { country: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-      ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
+      AND: [
+        {
+          OR: [
+            { status: "CONVERTED" },
+            { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+          ],
+        },
+        ...(q
+          ? [{
+              OR: [
+                { name: { contains: q, mode: "insensitive" as const } },
+                { normalizedName: { contains: q, mode: "insensitive" as const } },
+                { city: { contains: q, mode: "insensitive" as const } },
+                { district: { contains: q, mode: "insensitive" as const } },
+                { country: { contains: q, mode: "insensitive" as const } },
+              ],
+            }]
+          : []),
+        ...(city ? [{ city: { contains: city, mode: "insensitive" as const } }] : []),
+      ],
     },
     include: {
       convertedStudio: {
@@ -66,7 +75,10 @@ export default async function DiscoverStudiosPage({
   const cityRows = await db.candidateStudio.groupBy({
     by: ["city"],
     where: {
-      status: { in: ["APPROVED", "CONVERTED"] },
+      OR: [
+        { status: "CONVERTED" },
+        { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+      ],
       city: { not: null },
     },
     _count: { city: true },

@@ -9,6 +9,12 @@ import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
+import {
+  discoveryFreshness,
+  discoveryFreshnessClass,
+  discoveryFreshnessLabel,
+  discoveryStaleCutoff,
+} from "@/lib/discovery/freshness";
 import { getOpenStreetMapSnapshotInfo } from "@/lib/discovery/providers/openstreetmap-snapshot";
 import { getOvertureSnapshotInfo } from "@/lib/discovery/providers/overture";
 import { DISCOVERY_PROVIDERS } from "@/lib/discovery/providers/registry";
@@ -66,12 +72,14 @@ export default async function AdminDiscoveryPage({
     preset?: string;
     importError?: string;
     provider?: string;
+    freshness?: string;
   }>;
 }) {
   const user = await requireRole("ADMIN");
   const query = await searchParams;
 
   const status = validStatus(query.status);
+  const freshnessFilter = query.freshness === "STALE" ? "STALE" : "";
   const rawSearch = String(query.q || "").trim().slice(0, 120);
   const normalizedSearch = normalizeSearchText(rawSearch);
   const country = /^[a-zA-Z]{2}$/.test(String(query.country || "").trim())
@@ -81,28 +89,42 @@ export default async function AdminDiscoveryPage({
   const pageSize = 40;
   const overtureSnapshot = getOvertureSnapshotInfo();
   const osmSnapshot = getOpenStreetMapSnapshotInfo();
+  const staleCutoff = discoveryStaleCutoff();
 
-  const where: Prisma.CandidateStudioWhereInput = {
-    ...(status ? { status } : {}),
-    ...(country ? { countryCode: country } : {}),
-    ...(rawSearch
-      ? {
-          OR: [
-            { name: { contains: rawSearch, mode: "insensitive" } },
-            ...(normalizedSearch
-              ? [{ normalizedName: { contains: normalizedSearch, mode: "insensitive" as const } }]
-              : []),
-            { city: { contains: rawSearch, mode: "insensitive" } },
-            { country: { contains: rawSearch, mode: "insensitive" } },
-            { website: { contains: rawSearch, mode: "insensitive" } },
-            { instagram: { contains: rawSearch, mode: "insensitive" } },
-            { phone: { contains: rawSearch } },
-          ],
-        }
-      : {}),
-  };
+  const filters: Prisma.CandidateStudioWhereInput[] = [];
+  if (status) filters.push({ status });
+  if (freshnessFilter === "STALE") {
+    filters.push(
+      { status: { not: "CONVERTED" } },
+      {
+        OR: [
+          { lastCheckedAt: null },
+          { lastCheckedAt: { lt: staleCutoff } },
+        ],
+      },
+    );
+  }
+  if (country) filters.push({ countryCode: country });
+  if (rawSearch) {
+    filters.push({
+      OR: [
+        { name: { contains: rawSearch, mode: "insensitive" } },
+        ...(normalizedSearch
+          ? [{ normalizedName: { contains: normalizedSearch, mode: "insensitive" as const } }]
+          : []),
+        { city: { contains: rawSearch, mode: "insensitive" } },
+        { country: { contains: rawSearch, mode: "insensitive" } },
+        { website: { contains: rawSearch, mode: "insensitive" } },
+        { instagram: { contains: rawSearch, mode: "insensitive" } },
+        { phone: { contains: rawSearch } },
+      ],
+    });
+  }
 
-  const [candidates, filteredCount, total, discovered, review, approved, converted, countryRows, providerRows] =
+  const where: Prisma.CandidateStudioWhereInput =
+    filters.length > 0 ? { AND: filters } : {};
+
+  const [candidates, filteredCount, total, discovered, review, approved, converted, staleCount, countryRows, providerRows] =
     await Promise.all([
       db.candidateStudio.findMany({
         where,
@@ -130,6 +152,15 @@ export default async function AdminDiscoveryPage({
       db.candidateStudio.count({ where: { status: "REVIEW_REQUIRED" } }),
       db.candidateStudio.count({ where: { status: "APPROVED" } }),
       db.candidateStudio.count({ where: { status: "CONVERTED" } }),
+      db.candidateStudio.count({
+        where: {
+          status: { not: "CONVERTED" },
+          OR: [
+            { lastCheckedAt: null },
+            { lastCheckedAt: { lt: staleCutoff } },
+          ],
+        },
+      }),
       db.candidateStudio.groupBy({
         by: ["countryCode"],
         where: { countryCode: { not: null } },
@@ -155,6 +186,7 @@ export default async function AdminDiscoveryPage({
     if (status) params.set("status", status);
     if (rawSearch) params.set("q", rawSearch);
     if (country) params.set("country", country);
+    if (freshnessFilter) params.set("freshness", freshnessFilter);
     if (targetPage > 1) params.set("page", String(targetPage));
     const suffix = params.toString();
     return suffix ? `/admin/discovery?${suffix}` : "/admin/discovery";
@@ -264,20 +296,23 @@ export default async function AdminDiscoveryPage({
           </div>
         </section>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           {[
             ["All candidates", total, "ALL"],
             ["Discovered", discovered, "DISCOVERED"],
             ["Needs review", review, "REVIEW_REQUIRED"],
             ["Approved", approved, "APPROVED"],
             ["Converted", converted, "CONVERTED"],
+            ["Stale / unchecked", staleCount, "STALE"],
           ].map(([label, value, valueStatus]) => (
             <Link
               key={String(label)}
               href={
                 valueStatus === "ALL"
                   ? "/admin/discovery"
-                  : `/admin/discovery?status=${valueStatus}`
+                  : valueStatus === "STALE"
+                    ? "/admin/discovery?freshness=STALE"
+                    : `/admin/discovery?status=${valueStatus}`
               }
               className="panel transition hover:border-zinc-700"
             >
@@ -319,7 +354,7 @@ export default async function AdminDiscoveryPage({
           <span>
             {filteredCount} result{filteredCount === 1 ? "" : "s"} · page {Math.min(page, pageCount)} of {pageCount}
           </span>
-          {(status || rawSearch || country) && (
+          {(status || rawSearch || country || freshnessFilter) && (
             <Link href="/admin/discovery" className="font-bold text-zinc-400 hover:text-white">
               Clear filters
             </Link>
@@ -350,6 +385,13 @@ export default async function AdminDiscoveryPage({
                       >
                         {STATUS_LABELS[candidate.status]}
                       </span>
+                      {candidate.status !== "CONVERTED" && (
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.08em] ${discoveryFreshnessClass(discoveryFreshness(candidate.lastCheckedAt))}`}
+                        >
+                          {discoveryFreshnessLabel(discoveryFreshness(candidate.lastCheckedAt))}
+                        </span>
+                      )}
                       <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-700">
                         {candidate.category.replaceAll("_", " ")}
                       </span>

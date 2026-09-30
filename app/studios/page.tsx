@@ -13,6 +13,7 @@ import {
   discoveryCategoriesForStudioCategory,
   discoveryCategoryLabel,
 } from "@/lib/discovery/search";
+import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
 import { categoryLabel, STUDIO_CATEGORIES } from "@/lib/studio";
 
@@ -62,6 +63,7 @@ export default async function StudiosPage({
   });
 
   const discoveryCategories = discoveryCategoriesForStudioCategory(category);
+  const staleCutoff = discoveryStaleCutoff();
 
   const [studios, locationRows, candidateRows, candidateLocationRows] = await Promise.all([
     db.studio.findMany({
@@ -107,17 +109,24 @@ export default async function StudiosPage({
     }),
     db.candidateStudio.findMany({
       where: {
-        status: { in: ["APPROVED", "CONVERTED"] },
-        ...(city
-          ? {
-              OR: [
-                { city: { contains: city, mode: "insensitive" as const } },
-                { district: { contains: city, mode: "insensitive" as const } },
-                { address: { contains: city, mode: "insensitive" as const } },
-              ],
-            }
-          : {}),
-        ...(discoveryCategories ? { category: { in: discoveryCategories } } : {}),
+        AND: [
+          {
+            OR: [
+              { status: "CONVERTED" },
+              { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+            ],
+          },
+          ...(city
+            ? [{
+                OR: [
+                  { city: { contains: city, mode: "insensitive" as const } },
+                  { district: { contains: city, mode: "insensitive" as const } },
+                  { address: { contains: city, mode: "insensitive" as const } },
+                ],
+              }]
+            : []),
+          ...(discoveryCategories ? [{ category: { in: discoveryCategories } }] : []),
+        ],
       },
       include: {
         convertedStudio: {
@@ -138,7 +147,10 @@ export default async function StudiosPage({
     }),
     db.candidateStudio.findMany({
       where: {
-        status: { in: ["APPROVED", "CONVERTED"] },
+        OR: [
+          { status: "CONVERTED" },
+          { status: "APPROVED", lastCheckedAt: { gte: staleCutoff } },
+        ],
       },
       select: { city: true, district: true },
       orderBy: [{ city: "asc" }, { district: "asc" }],
