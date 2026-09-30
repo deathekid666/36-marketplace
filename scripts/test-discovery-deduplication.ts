@@ -51,7 +51,7 @@ const sameBrandDifferentBranch = evaluateDedupCandidate(
     countryCode: "MA",
     city: "Casablanca",
     address: "200 Boulevard Another",
-    latitude: 33.6501,
+    latitude: 33.7001,
     longitude: -7.6101,
     phone: "+212 5 22 00 11 22",
     website: "studioecho.ma",
