@@ -155,6 +155,19 @@ enum CandidateStudioTransitionActor {
   ADMIN
 }
 
+enum CandidateStudioClaimStatus {
+  SUBMITTED
+  VERIFIED
+  REJECTED
+  WITHDRAWN
+}
+
+enum CandidateStudioClaimRelationship {
+  OWNER
+  MANAGER
+  AUTHORIZED_REPRESENTATIVE
+}
+
 model User {
   id                      String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                   String        @unique
@@ -188,6 +201,8 @@ model User {
   referralsInvited        Referral[] @relation("ReferralInviter")
   referralAsInvitee       Referral? @relation("ReferralInvitee")
   candidateStudioTransitions CandidateStudioTransition[]
+  candidateStudioClaims CandidateStudioClaim[] @relation("CandidateClaimant")
+  candidateStudioClaimsReviewed CandidateStudioClaim[] @relation("CandidateClaimReviewer")
 
   @@index([role])
 }
@@ -829,6 +844,7 @@ model CandidateStudio {
   convertedStudio   Studio?                   @relation(fields: [convertedStudioId], references: [id], onDelete: SetNull)
   sources           CandidateStudioSource[]
   transitions       CandidateStudioTransition[]
+  claims            CandidateStudioClaim[]
 
   @@index([normalizedName])
   @@index([status, countryCode, city])
@@ -875,4 +891,31 @@ model CandidateStudioTransition {
   @@index([candidateStudioId, createdAt])
   @@index([actorUserId, createdAt])
   @@index([toStatus, createdAt])
+}
+
+
+model CandidateStudioClaim {
+  id                String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidateStudioId String                           @db.Uuid
+  claimantId        String                           @db.Uuid
+  relationship      CandidateStudioClaimRelationship
+  businessEmail     String
+  businessPhone     String                           @default("")
+  proofUrl          String                           @default("")
+  evidenceNote      String                           @default("")
+  status            CandidateStudioClaimStatus       @default(SUBMITTED)
+  reviewedById      String?                          @db.Uuid
+  adminNote         String                           @default("")
+  submittedAt       DateTime                         @default(now()) @db.Timestamp(3)
+  reviewedAt        DateTime?                        @db.Timestamp(3)
+  createdAt         DateTime                         @default(now()) @db.Timestamp(3)
+  updatedAt         DateTime                         @updatedAt @db.Timestamp(3)
+  candidateStudio   CandidateStudio                  @relation(fields: [candidateStudioId], references: [id], onDelete: Cascade)
+  claimant          User                             @relation("CandidateClaimant", fields: [claimantId], references: [id], onDelete: Restrict)
+  reviewedBy        User?                            @relation("CandidateClaimReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+
+  @@unique([candidateStudioId, claimantId])
+  @@index([candidateStudioId, status, createdAt])
+  @@index([claimantId, status, createdAt])
+  @@index([reviewedById, reviewedAt])
 }

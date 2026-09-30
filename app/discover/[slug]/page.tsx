@@ -46,6 +46,11 @@ export default async function DiscoveryStudioPage({
       convertedStudio: {
         select: { slug: true, status: true },
       },
+      claims: {
+        where: { status: "VERIFIED" },
+        select: { id: true },
+        take: 1,
+      },
     },
   });
 
@@ -72,6 +77,8 @@ export default async function DiscoveryStudioPage({
       : [];
 
   const website = safeExternalUrl(candidate.website);
+  const ownershipVerified = candidate.claims.length > 0;
+  const claimHref = "/discover/" + candidate.slug + "/claim";
 
   return (
     <main className="min-h-screen">
@@ -206,6 +213,33 @@ export default async function DiscoveryStudioPage({
                 </a>
               )}
 
+              {ownershipVerified ? (
+                <div className="mt-5 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
+                  <b className="text-sm text-emerald-300">Ownership claim verified</b>
+                  <p className="mt-1 text-xs leading-5 text-zinc-600">
+                    A verified studio representative is connected to this discovery listing. 36 onboarding is still required before booking can start.
+                  </p>
+                </div>
+              ) : user?.role === "STUDIO_OWNER" ? (
+                <Link
+                  href={claimHref}
+                  className="mt-5 inline-flex w-full justify-center rounded-xl bg-sky-300 px-5 py-3.5 text-sm font-black text-black"
+                >
+                  Claim this studio
+                </Link>
+              ) : !user ? (
+                <Link
+                  href={`/auth/login?next=${encodeURIComponent(claimHref)}`}
+                  className="mt-5 inline-flex w-full justify-center rounded-xl bg-sky-300 px-5 py-3.5 text-sm font-black text-black"
+                >
+                  Claim this studio
+                </Link>
+              ) : (
+                <div className="mt-5 rounded-xl border border-zinc-900 p-4 text-xs leading-5 text-zinc-600">
+                  Ownership claims require a Studio Owner account.
+                </div>
+              )}
+
               <Link
                 href="/studios"
                 className="mt-3 inline-flex w-full justify-center rounded-xl bg-acid px-5 py-3.5 text-sm font-black text-black"
@@ -214,7 +248,7 @@ export default async function DiscoveryStudioPage({
               </Link>
 
               <p className="mt-4 text-center text-[10px] leading-5 text-zinc-700">
-                Studio claiming and owner conversion are part of the next discovery phase.
+                Claim verification does not create prices, rooms or booking availability.
               </p>
             </section>
           </aside>

@@ -9,6 +9,10 @@ import {
   rejectCandidateAction,
   requestCandidateReviewAction,
 } from "@/app/admin/discovery/actions";
+import {
+  rejectCandidateClaimAction,
+  verifyCandidateClaimAction,
+} from "@/app/admin/discovery/claim-actions";
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -62,6 +66,8 @@ const RESULT_MESSAGES: Record<string, string> = {
   archived: "Candidate archived.",
   "review-required": "Candidate moved to human review.",
   enriched: "Candidate marked enriched.",
+  "claim-verified": "Ownership claim verified. The candidate is still not bookable until D9 onboarding/conversion.",
+  "claim-rejected": "Ownership claim rejected.",
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -75,6 +81,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   "identity-incomplete": "The candidate name/identity is incomplete.",
   "concurrent-update": "The candidate changed during review. Reload and review the latest state.",
   "transition-failed": "The lifecycle action failed.",
+  "claim-already-verified": "Another ownership claim is already verified for this candidate.",
+  "claim-candidate-unavailable": "This candidate is no longer available for claim review.",
+  "claim-review-not-allowed": "This ownership claim is no longer pending.",
+  "claim-not-found": "The ownership claim no longer exists.",
+  "claim-review-failed": "The ownership claim review failed.",
 };
 
 export default async function AdminDiscoveryCandidatePage({
@@ -109,6 +120,24 @@ export default async function AdminDiscoveryCandidatePage({
           slug: true,
           status: true,
           city: true,
+        },
+      },
+      claims: {
+        orderBy: { updatedAt: "desc" },
+        include: {
+          claimant: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              status: true,
+              emailVerifiedAt: true,
+            },
+          },
+          reviewedBy: {
+            select: { id: true, name: true, email: true },
+          },
         },
       },
     },
@@ -337,6 +366,111 @@ export default async function AdminDiscoveryCandidatePage({
                   })
                 )}
               </div>
+            </section>
+
+            <section className="panel">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">
+                    Ownership
+                  </span>
+                  <h2 className="mt-2 text-2xl font-black">Studio claims</h2>
+                </div>
+                <span className="text-xs text-zinc-600">{candidate.claims.length} claim{candidate.claims.length === 1 ? "" : "s"}</span>
+              </div>
+
+              {candidate.claims.length === 0 ? (
+                <div className="mt-5 rounded-xl border border-dashed border-zinc-800 p-6 text-sm text-zinc-600">
+                  No ownership claims have been submitted.
+                </div>
+              ) : (
+                <div className="mt-5 space-y-4">
+                  {candidate.claims.map((claim) => {
+                    const proofUrl = safeExternalUrl(claim.proofUrl);
+
+                    return (
+                      <article key={claim.id} className="rounded-xl border border-zinc-900 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <b>{claim.claimant.name}</b>
+                              <span className="rounded-full border border-zinc-800 px-2 py-0.5 text-[9px] font-black uppercase text-zinc-400">
+                                {claim.status}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-zinc-600">{claim.claimant.email}</p>
+                          </div>
+                          <span className="text-[10px] text-zinc-700">{dateTime(claim.submittedAt)}</span>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
+                          <div>
+                            <span className="label">Relationship</span>
+                            <p className="text-zinc-400">{claim.relationship.replaceAll("_", " ")}</p>
+                          </div>
+                          <div>
+                            <span className="label">Business email</span>
+                            <p className="break-all text-zinc-400">{claim.businessEmail}</p>
+                          </div>
+                          <div>
+                            <span className="label">Business phone</span>
+                            <p className="text-zinc-400">{claim.businessPhone || "—"}</p>
+                          </div>
+                          <div>
+                            <span className="label">Account email verified</span>
+                            <p className={claim.claimant.emailVerifiedAt ? "text-emerald-300" : "text-red-300"}>
+                              {claim.claimant.emailVerifiedAt ? "Yes" : "No"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {claim.evidenceNote && (
+                          <div className="mt-4 rounded-xl border border-zinc-900 p-3">
+                            <span className="label">Evidence note</span>
+                            <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-400">{claim.evidenceNote}</p>
+                          </div>
+                        )}
+
+                        {proofUrl && (
+                          <a href={proofUrl} target="_blank" rel="noreferrer noopener" className="button-dark mt-4 inline-flex">
+                            Open proof link ↗
+                          </a>
+                        )}
+
+                        {claim.reviewedBy && (
+                          <p className="mt-4 text-xs text-zinc-600">
+                            Reviewed by {claim.reviewedBy.name || claim.reviewedBy.email} · {dateTime(claim.reviewedAt)}
+                          </p>
+                        )}
+                        {claim.adminNote && (
+                          <p className="mt-2 text-xs leading-5 text-zinc-500">Admin note: {claim.adminNote}</p>
+                        )}
+
+                        {claim.status === "SUBMITTED" && candidate.status === CandidateStudioStatus.APPROVED && (
+                          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                            <form action={verifyCandidateClaimAction}>
+                              <input type="hidden" name="claimId" value={claim.id} />
+                              <input type="hidden" name="candidateId" value={candidate.id} />
+                              <textarea name="adminNote" className="field min-h-20" placeholder="Optional verification note" />
+                              <button className="mt-2 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-black">
+                                Verify ownership
+                              </button>
+                            </form>
+                            <form action={rejectCandidateClaimAction}>
+                              <input type="hidden" name="claimId" value={claim.id} />
+                              <input type="hidden" name="candidateId" value={candidate.id} />
+                              <textarea name="adminNote" required className="field min-h-20" placeholder="Why is this claim rejected?" />
+                              <button className="mt-2 w-full rounded-xl border border-red-900/70 px-4 py-3 text-xs font-black text-red-300">
+                                Reject claim
+                              </button>
+                            </form>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             <section className="panel">
