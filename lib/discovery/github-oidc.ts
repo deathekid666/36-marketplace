@@ -1,4 +1,4 @@
-import { createPublicKey, verify } from "node:crypto";
+import { createPublicKey, verify, type JsonWebKey } from "node:crypto";
 
 const ISSUER = "https://token.actions.githubusercontent.com";
 const AUDIENCE = "36-marketplace-global-contacts";
