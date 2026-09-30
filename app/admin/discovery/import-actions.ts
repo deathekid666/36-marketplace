@@ -5,34 +5,51 @@ import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth";
 import { ingestDiscoveryStudio } from "@/lib/discovery/ingest";
+import { loadOpenStreetMapSnapshot } from "@/lib/discovery/providers/openstreetmap-snapshot";
 import { loadOvertureSnapshot } from "@/lib/discovery/providers/overture";
 import { consumeRateLimit } from "@/lib/rate-limit";
 
-function importErrorCode(error: unknown) {
-  const message = error instanceof Error ? error.message : "OVERTURE_IMPORT_FAILED";
+type ProviderKey = "OVERTURE" | "OPENSTREETMAP";
+
+type ImportScan = {
+  records: Parameters<typeof ingestDiscoveryStudio>[0][];
+};
+
+function importErrorCode(provider: ProviderKey, error: unknown) {
+  const message = error instanceof Error ? error.message : "IMPORT_FAILED";
+
   if (message === "OVERTURE_SNAPSHOT_NOT_READY") return "snapshot-not-ready";
   if (message === "OVERTURE_SNAPSHOT_EMPTY") return "snapshot-empty";
+  if (message === "OSM_SNAPSHOT_NOT_READY") return "snapshot-not-ready";
+  if (message === "OSM_SNAPSHOT_EMPTY") return "snapshot-empty";
+
   return "import-failed";
 }
 
-export async function importOvertureAction() {
-  const admin = await requireRole("ADMIN");
-
+async function runImport(
+  provider: ProviderKey,
+  adminId: string,
+  load: () => ImportScan,
+) {
   const rate = await consumeRateLimit({
-    key: `discovery-overture:${admin.id}`,
-    action: "OVERTURE_ADMIN_IMPORT",
+    key: `discovery-${provider.toLowerCase()}:${adminId}`,
+    action: `${provider}_ADMIN_IMPORT`,
     limit: 4,
     windowSeconds: 60 * 60,
   });
 
   if (!rate.allowed) {
-    redirect("/admin/discovery?importError=scan-rate-limited");
+    redirect(`/admin/discovery?provider=${provider}&importError=scan-rate-limited`);
   }
 
-  let destination = "/admin/discovery?importError=import-failed";
+  let destination = `/admin/discovery?provider=${provider}&importError=import-failed`;
 
   try {
-    const scan = loadOvertureSnapshot();
+    const scan = load();
+
+    if (scan.records.length === 0) {
+      throw new Error(provider === "OPENSTREETMAP" ? "OSM_SNAPSHOT_EMPTY" : "OVERTURE_SNAPSHOT_EMPTY");
+    }
 
     const stats = {
       enriched: 0,
@@ -53,7 +70,7 @@ export async function importOvertureAction() {
     revalidatePath("/admin/discovery");
 
     const params = new URLSearchParams({
-      provider: "OVERTURE",
+      provider,
       imported: String(scan.records.length),
       enriched: String(stats.enriched),
       review: String(stats.review),
@@ -63,8 +80,57 @@ export async function importOvertureAction() {
 
     destination = `/admin/discovery?${params.toString()}`;
   } catch (error) {
-    destination = `/admin/discovery?importError=${importErrorCode(error)}`;
+    destination = `/admin/discovery?provider=${provider}&importError=${importErrorCode(provider, error)}`;
   }
 
   redirect(destination);
+}
+
+export async function importOvertureAction() {
+  const admin = await requireRole("ADMIN");
+  return runImport("OVERTURE", admin.id, () => loadOvertureSnapshot());
+}
+
+export async function importOpenStreetMapAction() {
+  const admin = await requireRole("ADMIN");
+
+  return runImport("OPENSTREETMAP", admin.id, () => {
+    const scan = loadOpenStreetMapSnapshot();
+    return {
+      records: scan.records.map((record) => ({
+        provider: record.provider,
+        sourceKey: record.sourceKey,
+        externalId: record.externalId,
+        sourceUrl: record.sourceUrl,
+        providerCategory: record.providerCategory,
+        attribution: record.attribution,
+        licenseUrl: record.licenseUrl,
+        name: record.name,
+        normalizedName: record.normalizedName,
+        category: record.category,
+        categoryConfidence: record.categoryConfidence,
+        categoryEvidence: record.categoryEvidence,
+        categoryAlternatives: record.categoryAlternatives,
+        countryCode: record.countryCode,
+        country: record.country,
+        region: record.region,
+        city: record.city,
+        district: record.district,
+        postalCode: record.postalCode,
+        address: record.address,
+        latitude: record.latitude,
+        longitude: record.longitude,
+        phone: record.phone,
+        email: record.email,
+        website: record.website,
+        instagram: record.instagram,
+        issues: record.issues,
+        slugHint: `${record.osmType}-${record.osmId}`,
+        metadata: {
+          osmTimestamp: record.osmTimestamp,
+          tags: record.tags,
+        },
+      })),
+    };
+  });
 }

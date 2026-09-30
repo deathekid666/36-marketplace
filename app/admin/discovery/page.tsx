@@ -1,12 +1,17 @@
 import { CandidateStudioStatus, Prisma } from "@prisma/client";
 import Link from "next/link";
 
-import { importOvertureAction } from "@/app/admin/discovery/import-actions";
+import {
+  importOpenStreetMapAction,
+  importOvertureAction,
+} from "@/app/admin/discovery/import-actions";
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
+import { getOpenStreetMapSnapshotInfo } from "@/lib/discovery/providers/openstreetmap-snapshot";
 import { getOvertureSnapshotInfo } from "@/lib/discovery/providers/overture";
+import { DISCOVERY_PROVIDERS } from "@/lib/discovery/providers/registry";
 
 export const metadata = { title: "Discovery · 36 Admin" };
 
@@ -74,6 +79,7 @@ export default async function AdminDiscoveryPage({
   const page = Math.max(1, Math.min(1000, Number.parseInt(String(query.page || "1"), 10) || 1));
   const pageSize = 40;
   const overtureSnapshot = getOvertureSnapshotInfo();
+  const osmSnapshot = getOpenStreetMapSnapshotInfo();
 
   const where: Prisma.CandidateStudioWhereInput = {
     ...(status ? { status } : {}),
@@ -95,7 +101,7 @@ export default async function AdminDiscoveryPage({
       : {}),
   };
 
-  const [candidates, filteredCount, total, discovered, review, approved, converted, countryRows] =
+  const [candidates, filteredCount, total, discovered, review, approved, converted, countryRows, providerRows] =
     await Promise.all([
       db.candidateStudio.findMany({
         where,
@@ -130,7 +136,16 @@ export default async function AdminDiscoveryPage({
         orderBy: { _count: { countryCode: "desc" } },
         take: 20,
       }),
+      db.candidateStudioSource.groupBy({
+        by: ["provider"],
+        _count: { provider: true },
+        orderBy: { _count: { provider: "desc" } },
+      }),
     ]);
+
+  const providerSourceCounts = new Map(
+    providerRows.map((row) => [row.provider, row._count.provider]),
+  );
 
   const pageCount = Math.max(1, Math.ceil(filteredCount / pageSize));
 
@@ -168,40 +183,83 @@ export default async function AdminDiscoveryPage({
 
         {query.imported && (
           <div className="mt-7 rounded-xl border border-acid/30 bg-acid/[0.04] p-4 text-sm text-acid">
-            Overture import complete: {query.imported} studio candidates · {query.enriched || "0"} enriched · {query.review || "0"} review · {query.matched || "0"} matched · {query.refreshed || "0"} refreshed.
+            {query.provider === "OPENSTREETMAP" ? "OpenStreetMap" : "Overture"} import complete: {query.imported} studio candidates · {query.enriched || "0"} enriched · {query.review || "0"} review · {query.matched || "0"} matched · {query.refreshed || "0"} refreshed.
           </div>
         )}
         {query.importError && (
           <div className="mt-7 rounded-xl border border-red-900/60 bg-red-950/20 p-4 text-sm text-red-300">
             {query.importError === "scan-rate-limited"
-              ? "Overture imports are limited to four per admin per hour."
+              ? "Provider imports are limited to four per admin per hour."
               : query.importError === "snapshot-not-ready"
-                ? "The Casablanca Overture snapshot has not been generated yet."
+                ? "The selected provider snapshot has not been generated yet."
                 : query.importError === "snapshot-empty"
-                  ? "The Casablanca Overture snapshot contains no studio candidates."
-                  : "The Overture import could not be completed."}
+                  ? "The selected provider snapshot contains no studio candidates, so nothing was imported."
+                  : "The provider import could not be completed."}
           </div>
         )}
 
-        <section className="mt-7 rounded-2xl border border-sky-900/40 bg-sky-950/10 p-5">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+        <section className="mt-7">
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">
-                Provider pilot
+                Discovery providers
               </span>
-              <h2 className="mt-2 text-2xl font-black">Overture Maps · Casablanca</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
-                Controlled studio shortlist from Overture&apos;s global Places dataset. Every record still passes 36 normalization, deduplication and lifecycle review before it can go any further.
-              </p>
-              <p className="mt-2 text-[10px] text-zinc-700">
-                Overture Places · snapshot {overtureSnapshot.generatedAt ? `generated ${new Date(overtureSnapshot.generatedAt).toLocaleString("en", { timeZone: "UTC" })} UTC · ${overtureSnapshot.recordCount} candidates from ${overtureSnapshot.totalPlacesInBbox} places` : "not generated yet"}
-              </p>
+              <h2 className="mt-2 text-2xl font-black">Controlled provider expansion</h2>
             </div>
-            <form action={importOvertureAction}>
-              <button className="rounded-xl bg-sky-300 px-5 py-3 text-xs font-black text-black">
-                Import Casablanca snapshot
-              </button>
-            </form>
+            <span className="text-xs text-zinc-600">
+              {DISCOVERY_PROVIDERS.length} configured providers
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <article className="rounded-2xl border border-sky-900/40 bg-sky-950/10 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="rounded-full border border-sky-900/50 px-2.5 py-1 text-[9px] font-black uppercase text-sky-300">
+                  Primary
+                </span>
+                <span className="text-[10px] text-zinc-600">
+                  {providerSourceCounts.get("OVERTURE") || 0} source rows
+                </span>
+              </div>
+              <h3 className="mt-4 text-xl font-black">Overture Maps · Casablanca</h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                Structured global Places snapshot. Every record still passes 36 normalization, deduplication and human lifecycle review.
+              </p>
+              <p className="mt-3 text-[10px] leading-5 text-zinc-700">
+                Snapshot {overtureSnapshot.generatedAt ? `generated ${new Date(overtureSnapshot.generatedAt).toLocaleString("en", { timeZone: "UTC" })} UTC · ${overtureSnapshot.recordCount} candidates from ${overtureSnapshot.totalPlacesInBbox} places` : "not generated yet"}
+              </p>
+              <form action={importOvertureAction} className="mt-4">
+                <button className="rounded-xl bg-sky-300 px-5 py-3 text-xs font-black text-black">
+                  Import Overture snapshot
+                </button>
+              </form>
+            </article>
+
+            <article className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-[9px] font-black uppercase text-zinc-400">
+                  Secondary
+                </span>
+                <span className="text-[10px] text-zinc-600">
+                  {providerSourceCounts.get("OPENSTREETMAP") || 0} source rows
+                </span>
+              </div>
+              <h3 className="mt-4 text-xl font-black">OpenStreetMap · Casablanca</h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                Independent ODbL location evidence from a Morocco PBF extract. It uses the same normalization and deduplication gate as Overture.
+              </p>
+              <p className="mt-3 text-[10px] leading-5 text-zinc-700">
+                Snapshot {osmSnapshot.generatedAt ? `generated ${new Date(osmSnapshot.generatedAt).toLocaleString("en", { timeZone: "UTC" })} UTC · ${osmSnapshot.rawElementCount} raw elements` : "not generated yet"}
+              </p>
+              <form action={importOpenStreetMapAction} className="mt-4">
+                <button
+                  disabled={osmSnapshot.rawElementCount === 0}
+                  className="rounded-xl border border-zinc-700 px-5 py-3 text-xs font-black text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {osmSnapshot.rawElementCount === 0 ? "Snapshot currently empty" : "Import OSM snapshot"}
+                </button>
+              </form>
+            </article>
           </div>
         </section>
 
