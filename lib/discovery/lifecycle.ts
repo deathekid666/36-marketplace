@@ -179,9 +179,7 @@ export async function transitionCandidateStudio(input: CandidateTransitionInput)
       assertCandidateDataQuality(candidate);
     }
 
-    const updateData: Prisma.CandidateStudioUpdateManyMutationInput = {
-      status: input.toStatus,
-    };
+    let conversionStudioId: string | null = null;
 
     if (input.toStatus === CandidateStudioStatus.CONVERTED) {
       if (!input.convertedStudioId) throw new Error("CANDIDATE_CONVERSION_STUDIO_REQUIRED");
@@ -190,8 +188,7 @@ export async function transitionCandidateStudio(input: CandidateTransitionInput)
         select: { id: true },
       });
       if (!studio) throw new Error("CANDIDATE_CONVERSION_STUDIO_NOT_FOUND");
-      updateData.convertedStudioId = studio.id;
-      updateData.convertedAt = new Date();
+      conversionStudioId = studio.id;
     } else if (input.convertedStudioId) {
       throw new Error("CANDIDATE_CONVERSION_STUDIO_ONLY_FOR_CONVERTED");
     }
@@ -201,7 +198,15 @@ export async function transitionCandidateStudio(input: CandidateTransitionInput)
         id: candidate.id,
         status: candidate.status,
       },
-      data: updateData,
+      data: input.toStatus === CandidateStudioStatus.CONVERTED
+        ? {
+            status: input.toStatus,
+            convertedStudioId: conversionStudioId!,
+            convertedAt: new Date(),
+          }
+        : {
+            status: input.toStatus,
+          },
     });
 
     if (updated.count !== 1) {
