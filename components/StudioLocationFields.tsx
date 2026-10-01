@@ -8,6 +8,8 @@ type Result = {
   longitude: number;
   city?: string;
   neighborhood?: string;
+  country?: string;
+  countryCode?: string;
 };
 
 const CASABLANCA = { lat: 33.5731, lng: -7.5898 };
@@ -50,7 +52,12 @@ export function StudioLocationFields(props: {
       setLoading(true);
       try {
         const response = await fetch(
-          "/api/geocode?q=" + encodeURIComponent(address),
+          "/api/geocode?q=" +
+            encodeURIComponent(
+              city.trim() && !address.toLowerCase().includes(city.trim().toLowerCase())
+                ? address + ", " + city
+                : address,
+            ),
           { signal: controller.signal },
         );
         const data = await response.json().catch(() => ({ results: [] }));
@@ -68,7 +75,7 @@ export function StudioLocationFields(props: {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [address]);
+  }, [address, city]);
 
   useEffect(() => {
     let disposed = false;
@@ -222,6 +229,7 @@ export function StudioLocationFields(props: {
             value={city}
             onChange={(event) => setCity(event.target.value)}
             required={props.required}
+            placeholder="City"
           />
         </label>
 
@@ -251,7 +259,7 @@ export function StudioLocationFields(props: {
 
         {loading && (
           <span className="mt-1 block text-[10px] text-[#8a8a8a]">
-            Searching addresses…
+            Searching worldwide…
           </span>
         )}
 

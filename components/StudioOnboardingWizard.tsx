@@ -248,12 +248,12 @@ export function StudioOnboardingWizard({
             <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">02 · Location</span>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Where should creators arrive?</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
-              Choose the address suggestion so the exact map coordinates are stored with the listing.
+              Search anywhere in the world, choose the address suggestion, then place the exact entrance pin.
             </p>
 
             <div className="mt-7 space-y-4 rounded-[28px] border border-[#e6e6e6] bg-white p-5 sm:p-7">
               <StudioLocationFields
-                city="Casablanca"
+                city=""
                 neighborhood=""
                 address=""
                 latitude=""
