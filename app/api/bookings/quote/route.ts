@@ -10,6 +10,7 @@ import {
   fingerprintFromRequest,
 } from "@/lib/rate-limit";
 import { trackMarketplaceEvent } from "@/lib/analytics";
+import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
 export const runtime = "nodejs";
 
@@ -97,6 +98,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    await expireStaleBookingHolds({
+      creatorId: user.id,
+      limit: 50,
+    });
+
     const quote = await getBookingQuote({
       creatorId: user.id,
       roomId,

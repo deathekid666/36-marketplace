@@ -13,6 +13,7 @@ import {
   fingerprintFromRequest,
 } from "@/lib/rate-limit";
 import { scheduleBookingReminders } from "@/lib/reminders";
+import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
 export const runtime = "nodejs";
 
@@ -107,6 +108,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    await expireStaleBookingHolds({
+      creatorId: user.id,
+      limit: 50,
+    });
+
     const booking = flashSlotId
       ? await createFlashBookingHold({
           creatorId: user.id,

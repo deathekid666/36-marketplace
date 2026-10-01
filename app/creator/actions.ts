@@ -113,12 +113,68 @@ export async function acceptOfferAction(form: FormData) {
 export async function releaseBookingHoldAction(form: FormData) {
   const user = await requireRole("CREATOR");
   const bookingId = text(form, "bookingId", 80);
-  const booking = await db.booking.findFirst({ where: { id: bookingId, creatorId: user.id, status: "PENDING_DEPOSIT" } });
+  const booking = await db.booking.findFirst({
+    where: {
+      id: bookingId,
+      creatorId: user.id,
+      status: "PENDING_DEPOSIT",
+    },
+    include: { flashSlot: true },
+  });
   if (!booking) redirect("/creator/bookings");
-  await db.$transaction([
-    db.booking.update({ where: { id: booking.id }, data: { status: "CANCELLED", expiresAt: null } }),
-    db.payment.updateMany({ where: { bookingId: booking.id, status: "PENDING" }, data: { status: "FAILED" } }),
-    db.payout.updateMany({ where: { bookingId: booking.id, status: { in: ["PENDING", "ELIGIBLE"] } }, data: { status: "HOLD" } }),
-  ]);
-  redirect("/creator/bookings?released=1");
+
+  const now = new Date();
+  const status =
+    booking.expiresAt && booking.expiresAt <= now
+      ? "EXPIRED"
+      : "CANCELLED";
+
+  await db.$transaction(async (tx) => {
+    await tx.booking.update({
+      where: { id: booking.id },
+      data: { status, expiresAt: null },
+    });
+    await tx.payment.updateMany({
+      where: {
+        bookingId: booking.id,
+        status: "PENDING",
+        kind: { not: "REFUND" },
+      },
+      data: { status: "FAILED" },
+    });
+    await tx.payout.updateMany({
+      where: {
+        bookingId: booking.id,
+        status: { in: ["PENDING", "ELIGIBLE"] },
+      },
+      data: { status: "HOLD" },
+    });
+    await tx.promoRedemption.deleteMany({
+      where: { bookingId: booking.id },
+    });
+    await tx.bookingReminder.deleteMany({
+      where: { bookingId: booking.id, sentAt: null },
+    });
+
+    if (booking.flashSlotId && booking.flashSlot) {
+      const canReturnToSale =
+        booking.flashSlot.startAt > now &&
+        booking.flashSlot.expiresAt > now;
+      await tx.flashSlot.updateMany({
+        where: {
+          id: booking.flashSlotId,
+          status: "BOOKED",
+        },
+        data: {
+          status: canReturnToSale ? "ACTIVE" : "EXPIRED",
+        },
+      });
+    }
+  });
+
+  redirect(
+    status === "EXPIRED"
+      ? "/creator/bookings?view=cancelled"
+      : "/creator/bookings?released=1",
+  );
 }

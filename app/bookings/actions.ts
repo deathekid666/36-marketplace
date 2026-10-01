@@ -79,12 +79,18 @@ export async function cancelBookingAction(form: FormData) {
     redirect(`/creator/bookings/${bookingId}?error=started`);
   }
 
-  const paidDeposit = booking.payments
-    .filter((p) => p.kind === "DEPOSIT" && p.status === "PAID")
-    .reduce((sum, p) => sum + p.amountMad, 0);
+  const paidCharges = booking.payments.filter(
+    (payment) =>
+      ["DEPOSIT", "BALANCE"].includes(payment.kind) &&
+      payment.status === "PAID",
+  );
+  const paidAmountMad = Math.min(
+    booking.totalAmountMad,
+    paidCharges.reduce((sum, payment) => sum + payment.amountMad, 0),
+  );
   const leadHours = (booking.startAt.getTime() - Date.now()) / 3600000;
   const refundable = leadHours >= booking.studio.freeCancellationHours;
-  const refundAmountMad = refundable ? paidDeposit : 0;
+  const refundAmountMad = refundable ? paidAmountMad : 0;
 
   await db.$transaction(async (tx) => {
     await tx.booking.update({
@@ -108,14 +114,19 @@ export async function cancelBookingAction(form: FormData) {
         where: { bookingId: booking.id, kind: "REFUND", status: { in: ["PENDING", "REFUNDED"] } },
       });
       if (!existing) {
-        const deposit = booking.payments.find((p) => p.kind === "DEPOSIT" && p.status === "PAID");
+        const paidCharge =
+          paidCharges.find((payment) => payment.kind === "DEPOSIT") ||
+          paidCharges[0];
         await tx.payment.create({
           data: {
             bookingId: booking.id,
             kind: "REFUND",
             amountMad: refundAmountMad,
             status: "PENDING",
-            provider: deposit?.provider || process.env.PAYMENT_PROVIDER || "MANUAL",
+            provider:
+              paidCharge?.provider ||
+              process.env.PAYMENT_PROVIDER ||
+              "MANUAL",
             providerRef: "CANCELLATION_REFUND",
           },
         });
