@@ -418,11 +418,23 @@ export function StudioMap({
         scrollWheelZoom: fullScreen,
         attributionControl: true,
         zoomControl: true,
-        worldCopyJump: true,
+        minZoom: 2,
+        maxBounds: [
+          [-85.0511, -180],
+          [85.0511, 180],
+        ],
+        maxBoundsViscosity: 1,
+        worldCopyJump: false,
       });
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
+        minZoom: 2,
+        noWrap: true,
+        bounds: [
+          [-85.0511, -180],
+          [85.0511, 180],
+        ],
         className: "studio-map-base-tiles",
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
