@@ -130,7 +130,7 @@ export function AirbnbUserProfile({
                 </div>
                 <span
                   className="absolute bottom-2 right-2 h-4 w-4 rounded-full border-[3px] border-[#10120f] bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,.65)]"
-                  aria-label="Active profile"
+                  aria-hidden="true"
                 />
               </div>
 
@@ -150,8 +150,7 @@ export function AirbnbUserProfile({
                 </div>
 
                 <p className="mt-2 text-sm font-semibold text-zinc-300 sm:text-base">
-                  {publicRole}
-                  {isOwner ? " · Studio host" : " · Creator"}
+                  {publicRole} · 36 member
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-bold text-zinc-200">
