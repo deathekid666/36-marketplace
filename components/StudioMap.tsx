@@ -89,6 +89,19 @@ function regionName(point: StudioMapPoint) {
   return "Middle East";
 }
 
+function countryLabel(code: string | null | undefined) {
+  const normalized = String(code || "").trim().toUpperCase();
+  if (!normalized) return "Unknown";
+  try {
+    return (
+      new Intl.DisplayNames(["en"], { type: "region" }).of(normalized) ||
+      normalized
+    );
+  } catch {
+    return normalized;
+  }
+}
+
 function averageCenter(group: StudioMapPoint[]) {
   return {
     lat: group.reduce((sum, p) => sum + p.lat, 0) / group.length,
@@ -236,8 +249,8 @@ export function StudioMap({
             (subtitle ? '<span>' + escapeHtml(subtitle) + "</span>" : "") +
             (label ? '<small>' + escapeHtml(label) + "</small>" : "") +
             "</div>",
-          iconSize: className === "world" ? [84, 74] : [84, 66],
-          iconAnchor: [42, className === "world" ? 37 : 33],
+          iconSize: className.includes("world") ? [92, 78] : [84, 66],
+          iconAnchor: [className.includes("world") ? 46 : 42, className.includes("world") ? 39 : 33],
         }),
       }).addTo(markerLayer);
 
@@ -263,31 +276,63 @@ export function StudioMap({
         return;
       }
 
-      if (zoom < 4) {
+      if (zoom < 6) {
         const groups = new Map<string, StudioMapPoint[]>();
         points.forEach((point) => {
-          const key = regionName(point);
+          const code = point.countryCode?.trim().toUpperCase();
+          const key = code || regionName(point);
           groups.set(key, [...(groups.get(key) || []), point]);
         });
-        const colors = ["#7c3cff", "#12b76a", "#ff3b5c", "#f5a300", "#2677ff", "#8f3cff"];
-        [...groups.entries()].forEach(([label, group], index) =>
-          addCluster(L, group, label, "", colors[index % colors.length], "world"),
-        );
+
+        const colors = [
+          "#7c3cff",
+          "#12b76a",
+          "#ff3b5c",
+          "#f5a300",
+          "#2677ff",
+          "#8f3cff",
+          "#00a6a6",
+        ];
+
+        [...groups.entries()].forEach(([key, group], index) => {
+          const label =
+            /^[A-Z]{2}$/.test(key)
+              ? countryLabel(key)
+              : key;
+          addCluster(
+            L,
+            group,
+            label,
+            "",
+            colors[index % colors.length],
+            "world country",
+          );
+        });
         return;
       }
 
-      if (zoom < 8) {
+      if (zoom < 10) {
         const groups = new Map<string, StudioMapPoint[]>();
         points.forEach((point) => {
-          const key = point.city?.trim() || point.countryCode?.trim() || regionName(point);
+          const country = point.countryCode?.trim().toUpperCase() || "";
+          const city = point.city?.trim();
+          const key = city
+            ? country + "::" + city
+            : country || regionName(point);
           groups.set(key, [...(groups.get(key) || []), point]);
         });
-        [...groups.entries()].forEach(([label, group]) => {
+
+        [...groups.entries()].forEach(([key, group]) => {
           if (group.length < 2) {
             addPointMarker(L, group[0]);
             return;
           }
-          addCluster(L, group, label, "", "#ff3b5c", "city");
+          const cityLabel = key.includes("::")
+            ? key.split("::").slice(1).join("::")
+            : /^[A-Z]{2}$/.test(key)
+              ? countryLabel(key)
+              : key;
+          addCluster(L, group, cityLabel, "", "#ff3b5c", "city");
         });
         return;
       }
