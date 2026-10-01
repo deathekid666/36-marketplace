@@ -4,7 +4,14 @@ import { StudioStatusBadge } from "@/components/StudioStatusBadge";
 import { StudioLocationFields } from "@/components/StudioLocationFields";
 import { StudioImageUploader } from "@/components/StudioImageUploader";
 import { requireOwnedStudio } from "@/lib/owner";
-import { categoryLabel, DAYS, STUDIO_CATEGORIES, studioCompletion } from "@/lib/studio";
+import { parseDirectoryProfileV2 } from "@/lib/discovery/profile-v2";
+import {
+  categoryLabel,
+  DAYS,
+  STUDIO_CATEGORIES,
+  studioCompletion,
+  studioOnboardingChecklist,
+} from "@/lib/studio";
 import {
   addAmenityAction,
   addBlockedSlotAction,
@@ -33,14 +40,27 @@ export default async function StudioBuilderPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ submit?: string }>;
+  searchParams: Promise<{ submit?: string; from?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
   const { user, studio } = await requireOwnedStudio(id);
   const completion = studioCompletion(studio);
+  const checklist = studioOnboardingChecklist(studio);
   const hours = new Map(studio.openingHours.map((x) => [x.dayOfWeek, x]));
-  const canSubmit = completion >= 78 && studio.status !== "SUSPENDED";
+  const canSubmit =
+    completion >= 78 &&
+    checklist.ready &&
+    studio.status !== "SUSPENDED";
+  const directoryProfile = studio.discoveryCandidate
+    ? parseDirectoryProfileV2(
+        studio.discoveryCandidate.transitions[0]?.metadata,
+      )
+    : parseDirectoryProfileV2(null);
+  const hasDirectoryReference =
+    directoryProfile.services.length > 0 ||
+    directoryProfile.equipment.length > 0 ||
+    Boolean(directoryProfile.openingHours);
 
   return (
     <main className="min-h-screen">
@@ -63,9 +83,64 @@ export default async function StudioBuilderPage({
           </div>
         </div>
 
-        {query.submit === "incomplete" && <div className="mt-6 rounded-xl border border-amber-800/50 bg-amber-950/20 p-4 text-sm text-amber-200">Complete the listing first: strong description, contact details, at least one room, one photo and most opening hours.</div>}
+        {query.submit === "incomplete" && (
+          <div className="mt-6 rounded-xl border border-amber-800/50 bg-amber-950/20 p-4 text-sm text-amber-200">
+            Finish every required onboarding item below before submitting for verification.
+          </div>
+        )}
         {query.submit === "ok" && <div className="mt-6 rounded-xl border border-acid/30 bg-acid/[0.04] p-4 text-sm text-acid">Submitted to 36 for verification.</div>}
         {studio.verificationNote && <div className="mt-6 rounded-xl border border-red-900/60 bg-red-950/20 p-4"><b className="text-sm text-red-300">Verification note</b><p className="mt-1 text-sm leading-6 text-red-200/70">{studio.verificationNote}</p></div>}
+
+        {query.from === "claim" && studio.discoveryCandidate && (
+          <div className="mt-6 rounded-2xl border border-emerald-900/40 bg-emerald-950/10 p-5">
+            <b className="text-sm text-emerald-300">Verified directory profile imported</b>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">
+              36 carried over the verified owner profile where the marketplace has an exact matching field.
+              Description, contact/location details and existing directory photos are reused automatically.
+              Pricing, room inventory and structured availability still require your confirmation.
+            </p>
+          </div>
+        )}
+
+        <section className="mt-6 rounded-2xl border border-zinc-900 bg-zinc-950/60 p-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-[0.13em] text-zinc-600">
+                Enable booking checklist
+              </span>
+              <h2 className="mt-1 text-xl font-black">
+                {checklist.completeCount}/{checklist.totalCount} required items complete
+              </h2>
+            </div>
+            <span
+              className={
+                checklist.ready
+                  ? "rounded-full border border-emerald-900/50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-300"
+                  : "rounded-full border border-amber-900/50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-amber-300"
+              }
+            >
+              {checklist.ready ? "Ready for review" : "Setup required"}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            {checklist.items.map((item) => (
+              <div
+                key={item.key}
+                className={
+                  item.complete
+                    ? "rounded-xl border border-emerald-900/30 bg-emerald-950/10 p-3"
+                    : "rounded-xl border border-zinc-900 bg-black/20 p-3"
+                }
+              >
+                <span className={item.complete ? "text-emerald-300" : "text-zinc-700"}>
+                  {item.complete ? "✓" : "○"}
+                </span>
+                <b className="ml-2 text-xs">{item.label}</b>
+                <p className="mt-1 text-[10px] leading-4 text-zinc-600">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="mt-8 grid gap-6 xl:grid-cols-[1.08fr_.92fr]">
           <div className="space-y-6">
@@ -149,6 +224,77 @@ export default async function StudioBuilderPage({
           </div>
 
           <div className="space-y-6">
+            {hasDirectoryReference && (
+              <section className="panel">
+                <span className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">
+                  Imported owner reference
+                </span>
+                <h2 className="mt-2 text-2xl font-black">Directory profile data</h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">
+                  This information came from the verified owner directory profile. Review it before using it for booking inventory.
+                </p>
+
+                {directoryProfile.services.length > 0 && (
+                  <div className="mt-5">
+                    <span className="label">Services previously listed</span>
+                    <div className="flex flex-wrap gap-2">
+                      {directoryProfile.services.map((service) => (
+                        <span key={service} className="rounded-full border border-sky-900/40 px-3 py-1 text-[10px] font-bold text-sky-300">
+                          {service}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {directoryProfile.equipment.length > 0 && (
+                  <div className="mt-5">
+                    <span className="label">Equipment previously listed</span>
+                    {studio.rooms.length === 0 ? (
+                      <p className="mt-2 rounded-xl border border-dashed border-zinc-800 p-4 text-xs text-zinc-600">
+                        Add a room first, then you can copy these equipment items into the room inventory.
+                      </p>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {directoryProfile.equipment.map((equipment) => (
+                          <form
+                            key={equipment}
+                            action={addEquipmentAction}
+                            className="grid gap-2 rounded-xl border border-zinc-900 p-3 sm:grid-cols-[1fr_180px_auto]"
+                          >
+                            <input type="hidden" name="studioId" value={studio.id} />
+                            <input type="hidden" name="name" value={equipment} />
+                            <input type="hidden" name="quantity" value="1" />
+                            <b className="self-center text-xs text-zinc-300">{equipment}</b>
+                            <select name="roomId" className="field py-2">
+                              {studio.rooms.map((room) => (
+                                <option key={room.id} value={room.id}>
+                                  {room.name}
+                                </option>
+                              ))}
+                            </select>
+                            <button className="button-dark">Copy to room</button>
+                          </form>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {directoryProfile.openingHours && (
+                  <div className="mt-5 rounded-xl border border-zinc-900 bg-black/20 p-4">
+                    <span className="label">Previous opening-hours text</span>
+                    <p className="whitespace-pre-line text-xs leading-5 text-zinc-400">
+                      {directoryProfile.openingHours}
+                    </p>
+                    <p className="mt-2 text-[10px] leading-4 text-zinc-700">
+                      Use this only as a reference; the booking engine requires the structured weekly schedule below.
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
+
             <section className="panel">
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">04 · Add-ons</span><h2 className="mt-2 text-2xl font-black">Sell extras with the room</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-500">Examples: engineer, extra camera, lighting kit, vocal tuning, extra microphone or editing time.</p>
@@ -180,7 +326,7 @@ export default async function StudioBuilderPage({
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">07 · Trust</span><h2 className="mt-2 text-2xl font-black">36 Verification</h2>
               <p className="mt-3 text-sm leading-6 text-zinc-400">Submit when the listing accurately represents the physical studio. Admin reviews the profile before the verified badge can appear in search.</p>
               <div className="mt-5 grid grid-cols-2 gap-3 text-xs"><div className="rounded-xl bg-black/25 p-3"><b className="block text-zinc-200">Readiness</b><span className="text-zinc-600">{completion}% complete</span></div><div className="rounded-xl bg-black/25 p-3"><b className="block text-zinc-200">Status</b><span className="text-zinc-600">{studio.status}</span></div></div>
-              {studio.status === "SUBMITTED" ? <div className="mt-5 rounded-xl border border-amber-800/40 p-4 text-sm text-amber-300">Waiting for admin review.</div> : studio.status === "VERIFIED" ? <div className="mt-5 rounded-xl border border-acid/40 p-4 text-sm text-acid">✓ Verified by 36.</div> : <form action={submitStudioAction} className="mt-5"><input type="hidden" name="studioId" value={studio.id} /><button disabled={!canSubmit} className="w-full rounded-xl bg-acid px-5 py-3.5 text-sm font-black text-black disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600">Submit for verification</button>{!canSubmit && <p className="mt-2 text-center text-[10px] text-zinc-600">Reach at least 78% readiness first.</p>}</form>}
+              {studio.status === "SUBMITTED" ? <div className="mt-5 rounded-xl border border-amber-800/40 p-4 text-sm text-amber-300">Waiting for admin review.</div> : studio.status === "VERIFIED" ? <div className="mt-5 rounded-xl border border-acid/40 p-4 text-sm text-acid">✓ Verified by 36.</div> : <form action={submitStudioAction} className="mt-5"><input type="hidden" name="studioId" value={studio.id} /><button disabled={!canSubmit} className="w-full rounded-xl bg-acid px-5 py-3.5 text-sm font-black text-black disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600">Submit for verification</button>{!canSubmit && <p className="mt-2 text-center text-[10px] text-zinc-600">Complete all 5 required onboarding items and reach at least 78% listing readiness.</p>}</form>}
             </section>
           </div>
         </div>

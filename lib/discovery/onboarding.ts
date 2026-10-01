@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/notifications";
 import { trackMarketplaceEvent } from "@/lib/analytics";
 import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
+import { parseDirectoryProfileV2 } from "@/lib/discovery/profile-v2";
 
 function studioCategory(value: DiscoveryStudioCategory): StudioCategory {
   switch (value) {
@@ -75,6 +76,12 @@ export async function startClaimedStudioOnboarding(input: {
               convertedStudio: {
                 select: { id: true, ownerId: true },
               },
+              transitions: {
+                where: { reasonCode: "VERIFIED_OWNER_PROFILE_UPDATE" },
+                orderBy: { createdAt: "desc" },
+                take: 1,
+                select: { metadata: true },
+              },
             },
           },
         },
@@ -84,6 +91,9 @@ export async function startClaimedStudioOnboarding(input: {
       if (claim.status !== "VERIFIED") throw new Error("ONBOARDING_CLAIM_NOT_VERIFIED");
 
       const candidate = claim.candidateStudio;
+      const directoryProfile = parseDirectoryProfileV2(
+        candidate.transitions[0]?.metadata,
+      );
 
       if (candidate.convertedStudio) {
         if (candidate.convertedStudio.ownerId !== claimant.id) {
@@ -96,8 +106,11 @@ export async function startClaimedStudioOnboarding(input: {
         };
       }
 
-      if (candidate.status !== CandidateStudioStatus.APPROVED) {
-        throw new Error("ONBOARDING_CANDIDATE_NOT_APPROVED");
+      if (
+        candidate.status !== CandidateStudioStatus.ENRICHED &&
+        candidate.status !== CandidateStudioStatus.APPROVED
+      ) {
+        throw new Error("ONBOARDING_CANDIDATE_NOT_AVAILABLE");
       }
 
       // Conversion is allow-listed by D14 rollout scope. The current booking
@@ -111,7 +124,7 @@ export async function startClaimedStudioOnboarding(input: {
           ownerId: claimant.id,
           name: candidate.name,
           slug: studioSlug(candidate.slug, claim.id),
-          description: "",
+          description: directoryProfile.description,
           primaryCategory: studioCategory(candidate.category),
           city: candidate.city || "Casablanca",
           neighborhood: candidate.district || "",
@@ -130,10 +143,21 @@ export async function startClaimedStudioOnboarding(input: {
         },
       });
 
+      if (directoryProfile.photoUrls.length > 0) {
+        await tx.studioPhoto.createMany({
+          data: directoryProfile.photoUrls.map((url, index) => ({
+            studioId: createdStudio.id,
+            url,
+            alt: candidate.name + " studio photo",
+            sortOrder: index,
+          })),
+        });
+      }
+
       const updated = await tx.candidateStudio.updateMany({
         where: {
           id: candidate.id,
-          status: CandidateStudioStatus.APPROVED,
+          status: candidate.status,
           convertedStudioId: null,
         },
         data: {
@@ -150,7 +174,7 @@ export async function startClaimedStudioOnboarding(input: {
       await tx.candidateStudioTransition.create({
         data: {
           candidateStudioId: candidate.id,
-          fromStatus: CandidateStudioStatus.APPROVED,
+          fromStatus: candidate.status,
           toStatus: CandidateStudioStatus.CONVERTED,
           actor: CandidateStudioTransitionActor.SYSTEM,
           reasonCode: "VERIFIED_CLAIM_CONVERSION",
@@ -159,6 +183,13 @@ export async function startClaimedStudioOnboarding(input: {
             claimId: claim.id,
             initiatedByClaimantId: claimant.id,
             studioId: createdStudio.id,
+            importedDirectoryProfile: {
+              description: Boolean(directoryProfile.description),
+              photoCount: directoryProfile.photoUrls.length,
+              serviceCount: directoryProfile.services.length,
+              equipmentCount: directoryProfile.equipment.length,
+              hasOpeningHoursReference: Boolean(directoryProfile.openingHours),
+            },
           },
         },
       });
@@ -167,6 +198,7 @@ export async function startClaimedStudioOnboarding(input: {
         studioId: createdStudio.id,
         candidateId: candidate.id,
         alreadyConverted: false,
+        importedDirectoryPhotoCount: directoryProfile.photoUrls.length,
       };
     },
     { isolationLevel: "Serializable" },
@@ -176,7 +208,8 @@ export async function startClaimedStudioOnboarding(input: {
     userId: input.claimantId,
     type: "DISCOVERY_ONBOARDING_STARTED",
     title: "Your claimed studio is ready for onboarding",
-    body: "36 created a private draft listing from your verified claim. Add rooms, pricing, equipment, photos and opening hours before submitting it for marketplace verification.",
+    body:
+      "36 created a private draft listing from your verified claim and carried over verified profile details where possible. Add rooms, pricing, availability and any missing marketplace information before submitting it for verification.",
     href: `/owner/studios/${result.studioId}`,
   });
 

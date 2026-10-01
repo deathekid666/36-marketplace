@@ -150,7 +150,7 @@ export default async function OwnerClaimsPage({
                   <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
                     <b className="text-sm text-emerald-300">Booking onboarding started</b>
                     <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      A private 36 Studio draft exists. Complete its rooms, pricing, availability and marketplace verification.
+                      A private 36 Studio draft exists. Complete rooms, pricing and availability, then submit it for marketplace verification.
                     </p>
                     <Link
                       href={`/owner/studios/${claim.candidateStudio.convertedStudio.id}`}
@@ -176,7 +176,7 @@ export default async function OwnerClaimsPage({
                         <form action={startClaimedStudioOnboardingAction}>
                           <input type="hidden" name="claimId" value={claim.id} />
                           <button className="rounded-xl bg-acid px-5 py-3 text-xs font-black text-black">
-                            Start booking onboarding
+                            Enable booking
                           </button>
                         </form>
                       ) : (

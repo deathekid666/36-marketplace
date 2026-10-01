@@ -6,8 +6,18 @@ import type { StudioCategory } from "@prisma/client";
 
 import { requireRole, requireVerifiedRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { DAYS, STUDIO_CATEGORIES, slugify, studioCompletion } from "@/lib/studio";
+import {
+  DAYS,
+  STUDIO_CATEGORIES,
+  slugify,
+  studioCompletion,
+  studioOnboardingChecklist,
+} from "@/lib/studio";
 import { casablancaDateTimeLocalToUtc } from "@/lib/time";
+import {
+  deleteManagedMarketplaceStudioPhotos,
+  isManagedMarketplaceStudioPhotoUrl,
+} from "@/lib/discovery/studio-photo-storage";
 
 function text(form: FormData, name: string, max = 1000) {
   return String(form.get(name) ?? "").trim().slice(0, max);
@@ -276,10 +286,49 @@ export async function removePhotoAction(form: FormData) {
   const user = await requireRole("STUDIO_OWNER");
   const studioId = text(form, "studioId", 80);
   const photoId = text(form, "photoId", 80);
-  const photo = await db.studioPhoto.findFirst({ where: { id: photoId, studio: { id: studioId, ownerId: user.id } } });
+  const photo = await db.studioPhoto.findFirst({
+    where: {
+      id: photoId,
+      studio: { id: studioId, ownerId: user.id },
+    },
+  });
   if (!photo) return;
+
   await markListingDirty(studioId);
-  await db.studioPhoto.delete({ where: { id: photo.id } });
+
+  const managedBlob = isManagedMarketplaceStudioPhotoUrl(
+    photo.url,
+    studioId,
+  );
+
+  await db.$transaction(async (tx) => {
+    await tx.studioPhoto.delete({ where: { id: photo.id } });
+
+    if (managedBlob) {
+      await tx.storedFile.deleteMany({
+        where: {
+          studioId,
+          ownerId: user.id,
+          url: photo.url,
+          provider: "VERCEL_BLOB",
+        },
+      });
+    }
+  });
+
+  if (managedBlob) {
+    try {
+      await deleteManagedMarketplaceStudioPhotos([photo.url], studioId);
+    } catch (error) {
+      console.error("marketplace-studio-photo-delete-error", {
+        studioId,
+        photoId,
+        message:
+          error instanceof Error ? error.message : "DELETE_FAILED",
+      });
+    }
+  }
+
   revalidatePath(`/owner/studios/${studioId}`);
 }
 
@@ -314,7 +363,8 @@ export async function submitStudioAction(form: FormData) {
   });
   if (!studio || studio.status === "SUSPENDED") return;
   const completion = studioCompletion(studio);
-  if (completion < 78) {
+  const checklist = studioOnboardingChecklist(studio);
+  if (completion < 78 || !checklist.ready) {
     redirect(`/owner/studios/${studioId}?submit=incomplete`);
   }
   await db.studio.update({

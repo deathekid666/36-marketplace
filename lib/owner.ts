@@ -15,6 +15,16 @@ export async function requireOwnedStudio(id: string) {
       amenities: { orderBy: { name: "asc" } },
       openingHours: { orderBy: { dayOfWeek: "asc" } },
       addons: { orderBy: { createdAt: "asc" } },
+      discoveryCandidate: {
+        include: {
+          transitions: {
+            where: { reasonCode: "VERIFIED_OWNER_PROFILE_UPDATE" },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { metadata: true },
+          },
+        },
+      },
     },
   });
   if (!studio) notFound();
