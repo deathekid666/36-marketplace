@@ -24,8 +24,8 @@ export async function AppHeader({ user }: { user?: User | null }) {
               {user.role === "STUDIO_OWNER" && <Link href="/owner/now" className="hidden text-xs font-semibold text-zinc-400 hover:text-white sm:inline">Sell empty time</Link>}
               {(user.role === "CREATOR" || user.role === "STUDIO_OWNER") && <Link href="/messages" className="text-xs font-semibold text-zinc-400 hover:text-white">Messages</Link>}
               <Link href="/notifications" className="relative text-xs font-semibold text-zinc-400 hover:text-white">Notifications{unread > 0 && <span className="ml-1 inline-flex min-w-5 justify-center rounded-full bg-acid px-1.5 py-0.5 text-[9px] font-black text-black">{unread > 99 ? "99+" : unread}</span>}</Link>
+              <Link href="/profile" className="text-xs font-semibold text-zinc-400 hover:text-white">Profile</Link>
               <Link href="/dashboard" className="text-xs font-semibold text-zinc-400 hover:text-white">Dashboard</Link>
-              <span className="hidden text-xs text-zinc-600 lg:inline">{user.email}</span>
               <LogoutButton />
             </>
           ) : (

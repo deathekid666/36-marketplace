@@ -144,7 +144,7 @@ export default async function StudioDetailPage({
       },
       reviews: {
         include: {
-          creator: { select: { name: true } },
+          creator: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: "desc" },
         take: 30,
@@ -369,7 +369,13 @@ export default async function StudioDetailPage({
                   {categoryLabel(
                     studio.primaryCategory,
                   )}{" "}
-                  studio hosted by {studio.owner.name}
+                  studio hosted by{" "}
+                  <Link
+                    href={"/profile/" + studio.owner.id}
+                    className="underline decoration-zinc-700 underline-offset-4 hover:text-acid"
+                  >
+                    {studio.owner.name}
+                  </Link>
                 </h2>
                 <p className="mt-2 text-sm text-zinc-500">
                   {studio.rooms.length} room
@@ -663,9 +669,12 @@ export default async function StudioDetailPage({
                           ) || "36"}
                         </div>
                         <div>
-                          <b className="text-sm">
+                          <Link
+                            href={"/profile/" + review.creator.id}
+                            className="text-sm font-black hover:text-acid"
+                          >
                             {review.creator.name}
-                          </b>
+                          </Link>
                           <div className="mt-0.5 text-[10px] text-acid">
                             {"★".repeat(
                               review.rating,
@@ -730,7 +739,13 @@ export default async function StudioDetailPage({
                   </div>
                   <div>
                     <h2 className="text-2xl font-black">
-                      Hosted by {studio.owner.name}
+                      Hosted by{" "}
+                      <Link
+                        href={"/profile/" + studio.owner.id}
+                        className="underline decoration-zinc-700 underline-offset-4 hover:text-acid"
+                      >
+                        {studio.owner.name}
+                      </Link>
                     </h2>
                     <p className="mt-1 text-sm text-zinc-600">
                       Hosting on 36 since {hostYear}
