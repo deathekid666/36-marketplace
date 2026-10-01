@@ -85,7 +85,7 @@ export function StudioLocationFields(props: {
       const hasSaved =
         validCoordinate(lat, -90, 90) &&
         validCoordinate(lng, -180, 180);
-      const center = hasSaved
+      const center: [number, number] = hasSaved
         ? [Number(lat), Number(lng)]
         : [CASABLANCA.lat, CASABLANCA.lng];
 
