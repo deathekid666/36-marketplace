@@ -473,6 +473,72 @@ export async function removeEquipmentAction(form: FormData) {
   revalidatePath(`/owner/studios/${studioId}`);
 }
 
+
+export async function setCoverPhotoAction(form: FormData) {
+  const user = await requireRole("STUDIO_OWNER");
+  const studioId = text(form, "studioId", 80);
+  const photoId = text(form, "photoId", 80);
+
+  const photos = await db.studioPhoto.findMany({
+    where: { studioId, studio: { ownerId: user.id } },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+
+  if (!photos.some((photo) => photo.id === photoId)) return;
+
+  const ordered = [
+    photoId,
+    ...photos.filter((photo) => photo.id !== photoId).map((photo) => photo.id),
+  ];
+
+  await markListingDirty(studioId);
+  await db.$transaction(
+    ordered.map((id, index) =>
+      db.studioPhoto.update({
+        where: { id },
+        data: { sortOrder: index },
+      }),
+    ),
+  );
+
+  revalidatePath(`/owner/studios/${studioId}`);
+  revalidatePath(`/owner/studios/${studioId}/preview`);
+}
+
+export async function moveStudioPhotoAction(form: FormData) {
+  const user = await requireRole("STUDIO_OWNER");
+  const studioId = text(form, "studioId", 80);
+  const photoId = text(form, "photoId", 80);
+  const direction = text(form, "direction", 10) === "right" ? 1 : -1;
+
+  const photos = await db.studioPhoto.findMany({
+    where: { studioId, studio: { ownerId: user.id } },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+
+  const index = photos.findIndex((photo) => photo.id === photoId);
+  const swapIndex = index + direction;
+  if (index < 0 || swapIndex < 0 || swapIndex >= photos.length) return;
+
+  const ordered = photos.map((photo) => photo.id);
+  [ordered[index], ordered[swapIndex]] = [ordered[swapIndex], ordered[index]];
+
+  await markListingDirty(studioId);
+  await db.$transaction(
+    ordered.map((id, order) =>
+      db.studioPhoto.update({
+        where: { id },
+        data: { sortOrder: order },
+      }),
+    ),
+  );
+
+  revalidatePath(`/owner/studios/${studioId}`);
+  revalidatePath(`/owner/studios/${studioId}/preview`);
+}
+
 export async function removePhotoAction(form: FormData) {
   const user = await requireRole("STUDIO_OWNER");
   const studioId = text(form, "studioId", 80);

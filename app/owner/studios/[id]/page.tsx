@@ -24,6 +24,8 @@ import {
   removeEquipmentAction,
   removePhotoAction,
   removeStudioAddonAction,
+  setCoverPhotoAction,
+  moveStudioPhotoAction,
   saveOpeningHoursAction,
   toggleStudioAddonAction,
   submitStudioAction,
@@ -242,8 +244,58 @@ export default async function StudioBuilderPage({
 
             <section id="media" className="panel scroll-mt-28">
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">03 · Media & amenities</span><h2 className="mt-2 text-2xl font-black">Make the listing credible</h2>
+              <div className="mt-4 rounded-xl border border-zinc-900 bg-black/20 p-4 text-xs leading-5 text-zinc-500">
+                The first photo is the cover image used on search cards and the public listing. Upload several angles, then reorder them below.
+              </div>
               <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {studio.photos.map((photo) => <div key={photo.id} className="overflow-hidden rounded-xl border border-zinc-900 bg-zinc-950"><img src={photo.url} alt={photo.alt || studio.name} className="h-36 w-full object-cover" /><div className="flex items-center justify-between gap-2 p-3 text-xs text-zinc-600"><span>{photo.alt || "Studio photo"}</span><form action={removePhotoAction}><input type="hidden" name="studioId" value={studio.id} /><input type="hidden" name="photoId" value={photo.id} /><button className="text-red-400/70 hover:text-red-300">Remove</button></form></div></div>)}
+                {studio.photos.map((photo, index) => (
+                  <div key={photo.id} className="overflow-hidden rounded-xl border border-zinc-900 bg-zinc-950">
+                    <div className="relative">
+                      <img src={photo.url} alt={photo.alt || studio.name} className="h-40 w-full object-cover" />
+                      {index === 0 && (
+                        <span className="absolute left-2 top-2 rounded-full bg-white px-2.5 py-1 text-[9px] font-black text-[#222] shadow">
+                          Cover
+                        </span>
+                      )}
+                      <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[9px] font-black text-white">
+                        {index + 1}
+                      </span>
+                    </div>
+                    <div className="p-3">
+                      <span className="block truncate text-xs text-zinc-500">{photo.alt || "Studio photo"}</span>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {index > 0 && (
+                          <form action={moveStudioPhotoAction}>
+                            <input type="hidden" name="studioId" value={studio.id} />
+                            <input type="hidden" name="photoId" value={photo.id} />
+                            <input type="hidden" name="direction" value="left" />
+                            <button className="rounded-lg border border-zinc-800 px-2.5 py-1.5 text-[9px] font-black text-zinc-400 hover:text-white">←</button>
+                          </form>
+                        )}
+                        {index < studio.photos.length - 1 && (
+                          <form action={moveStudioPhotoAction}>
+                            <input type="hidden" name="studioId" value={studio.id} />
+                            <input type="hidden" name="photoId" value={photo.id} />
+                            <input type="hidden" name="direction" value="right" />
+                            <button className="rounded-lg border border-zinc-800 px-2.5 py-1.5 text-[9px] font-black text-zinc-400 hover:text-white">→</button>
+                          </form>
+                        )}
+                        {index > 0 && (
+                          <form action={setCoverPhotoAction}>
+                            <input type="hidden" name="studioId" value={studio.id} />
+                            <input type="hidden" name="photoId" value={photo.id} />
+                            <button className="rounded-lg border border-zinc-800 px-2.5 py-1.5 text-[9px] font-black text-zinc-400 hover:text-acid">Set cover</button>
+                          </form>
+                        )}
+                        <form action={removePhotoAction} className="ml-auto">
+                          <input type="hidden" name="studioId" value={studio.id} />
+                          <input type="hidden" name="photoId" value={photo.id} />
+                          <button className="text-[9px] font-black text-red-400/70 hover:text-red-300">Remove</button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                ))}
                 {studio.photos.length === 0 && <div className="rounded-xl border border-dashed border-zinc-800 p-8 text-center text-xs text-zinc-600 sm:col-span-2 lg:col-span-3">Upload at least one real studio photo for verification.</div>}
               </div>
               <StudioImageUploader studioId={studio.id}/><details className="mt-4"><summary className="cursor-pointer text-xs text-zinc-600">Or add an existing image URL</summary><form action={addPhotoAction} className="mt-5 grid gap-3 md:grid-cols-[1.5fr_1fr_100px_auto]"><input type="hidden" name="studioId" value={studio.id} /><input className="field" name="url" type="url" required placeholder="https://…/studio.jpg" /><input className="field" name="alt" placeholder="Control room" /><input className="field" name="sortOrder" type="number" min="0" defaultValue="0" /><button className="button-dark">Add photo</button></form></details>
