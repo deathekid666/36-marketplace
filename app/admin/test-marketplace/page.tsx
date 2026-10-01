@@ -5,6 +5,7 @@ import {
 } from "@/app/admin/test-marketplace/actions";
 import { AppHeader } from "@/components/AppHeader";
 import { DemoMarketplaceSetup } from "@/components/DemoMarketplaceSetup";
+import { MarketplaceLifecycleQa } from "@/components/MarketplaceLifecycleQa";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -98,6 +99,23 @@ export default async function AdminTestMarketplacePage() {
 
             <div className="mt-5">
               <DemoMarketplaceSetup />
+            </div>
+          </section>
+
+          <section className="panel">
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">
+              Automated lifecycle QA
+            </span>
+            <h2 className="mt-2 text-xl font-black">
+              Test booking → payment → messaging → completion → review → payout
+            </h2>
+            <p className="mt-2 text-xs leading-5 text-zinc-600">
+              Runs only against the fixed 36 demo accounts. It creates temporary
+              QA bookings, verifies the financial and communication lifecycle,
+              tests expired-hold cleanup, then deletes the temporary records.
+            </p>
+            <div className="mt-5">
+              <MarketplaceLifecycleQa enabled={demos.length > 0} />
             </div>
           </section>
 

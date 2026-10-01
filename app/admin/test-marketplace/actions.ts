@@ -6,6 +6,12 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import {
+  createBookingHold,
+  getRoomAvailability,
+} from "@/lib/booking";
+import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
+import { localDateKey } from "@/lib/time";
 
 export type DemoSetupState = {
   ok: boolean;
@@ -16,6 +22,20 @@ export type DemoSetupState = {
   creatorPassword?: string;
   studioUrls?: Array<{ name: string; url: string }>;
   compareUrl?: string;
+};
+
+
+
+export type MarketplaceQaCheck = {
+  name: string;
+  ok: boolean;
+  detail: string;
+};
+
+export type MarketplaceQaState = {
+  ok: boolean;
+  message: string;
+  checks?: MarketplaceQaCheck[];
 };
 
 const OWNER_EMAIL = "demo-owner@36.local";
@@ -395,4 +415,326 @@ export async function removeDemoMarketplaceAction() {
   revalidatePath("/studios/compare");
   revalidatePath("/admin");
   revalidatePath("/admin/test-marketplace");
+}
+
+
+export async function runMarketplaceLifecycleQaAction(
+  _previous: MarketplaceQaState,
+  _formData: FormData,
+): Promise<MarketplaceQaState> {
+  await requireRole("ADMIN");
+
+  const checks: MarketplaceQaCheck[] = [];
+  const createdBookingIds: string[] = [];
+
+  const add = (name: string, ok: boolean, detail: string) => {
+    checks.push({ name, ok, detail });
+  };
+
+  try {
+    const [owner, creator, studio] = await Promise.all([
+      db.user.findUnique({
+        where: { email: OWNER_EMAIL },
+        select: { id: true, role: true },
+      }),
+      db.user.findUnique({
+        where: { email: CREATOR_EMAIL },
+        select: { id: true, role: true },
+      }),
+      db.studio.findUnique({
+        where: { slug: DEMO_SLUGS[0] },
+        include: {
+          rooms: {
+            where: { active: true },
+            orderBy: { hourlyRateMad: "asc" },
+            take: 1,
+          },
+        },
+      }),
+    ]);
+
+    if (!owner || !creator || !studio || !studio.rooms[0]) {
+      return {
+        ok: false,
+        message:
+          "Create/reset the demo environment first. QA only runs against the fixed 36 demo accounts and studios.",
+        checks,
+      };
+    }
+
+    add(
+      "Demo fixtures",
+      owner.role === "STUDIO_OWNER" &&
+        creator.role === "CREATOR" &&
+        studio.status === "VERIFIED",
+      "Verified demo owner, creator and studio are present.",
+    );
+
+    const room = studio.rooms[0];
+    const durationMinutes = Math.max(60, room.minimumHours * 60);
+
+    let slot: { startAt: string; endAt: string; label: string } | null = null;
+
+    for (let offset = 1; offset <= 21 && !slot; offset += 1) {
+      const date = new Date(Date.now() + offset * 24 * 60 * 60 * 1000);
+      const dateKey = localDateKey(date);
+      const available = await getRoomAvailability(
+        room.id,
+        dateKey,
+        durationMinutes,
+      );
+      if (available[0]) slot = available[0];
+    }
+
+    if (!slot) {
+      add(
+        "Availability",
+        false,
+        "No future demo slot was available in the next 21 days.",
+      );
+      return {
+        ok: false,
+        message: "Lifecycle QA stopped because no demo availability was found.",
+        checks,
+      };
+    }
+
+    add(
+      "Availability",
+      true,
+      "Found a real bookable slot: " + slot.label + ".",
+    );
+
+    const confirmed = await createBookingHold({
+      creatorId: creator.id,
+      roomId: room.id,
+      startAt: new Date(slot.startAt),
+      durationMinutes,
+      paymentMethod: "PAY_AT_STUDIO",
+      notes: "[AUTOMATED QA] offline booking lifecycle",
+    });
+    createdBookingIds.push(confirmed.id);
+
+    const offlinePayment = confirmed.payments.find(
+      (payment) => payment.kind === "BALANCE",
+    );
+
+    add(
+      "Booking creation",
+      confirmed.status === "CONFIRMED" &&
+        confirmed.paymentStatus === "PENDING" &&
+        Boolean(offlinePayment),
+      "Offline checkout created a confirmed booking with payment pending.",
+    );
+
+    const conversation = await db.conversation.create({
+      data: { bookingId: confirmed.id },
+    });
+
+    await db.message.createMany({
+      data: [
+        {
+          conversationId: conversation.id,
+          senderId: creator.id,
+          body: "[AUTOMATED QA] creator message",
+        },
+        {
+          conversationId: conversation.id,
+          senderId: owner.id,
+          body: "[AUTOMATED QA] owner reply",
+        },
+      ],
+    });
+
+    const messageCount = await db.message.count({
+      where: { conversationId: conversation.id },
+    });
+
+    add(
+      "Messaging",
+      messageCount === 2,
+      "Creator ↔ owner booking conversation persisted both messages.",
+    );
+
+    await db.$transaction(async (tx) => {
+      await tx.payment.updateMany({
+        where: {
+          bookingId: confirmed.id,
+          status: "PENDING",
+          kind: { in: ["DEPOSIT", "BALANCE"] },
+        },
+        data: {
+          status: "PAID",
+          confirmedAt: new Date(),
+          confirmedById: owner.id,
+        },
+      });
+
+      await tx.booking.update({
+        where: { id: confirmed.id },
+        data: { paymentStatus: "PAID" },
+      });
+    });
+
+    const paidBooking = await db.booking.findUnique({
+      where: { id: confirmed.id },
+      include: { payments: true },
+    });
+
+    add(
+      "Offline payment",
+      paidBooking?.paymentStatus === "PAID" &&
+        paidBooking.payments
+          .filter((payment) =>
+            ["DEPOSIT", "BALANCE"].includes(payment.kind),
+          )
+          .every((payment) => payment.status === "PAID"),
+      "Studio receipt confirmation moved the booking to fully paid.",
+    );
+
+    const qaEnd = new Date(Date.now() - 30 * 60 * 1000);
+    const qaStart = new Date(
+      qaEnd.getTime() - durationMinutes * 60 * 1000,
+    );
+
+    await db.$transaction([
+      db.booking.update({
+        where: { id: confirmed.id },
+        data: {
+          startAt: qaStart,
+          endAt: qaEnd,
+          status: "COMPLETED",
+        },
+      }),
+      db.payout.updateMany({
+        where: { bookingId: confirmed.id, status: "PENDING" },
+        data: {
+          status: "ELIGIBLE",
+          availableAt: new Date(),
+        },
+      }),
+    ]);
+
+    await db.review.create({
+      data: {
+        bookingId: confirmed.id,
+        creatorId: creator.id,
+        studioId: studio.id,
+        rating: 5,
+        accuracy: 5,
+        equipment: 5,
+        communication: 5,
+        comment: "[AUTOMATED QA] verified lifecycle review",
+      },
+    });
+
+    const payout = await db.payout.findUnique({
+      where: { bookingId: confirmed.id },
+    });
+
+    if (payout) {
+      await db.payout.update({
+        where: { id: payout.id },
+        data: {
+          status: "PAID",
+          paidAt: new Date(),
+          reference: "QA-LIFECYCLE",
+        },
+      });
+    }
+
+    const completed = await db.booking.findUnique({
+      where: { id: confirmed.id },
+      include: {
+        review: true,
+        payout: true,
+      },
+    });
+
+    add(
+      "Completion + review",
+      completed?.status === "COMPLETED" &&
+        completed.review?.rating === 5,
+      "Paid session completed and accepted one verified review.",
+    );
+
+    add(
+      "Payout",
+      completed?.payout?.status === "PAID" &&
+        completed.payout.reference === "QA-LIFECYCLE",
+      "Payout progressed PENDING → ELIGIBLE → PAID.",
+    );
+
+    const hold = await createBookingHold({
+      creatorId: creator.id,
+      roomId: room.id,
+      startAt: new Date(slot.startAt),
+      durationMinutes,
+      notes: "[AUTOMATED QA] expiring deposit hold",
+    });
+    createdBookingIds.push(hold.id);
+
+    await db.booking.update({
+      where: { id: hold.id },
+      data: {
+        expiresAt: new Date(Date.now() - 60 * 1000),
+      },
+    });
+
+    const cleaned = await expireStaleBookingHolds({
+      creatorId: creator.id,
+      roomId: room.id,
+      limit: 50,
+    });
+
+    const expired = await db.booking.findUnique({
+      where: { id: hold.id },
+      include: {
+        payments: true,
+        payout: true,
+      },
+    });
+
+    add(
+      "Expired hold cleanup",
+      cleaned >= 1 &&
+        expired?.status === "EXPIRED" &&
+        expired.payments.every(
+          (payment) =>
+            payment.kind === "REFUND" || payment.status === "FAILED",
+        ) &&
+        expired.payout?.status === "HOLD",
+      "Expired deposit hold released inventory, failed pending charges and held payout.",
+    );
+
+    const ok = checks.every((check) => check.ok);
+
+    return {
+      ok,
+      message: ok
+        ? "Marketplace lifecycle QA passed. Temporary QA bookings are removed automatically."
+        : "Marketplace lifecycle QA found one or more failures.",
+      checks,
+    };
+  } catch (error) {
+    add(
+      "Unexpected error",
+      false,
+      error instanceof Error ? error.message : "Unknown QA failure",
+    );
+
+    return {
+      ok: false,
+      message: "Marketplace lifecycle QA stopped on an unexpected error.",
+      checks,
+    };
+  } finally {
+    if (createdBookingIds.length) {
+      await db.booking
+        .deleteMany({
+          where: { id: { in: createdBookingIds } },
+        })
+        .catch(() => undefined);
+    }
+  }
 }
