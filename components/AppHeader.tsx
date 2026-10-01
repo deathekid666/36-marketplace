@@ -56,11 +56,15 @@ export async function AppHeader({ user }: { user?: User | null }) {
               <Link href="/owner/studios/new" className="air-host-link">
                 List your studio
               </Link>
-            ) : (
-              <Link href="/auth/signup" className="air-host-link">
+            ) : user?.role === "CREATOR" ? (
+              <Link href="/list-your-studio" className="air-host-link">
                 List your studio
               </Link>
-            )}
+            ) : !user ? (
+              <Link href="/list-your-studio" className="air-host-link">
+                List your studio
+              </Link>
+            ) : null}
 
             {user ? (
               <>
@@ -79,7 +83,18 @@ export async function AppHeader({ user }: { user?: User | null }) {
                   <Icon name="menu" />
                   <span className="air-header-avatar">{initials(user.name)}</span>
                 </Link>
-                <Link href="/dashboard" className="air-dashboard-link">Dashboard</Link>
+                <Link
+                  href={
+                    user.role === "ADMIN"
+                      ? "/admin"
+                      : user.role === "STUDIO_OWNER"
+                        ? "/owner"
+                        : "/creator"
+                  }
+                  className="air-dashboard-link"
+                >
+                  Dashboard
+                </Link>
                 <LogoutButton />
               </>
             ) : (

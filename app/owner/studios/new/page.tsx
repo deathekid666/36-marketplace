@@ -10,7 +10,7 @@ export default async function NewStudioPage() {
     <main className="min-h-screen">
       <AppHeader user={user} />
       <section className="mx-auto max-w-3xl px-5 py-12">
-        <Link href="/owner" className="text-xs font-bold text-zinc-500 hover:text-white">← Back to studios</Link>
+        <Link href="/owner/studios" className="text-xs font-bold text-zinc-500 hover:text-white">← My studios</Link>
         <span className="mt-9 block text-xs font-bold uppercase tracking-[0.2em] text-acid">Step 1</span>
         <h1 className="mt-3 text-4xl font-black tracking-[-0.045em]">Create your studio listing</h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-500">Start with the identity. Rooms, equipment, photos and availability come next.</p>

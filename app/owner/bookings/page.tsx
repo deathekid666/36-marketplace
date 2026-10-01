@@ -151,7 +151,7 @@ export default async function OwnerBookingsPage({
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/owner"
+              href="/owner/studios"
               className="rounded-full border border-[#cfcfcf] px-5 py-3 text-xs font-black"
             >
               Studios

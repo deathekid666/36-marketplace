@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 
 type Mode = "login" | "signup";
 
-export function AuthForm({ mode, nextTo }: { mode: Mode; nextTo?: string }) {
+export function AuthForm({
+  mode,
+  nextTo,
+  defaultRole = "CREATOR",
+}: {
+  mode: Mode;
+  nextTo?: string;
+  defaultRole?: "CREATOR" | "STUDIO_OWNER";
+}) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,12 +56,12 @@ export function AuthForm({ mode, nextTo }: { mode: Mode; nextTo?: string }) {
             <legend>I am joining as</legend>
             <div className="air-role-grid">
               <label className="role-card">
-                <input className="peer sr-only" type="radio" name="role" value="CREATOR" defaultChecked />
+                <input className="peer sr-only" type="radio" name="role" value="CREATOR" defaultChecked={defaultRole === "CREATOR"} />
                 <b>Creator</b>
                 <small>Find and book creative spaces.</small>
               </label>
               <label className="role-card">
-                <input className="peer sr-only" type="radio" name="role" value="STUDIO_OWNER" />
+                <input className="peer sr-only" type="radio" name="role" value="STUDIO_OWNER" defaultChecked={defaultRole === "STUDIO_OWNER"} />
                 <b>Studio owner</b>
                 <small>List and manage spaces.</small>
               </label>
