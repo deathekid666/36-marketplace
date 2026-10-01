@@ -86,18 +86,16 @@ export function DirectoryLocationPicker({
   }
 
   return (
-    <div className="relative rounded-2xl border-t border-[#ebebeb] px-4 py-2 lg:border-l lg:border-t-0">
-      <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
-        Location
-      </span>
+    <div className="creative-location-picker">
+      <span className="creative-location-icon">⌖</span>
       <input
         value={value}
         onChange={(event) => clearSelection(event.target.value)}
         onFocus={() => setOpen(true)}
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}
-        placeholder="City or country"
+        placeholder="Anywhere"
         autoComplete="off"
-        className="mt-1 w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-[#a3a3a3]"
+        className="creative-location-input"
         aria-label="Studio location"
       />
       <input type="hidden" name="city" value={city} />
@@ -131,25 +129,20 @@ export function DirectoryLocationPicker({
         </div>
       )}
 
-      <div className="mt-2 flex items-center gap-2">
-        <span className="text-[10px] font-black uppercase tracking-[0.1em] text-[#a3a3a3]">
-          Radius
-        </span>
-        <select
-          name="radius"
-          defaultValue={defaultRadius == null ? "" : String(defaultRadius)}
-          disabled={lat == null || lng == null}
-          className="bg-transparent text-[11px] font-bold text-[#555555] outline-none disabled:text-[#b8b8b8]"
-          title={lat == null || lng == null ? "Choose a city to use radius search" : "Radius"}
-        >
-          <option value="" className="bg-white">Any</option>
-          <option value="5" className="bg-white">5 km</option>
-          <option value="10" className="bg-white">10 km</option>
-          <option value="25" className="bg-white">25 km</option>
-          <option value="50" className="bg-white">50 km</option>
-          <option value="100" className="bg-white">100 km</option>
-        </select>
-      </div>
+      <select
+        name="radius"
+        defaultValue={defaultRadius == null ? "" : String(defaultRadius)}
+        disabled={lat == null || lng == null}
+        className="creative-location-radius"
+        title={lat == null || lng == null ? "Choose a city to use radius search" : "Radius"}
+      >
+        <option value="">Any radius</option>
+        <option value="5">5 km</option>
+        <option value="10">10 km</option>
+        <option value="25">25 km</option>
+        <option value="50">50 km</option>
+        <option value="100">100 km</option>
+      </select>
     </div>
   );
 }

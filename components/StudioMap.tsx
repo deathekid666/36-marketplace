@@ -5,11 +5,7 @@ import {
   useRouter,
   useSearchParams,
 } from "next/navigation";
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type StudioMapPoint = {
   id: string;
@@ -20,8 +16,11 @@ export type StudioMapPoint = {
   price?: number | null;
   kind?: "BOOKABLE" | "CONTACT";
   category?: string | null;
+  categoryKey?: string | null;
   rating?: number | null;
   photoUrl?: string | null;
+  city?: string | null;
+  countryCode?: string | null;
 };
 
 declare global {
@@ -37,7 +36,65 @@ type Bounds = {
   west: number;
 };
 
-type LabelMode = "price" | "name";
+const CATEGORY_META: Record<string, { icon: string; color: string }> = {
+  RECORDING: { icon: "●", color: "#ff2d67" },
+  PODCAST: { icon: "◉", color: "#7c3cff" },
+  PHOTO: { icon: "▣", color: "#2677ff" },
+  VIDEO: { icon: "▶", color: "#ff8a00" },
+  REHEARSAL: { icon: "♪", color: "#12b76a" },
+  DJ: { icon: "⌁", color: "#111111" },
+  PRODUCTION: { icon: "◆", color: "#111111" },
+  IMAGE_LAB: { icon: "△", color: "#f5a300" },
+  POST_PRODUCTION: { icon: "△", color: "#f5a300" },
+  VOICE_OVER: { icon: "▮", color: "#1888ff" },
+  LIVE_STREAMING: { icon: "◍", color: "#00a6a6" },
+  OTHER: { icon: "•", color: "#555555" },
+};
+
+function metaFor(point: StudioMapPoint) {
+  return CATEGORY_META[String(point.categoryKey || "OTHER")] || CATEGORY_META.OTHER;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+      })[character] || character,
+  );
+}
+
+function cssEscape(value: string) {
+  if (typeof CSS !== "undefined" && CSS.escape) return CSS.escape(value);
+  return value.replace(/["\\]/g, "\\$&");
+}
+
+function compactName(value: string) {
+  const cleaned = value.trim();
+  return cleaned.length > 24 ? cleaned.slice(0, 22) + "…" : cleaned;
+}
+
+function regionName(point: StudioMapPoint) {
+  const { lat, lng } = point;
+  if (lng < -30) return lat >= 10 ? "North America" : "South America";
+  if (lng >= -30 && lng <= 60 && lat >= 35) return "Europe";
+  if (lng >= -30 && lng <= 60 && lat < 35 && lat > -38) return "Africa";
+  if (lng > 60 && lat >= -10) return "Asia";
+  if (lng > 95 && lat < -10) return "Oceania";
+  return "Middle East";
+}
+
+function averageCenter(group: StudioMapPoint[]) {
+  return {
+    lat: group.reduce((sum, p) => sum + p.lat, 0) / group.length,
+    lng: group.reduce((sum, p) => sum + p.lng, 0) / group.length,
+  };
+}
 
 export function StudioMap({
   points,
@@ -50,54 +107,32 @@ export function StudioMap({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [areaBounds, setAreaBounds] =
-    useState<Bounds | null>(null);
-  const [labelMode, setLabelMode] =
-    useState<LabelMode>("price");
-  const labelModeRef = useRef<LabelMode>("price");
-  const renderMarkersRef = useRef<(() => void) | null>(null);
-  labelModeRef.current = labelMode;
-  const [fullScreen, setFullScreen] =
-    useState(false);
-  const [directionsOpen, setDirectionsOpen] =
-    useState(false);
+  const [fullScreen, setFullScreen] = useState(false);
+  const [areaBounds, setAreaBounds] = useState<Bounds | null>(null);
+  const [directionsOpen, setDirectionsOpen] = useState(false);
 
-  const navigationPoint =
-    points.length === 1 ? points[0] : null;
-  const hasVerifiedPrices = points.some(
-    (point) => point.price != null && point.price > 0,
-  );
+  const navigationPoint = points.length === 1 ? points[0] : null;
   const googleMapsUrl = navigationPoint
     ? "https://www.google.com/maps/dir/?api=1&destination=" +
-      encodeURIComponent(
-        navigationPoint.lat + "," + navigationPoint.lng,
-      )
+      encodeURIComponent(navigationPoint.lat + "," + navigationPoint.lng)
     : null;
   const wazeUrl = navigationPoint
     ? "https://www.waze.com/ul?ll=" +
-      encodeURIComponent(
-        navigationPoint.lat + "," + navigationPoint.lng,
-      ) +
+      encodeURIComponent(navigationPoint.lat + "," + navigationPoint.lng) +
       "&navigate=yes"
     : null;
 
   useEffect(() => {
     if (!fullScreen) return;
-
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setFullScreen(false);
-      }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullScreen(false);
     };
-
-    window.addEventListener("keydown", onKeyDown);
-
+    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = previous;
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKey);
     };
   }, [fullScreen]);
 
@@ -105,426 +140,265 @@ export function StudioMap({
     if (!ref.current || points.length === 0) return;
 
     let map: any;
+    let markerLayer: any;
     let cancelled = false;
     let readyForAreaSearch = false;
     const markerById = new Map<string, any>();
-    let markerLayer: any;
 
-    function highlightCard(studioId: string) {
-      document
-        .querySelectorAll<HTMLElement>(
-          "[data-directory-card]",
-        )
-        .forEach((card) => {
-          card.dataset.mapActive =
-            card.dataset.studioId === studioId
-              ? "true"
-              : "false";
-        });
+    function highlightCard(id: string) {
+      document.querySelectorAll<HTMLElement>("[data-directory-card]").forEach((card) => {
+        card.dataset.mapActive = card.dataset.studioId === id ? "true" : "false";
+      });
     }
 
-    function markerLabel(point: StudioMapPoint) {
-      if (points.length === 1) {
-        return compactMarkerName(point.name);
-      }
-      if (labelModeRef.current === "price" && point.price) {
-        return point.price + " MAD";
-      }
-      return compactMarkerName(point.name);
-    }
+    function addPointMarker(L: any, point: StudioMapPoint) {
+      const meta = metaFor(point);
+      const isBookable = point.kind === "BOOKABLE";
+      const label = isBookable && point.price
+        ? point.price + " MAD"
+        : meta.icon + " " + compactName(point.name);
+      const width = Math.max(76, Math.min(170, 34 + label.length * 6.2));
 
-    function addPointMarker(
-      L: any,
-      point: StudioMapPoint,
-    ) {
-      const label = markerLabel(point);
-      const markerWidth =
-        labelModeRef.current === "price" && point.price
-          ? 86
-          : Math.max(
-              92,
-              Math.min(190, 30 + label.length * 7),
-            );
-      const kind =
-        point.kind ||
-        (point.price ? "BOOKABLE" : "CONTACT");
-      const kindClass =
-        kind === "BOOKABLE"
-          ? "studio-map-marker--bookable"
-          : "studio-map-marker--contact";
+      const marker = L.marker([point.lat, point.lng], {
+        icon: L.divIcon({
+          className: "studio-map-marker-wrap",
+          html:
+            '<div class="creative-map-pin ' +
+            (isBookable ? "is-bookable" : "is-contact") +
+            '" style="--pin-color:' + meta.color + '">' +
+            '<span class="creative-map-pin-dot">' + escapeHtml(meta.icon) + "</span>" +
+            '<b>' + escapeHtml(label) + "</b>" +
+            "</div>",
+          iconSize: [width, 40],
+          iconAnchor: [Math.round(width / 2), 20],
+        }),
+      }).addTo(markerLayer);
 
-      const marker = L.marker(
-        [point.lat, point.lng],
-        {
-          icon: L.divIcon({
-            className: "studio-map-marker-wrap",
-            html:
-              '<div class="studio-map-marker ' +
-              kindClass +
-              '" title="' +
-              escapeHtml(point.name) +
-              '">' +
-              escapeHtml(label) +
-              "</div>",
-            iconSize: [markerWidth, 38],
-            iconAnchor: [
-              Math.round(markerWidth / 2),
-              19,
-            ],
-          }),
-        },
-      ).addTo(markerLayer);
-
-      const popupImage = point.photoUrl
+      const photo = point.photoUrl
         ? '<img class="studio-map-popup-image" src="' +
           escapeHtml(point.photoUrl) +
           '" alt="" referrerpolicy="no-referrer" />'
         : "";
-      const meta = [
-        point.category || "",
-        point.rating
-          ? "★ " + point.rating.toFixed(1)
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" · ");
 
       marker.bindPopup(
-        '<div class="studio-map-popup">' +
-          popupImage +
-          "<strong>" +
-          escapeHtml(point.name) +
-          "</strong>" +
-          (meta
-            ? "<span>" +
-              escapeHtml(meta) +
-              "</span>"
-            : "") +
-          (point.price
-            ? "<span>" +
-              point.price +
-              " MAD / hour</span>"
-            : '<span class="studio-map-popup-contact">Contact only · not bookable</span>') +
-          '<div class="studio-map-popup-actions">' +
-          '<a href="' +
-          escapeHtml(point.href) +
-          '">View studio →</a>' +
-          '<a href="' +
+        '<div class="creative-map-popup">' +
+          photo +
+          '<div class="creative-map-popup-copy">' +
+          '<strong>' + escapeHtml(point.name) + "</strong>" +
+          '<span>' +
           escapeHtml(
-            "https://www.google.com/maps/dir/?api=1&destination=" +
-              encodeURIComponent(point.lat + "," + point.lng),
+            [point.category || "", point.city || ""].filter(Boolean).join(" · "),
           ) +
+          "</span>" +
+          (point.rating
+            ? '<span class="creative-map-rating">★ ' + point.rating.toFixed(1) + "</span>"
+            : "") +
+          (isBookable && point.price
+            ? '<b>' + point.price + " MAD <small>/ hour</small></b>"
+            : '<em>Contact only</em>') +
+          '<div class="studio-map-popup-actions">' +
+          '<a href="' + escapeHtml(point.href) + '">View details</a>' +
+          '<a href="https://www.google.com/maps/dir/?api=1&destination=' +
+          encodeURIComponent(point.lat + "," + point.lng) +
           '" target="_blank" rel="noreferrer">Directions ↗</a>' +
-          "</div></div>",
+          "</div></div></div>",
       );
 
       marker.on("click", () => {
         highlightCard(point.id);
         document
           .querySelector<HTMLElement>(
-            '[data-directory-card][data-studio-id="' +
-              cssEscape(point.id) +
-              '"]',
+            '[data-directory-card][data-studio-id="' + cssEscape(point.id) + '"]',
           )
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
 
       markerById.set(point.id, marker);
     }
 
+    function addCluster(
+      L: any,
+      group: StudioMapPoint[],
+      label: string,
+      subtitle: string,
+      color: string,
+      className: string,
+    ) {
+      const center = averageCenter(group);
+      const marker = L.marker([center.lat, center.lng], {
+        icon: L.divIcon({
+          className: "studio-map-marker-wrap",
+          html:
+            '<div class="creative-map-cluster ' +
+            className +
+            '" style="--cluster-color:' + color + '">' +
+            '<strong>' + group.length + "</strong>" +
+            (subtitle ? '<span>' + escapeHtml(subtitle) + "</span>" : "") +
+            (label ? '<small>' + escapeHtml(label) + "</small>" : "") +
+            "</div>",
+          iconSize: className === "world" ? [84, 74] : [84, 66],
+          iconAnchor: [42, className === "world" ? 37 : 33],
+        }),
+      }).addTo(markerLayer);
+
+      marker.on("click", () => {
+        const bounds = L.latLngBounds(group.map((p) => [p.lat, p.lng]));
+        readyForAreaSearch = false;
+        map.fitBounds(bounds, { padding: [70, 70], maxZoom: 14 });
+        window.setTimeout(() => {
+          readyForAreaSearch = true;
+        }, 420);
+      });
+    }
+
     function renderMarkers(L: any) {
       if (!map || !markerLayer) return;
-
       markerLayer.clearLayers();
       markerById.clear();
 
       const zoom = map.getZoom();
-      const shouldCluster =
-        points.length >= 8 && zoom < 14;
 
-      if (!shouldCluster) {
-        points.forEach((point) =>
-          addPointMarker(L, point),
+      if (points.length === 1 || zoom >= 13) {
+        points.forEach((point) => addPointMarker(L, point));
+        return;
+      }
+
+      if (zoom < 4) {
+        const groups = new Map<string, StudioMapPoint[]>();
+        points.forEach((point) => {
+          const key = regionName(point);
+          groups.set(key, [...(groups.get(key) || []), point]);
+        });
+        const colors = ["#7c3cff", "#12b76a", "#ff3b5c", "#f5a300", "#2677ff", "#8f3cff"];
+        [...groups.entries()].forEach(([label, group], index) =>
+          addCluster(L, group, label, "", colors[index % colors.length], "world"),
         );
         return;
       }
 
-      const cellSize =
-        zoom < 4 ? 180 : zoom < 6 ? 140 : zoom < 8 ? 110 : zoom < 11 ? 88 : 72;
-      const groups = new Map<
-        string,
-        StudioMapPoint[]
-      >();
-
-      for (const point of points) {
-        const projected = map.project(
-          [point.lat, point.lng],
-          zoom,
-        );
-        const key =
-          Math.floor(projected.x / cellSize) +
-          ":" +
-          Math.floor(projected.y / cellSize);
-        groups.set(key, [
-          ...(groups.get(key) || []),
-          point,
-        ]);
-      }
-
-      for (const group of groups.values()) {
-        const minimumClusterSize = zoom < 6 ? 2 : 3;
-        if (group.length < minimumClusterSize) {
-          group.forEach((point) =>
-            addPointMarker(L, point),
-          );
-          continue;
-        }
-
-        const projectedPoints = group.map((point) => ({
-          point,
-          projected: map.project(
-            [point.lat, point.lng],
-            zoom,
-          ),
-        }));
-        const centerX =
-          projectedPoints.reduce(
-            (sum, item) => sum + item.projected.x,
-            0,
-          ) / projectedPoints.length;
-        const centerY =
-          projectedPoints.reduce(
-            (sum, item) => sum + item.projected.y,
-            0,
-          ) / projectedPoints.length;
-        const representative = projectedPoints.reduce(
-          (best, item) => {
-            const distance =
-              Math.pow(item.projected.x - centerX, 2) +
-              Math.pow(item.projected.y - centerY, 2);
-            return distance < best.distance
-              ? { point: item.point, distance }
-              : best;
-          },
-          {
-            point: projectedPoints[0].point,
-            distance: Number.POSITIVE_INFINITY,
-          },
-        ).point;
-        const lat = representative.lat;
-        const lng = representative.lng;
-        const bookableCount = group.filter(
-          (point) =>
-            (point.kind ||
-              (point.price
-                ? "BOOKABLE"
-                : "CONTACT")) === "BOOKABLE",
-        ).length;
-        const contactCount =
-          group.length - bookableCount;
-
-        const worldCluster = zoom < 5;
-        const clusterLabel =
-          hasVerifiedPrices &&
-          labelModeRef.current === "price"
-            ? (() => {
-                const prices = group
-                  .map((point) => point.price)
-                  .filter(
-                    (value): value is number =>
-                      typeof value === "number" &&
-                      value > 0,
-                  );
-                if (!prices.length) return "studios";
-                const min = Math.min(...prices);
-                const max = Math.max(...prices);
-                return min === max
-                  ? min + " MAD"
-                  : min + "–" + max + " MAD";
-              })()
-            : hasVerifiedPrices &&
-                labelModeRef.current === "name"
-              ? compactMarkerName(group[0].name) +
-                (group.length > 1
-                  ? " +" + (group.length - 1)
-                  : "")
-              : "studios";
-
-        const clusterWidth = worldCluster ? 52 : 76;
-        const clusterHeight = worldCluster ? 52 : 46;
-
-        const cluster = L.marker([lat, lng], {
-          icon: L.divIcon({
-            className: "studio-map-marker-wrap",
-            html:
-              '<div class="studio-map-cluster' +
-              (worldCluster
-                ? ' studio-map-cluster--world'
-                : '') +
-              '">' +
-              "<strong>" +
-              group.length +
-              "</strong>" +
-              (worldCluster
-                ? ""
-                : "<span>" +
-                  escapeHtml(clusterLabel) +
-                  "</span>") +
-              "</div>",
-            iconSize: [clusterWidth, clusterHeight],
-            iconAnchor: [
-              Math.round(clusterWidth / 2),
-              Math.round(clusterHeight / 2),
-            ],
-          }),
-        }).addTo(markerLayer);
-
-        cluster.on("click", () => {
-          const clusterBounds =
-            L.latLngBounds(
-              group.map((point) => [
-                point.lat,
-                point.lng,
-              ]),
-            );
-
-          readyForAreaSearch = false;
-          map.fitBounds(clusterBounds, {
-            padding: [55, 55],
-            maxZoom: 15,
-          });
-          window.setTimeout(() => {
-            readyForAreaSearch = true;
-          }, 450);
+      if (zoom < 8) {
+        const groups = new Map<string, StudioMapPoint[]>();
+        points.forEach((point) => {
+          const key = point.city?.trim() || point.countryCode?.trim() || regionName(point);
+          groups.set(key, [...(groups.get(key) || []), point]);
         });
+        [...groups.entries()].forEach(([label, group]) => {
+          if (group.length < 2) {
+            addPointMarker(L, group[0]);
+            return;
+          }
+          addCluster(L, group, label, "", "#ff3b5c", "city");
+        });
+        return;
       }
+
+      if (zoom < 13) {
+        const groups = new Map<string, StudioMapPoint[]>();
+        points.forEach((point) => {
+          const projected = map.project([point.lat, point.lng], zoom);
+          const key =
+            Math.floor(projected.x / 110) +
+            ":" +
+            Math.floor(projected.y / 110) +
+            ":" +
+            String(point.categoryKey || "OTHER");
+          groups.set(key, [...(groups.get(key) || []), point]);
+        });
+
+        for (const group of groups.values()) {
+          if (group.length < 2) {
+            addPointMarker(L, group[0]);
+            continue;
+          }
+          const meta = metaFor(group[0]);
+          addCluster(
+            L,
+            group,
+            "",
+            meta.icon + " " + (group[0].category || "Creative"),
+            meta.color,
+            "category",
+          );
+        }
+        return;
+      }
+
+      points.forEach((point) => addPointMarker(L, point));
     }
 
     const load = async () => {
-      if (
-        !document.querySelector(
-          'link[data-leaflet="36"]',
-        )
-      ) {
-        const link =
-          document.createElement("link");
+      if (!document.querySelector('link[data-leaflet="36"]')) {
+        const link = document.createElement("link");
         link.rel = "stylesheet";
-        link.href =
-          "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
         link.dataset.leaflet = "36";
         document.head.appendChild(link);
       }
 
       if (!window.L) {
-        await new Promise<void>(
-          (resolve, reject) => {
-            const existing =
-              document.querySelector(
-                'script[data-leaflet="36"]',
-              ) as HTMLScriptElement | null;
-
-            if (existing) {
-              if (
-                existing.dataset.loaded === "true"
-              ) {
-                resolve();
-                return;
-              }
-              existing.addEventListener(
-                "load",
-                () => resolve(),
-                { once: true },
-              );
-              existing.addEventListener(
-                "error",
-                () =>
-                  reject(
-                    new Error(
-                      "Map library failed",
-                    ),
-                  ),
-                { once: true },
-              );
+        await new Promise<void>((resolve, reject) => {
+          const existing = document.querySelector(
+            'script[data-leaflet="36"]',
+          ) as HTMLScriptElement | null;
+          if (existing) {
+            if (existing.dataset.loaded === "true") {
+              resolve();
               return;
             }
+            existing.addEventListener("load", () => resolve(), { once: true });
+            existing.addEventListener(
+              "error",
+              () => reject(new Error("Map library failed")),
+              { once: true },
+            );
+            return;
+          }
 
-            const script =
-              document.createElement("script");
-            script.src =
-              "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-            script.dataset.leaflet = "36";
-            script.onload = () => {
-              script.dataset.loaded = "true";
-              resolve();
-            };
-            script.onerror = () =>
-              reject(
-                new Error("Map library failed"),
-              );
-            document.body.appendChild(script);
-          },
-        );
+          const script = document.createElement("script");
+          script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+          script.dataset.leaflet = "36";
+          script.onload = () => {
+            script.dataset.loaded = "true";
+            resolve();
+          };
+          script.onerror = () => reject(new Error("Map library failed"));
+          document.body.appendChild(script);
+        });
       }
 
-      if (
-        cancelled ||
-        !ref.current ||
-        !window.L
-      ) {
-        return;
-      }
-
+      if (cancelled || !ref.current || !window.L) return;
       const L = window.L;
+
       map = L.map(ref.current, {
         scrollWheelZoom: fullScreen,
         attributionControl: true,
         zoomControl: true,
+        worldCopyJump: true,
       });
 
-      L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-          maxZoom: 19,
-          className: "studio-map-base-tiles",
-          attribution:
-            "© OpenStreetMap contributors",
-        },
-      ).addTo(map);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        className: "studio-map-base-tiles",
+        attribution: "© OpenStreetMap contributors",
+      }).addTo(map);
 
       markerLayer = L.layerGroup().addTo(map);
-      const bounds = L.latLngBounds(
-        points.map((point) => [
-          point.lat,
-          point.lng,
-        ]),
-      );
+      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
 
       if (points.length === 1) {
-        map.setView(
-          [points[0].lat, points[0].lng],
-          14,
-        );
+        map.setView([points[0].lat, points[0].lng], 14);
       } else {
-        const latSpan =
-          bounds.getNorth() - bounds.getSouth();
-        const lngSpan =
-          bounds.getEast() - bounds.getWest();
-
-        if (latSpan > 100 || lngSpan > 250) {
-          map.setView([20, 5], 2);
+        const latSpan = bounds.getNorth() - bounds.getSouth();
+        const lngSpan = bounds.getEast() - bounds.getWest();
+        if (latSpan > 65 || lngSpan > 120) {
+          map.setView([22, 8], 2);
+        } else if (latSpan > 12 || lngSpan > 18) {
+          map.fitBounds(bounds.pad(0.05), { padding: [30, 30], maxZoom: 6 });
         } else {
-          map.fitBounds(bounds.pad(0.08), {
-            padding: [24, 24],
-            maxZoom: 12,
-          });
+          map.fitBounds(bounds.pad(0.06), { padding: [30, 30], maxZoom: 12 });
         }
       }
 
-      renderMarkersRef.current = () =>
-        renderMarkers(L);
       renderMarkers(L);
 
       window.setTimeout(() => {
@@ -533,13 +407,7 @@ export function StudioMap({
       }, 180);
 
       const captureBounds = () => {
-        if (
-          !searchArea ||
-          !readyForAreaSearch ||
-          !map
-        ) {
-          return;
-        }
+        if (!searchArea || !readyForAreaSearch) return;
         const next = map.getBounds();
         setAreaBounds({
           north: next.getNorth(),
@@ -556,107 +424,53 @@ export function StudioMap({
       });
 
       const focusListener = (event: Event) => {
-        const custom =
-          event as CustomEvent<{
-            studioId?: string;
-          }>;
-        const studioId =
-          custom.detail?.studioId;
-        if (!studioId) return;
-
-        const point = points.find(
-          (item) => item.id === studioId,
-        );
+        const custom = event as CustomEvent<{ studioId?: string }>;
+        const id = custom.detail?.studioId;
+        if (!id) return;
+        const point = points.find((item) => item.id === id);
         if (!point) return;
-
-        highlightCard(studioId);
+        highlightCard(id);
         readyForAreaSearch = false;
-        map.setView(
-          [point.lat, point.lng],
-          Math.max(map.getZoom(), 15),
-          { animate: true },
-        );
-
+        map.setView([point.lat, point.lng], Math.max(map.getZoom(), 14), {
+          animate: true,
+        });
         window.setTimeout(() => {
           renderMarkers(L);
-          markerById
-            .get(studioId)
-            ?.openPopup();
+          markerById.get(id)?.openPopup();
           readyForAreaSearch = true;
         }, 350);
       };
 
-      window.addEventListener(
-        "36:focus-studio",
-        focusListener,
-      );
-
-      return () => {
-        window.removeEventListener(
-          "36:focus-studio",
-          focusListener,
-        );
-      };
+      window.addEventListener("36:focus-studio", focusListener);
+      return () => window.removeEventListener("36:focus-studio", focusListener);
     };
 
-    let detach:
-      | (() => void)
-      | undefined;
-
-    load()
-      .then((cleanup) => {
-        detach = cleanup;
-      })
-      .catch(() => undefined);
+    let detach: (() => void) | undefined;
+    load().then((cleanup) => {
+      detach = cleanup;
+    }).catch(() => undefined);
 
     return () => {
       cancelled = true;
       detach?.();
-      renderMarkersRef.current = null;
       if (map) map.remove();
     };
-  }, [
-    points,
-    searchArea,
-    fullScreen,
-  ]);
-
-  useEffect(() => {
-    renderMarkersRef.current?.();
-  }, [labelMode]);
+  }, [points, searchArea, fullScreen]);
 
   function applyAreaSearch() {
     if (!areaBounds) return;
-
-    const params = new URLSearchParams(
-      searchParams.toString(),
-    );
-    params.set(
-      "north",
-      areaBounds.north.toFixed(5),
-    );
-    params.set(
-      "south",
-      areaBounds.south.toFixed(5),
-    );
-    params.set(
-      "east",
-      areaBounds.east.toFixed(5),
-    );
-    params.set(
-      "west",
-      areaBounds.west.toFixed(5),
-    );
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("north", areaBounds.north.toFixed(5));
+    params.set("south", areaBounds.south.toFixed(5));
+    params.set("east", areaBounds.east.toFixed(5));
+    params.set("west", areaBounds.west.toFixed(5));
     params.delete("city");
     params.delete("country");
     params.delete("lat");
     params.delete("lng");
     params.delete("radius");
     params.delete("page");
-
-    router.push(
-      pathname + "?" + params.toString(),
-    );
+    router.push(pathname + "?" + params.toString());
     setAreaBounds(null);
   }
 
@@ -665,96 +479,41 @@ export function StudioMap({
   return (
     <div
       id="directory-map"
-      className={
-        fullScreen
-          ? "fixed inset-0 z-[5000] bg-black"
-          : "relative"
-      }
+      className={fullScreen ? "fixed inset-0 z-[5000] bg-white" : "creative-map-shell"}
     >
       <div
         ref={ref}
-        className={
-          fullScreen
-            ? "h-screen w-full bg-zinc-950"
-            : "h-[500px] w-full overflow-hidden rounded-[22px] border border-[#dddddd] bg-[#f3f3f3] xl:h-[590px]"
-        }
-        aria-label="Studio locations map"
+        className={fullScreen ? "h-screen w-full" : "creative-map-canvas"}
+        aria-label="Creative spaces map"
       />
 
-      {points.length > 1 && hasVerifiedPrices && (
-        <div className="absolute left-3 top-3 z-[1100] flex overflow-hidden rounded-full border border-zinc-700 bg-zinc-950/95 p-1 shadow-xl backdrop-blur">
-          <button
-            type="button"
-            aria-pressed={
-              labelModeRef.current === "price"
-            }
-            onClick={() =>
-              setLabelMode("price")
-            }
-            className={
-              "rounded-full px-3 py-2 text-[10px] font-black " +
-              (labelModeRef.current === "price"
-                ? "bg-white text-black"
-                : "text-zinc-400")
-            }
-          >
-            Price
-          </button>
-          <button
-            type="button"
-            aria-pressed={
-              labelMode === "name"
-            }
-            onClick={() =>
-              setLabelMode("name")
-            }
-            className={
-              "rounded-full px-3 py-2 text-[10px] font-black " +
-              (labelMode === "name"
-                ? "bg-white text-black"
-                : "text-zinc-400")
-            }
-          >
-            Name
-          </button>
-        </div>
+      {searchArea && areaBounds && (
+        <button
+          type="button"
+          onClick={applyAreaSearch}
+          className="creative-map-search-area"
+        >
+          ⌕ Search this area
+        </button>
       )}
 
-      <div className="absolute right-3 top-3 z-[1200] flex items-center gap-2">
+      <div className="creative-map-top-actions">
         {navigationPoint && googleMapsUrl && wazeUrl && (
           <div className="relative">
             <button
               type="button"
-              aria-expanded={directionsOpen}
-              onClick={() =>
-                setDirectionsOpen((value) => !value)
-              }
-              className="rounded-full border border-zinc-700 bg-zinc-950/95 px-4 py-2.5 text-[10px] font-black text-white shadow-xl backdrop-blur"
+              onClick={() => setDirectionsOpen((value) => !value)}
+              className="creative-map-action"
             >
               Directions
             </button>
-
             {directionsOpen && (
-              <div className="absolute right-0 top-[calc(100%+8px)] min-w-[180px] overflow-hidden rounded-2xl border border-[#dddddd] bg-white p-1.5 text-[#222] shadow-2xl">
-                <a
-                  href={googleMapsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => setDirectionsOpen(false)}
-                  className="flex items-center justify-between rounded-xl px-3 py-3 text-[10px] font-black transition hover:bg-[#f7f7f7]"
-                >
-                  <span>Google Maps</span>
-                  <span aria-hidden="true">↗</span>
+              <div className="creative-map-directions">
+                <a href={googleMapsUrl} target="_blank" rel="noreferrer">
+                  Google Maps <span>↗</span>
                 </a>
-                <a
-                  href={wazeUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => setDirectionsOpen(false)}
-                  className="flex items-center justify-between rounded-xl px-3 py-3 text-[10px] font-black transition hover:bg-[#f7f7f7]"
-                >
-                  <span>Waze</span>
-                  <span aria-hidden="true">↗</span>
+                <a href={wazeUrl} target="_blank" rel="noreferrer">
+                  Waze <span>↗</span>
                 </a>
               </div>
             )}
@@ -763,73 +522,12 @@ export function StudioMap({
 
         <button
           type="button"
-          onClick={() =>
-            setFullScreen((value) => !value)
-          }
-          className="rounded-full border border-zinc-700 bg-zinc-950/95 px-4 py-2.5 text-[10px] font-black text-white shadow-xl backdrop-blur"
+          onClick={() => setFullScreen((value) => !value)}
+          className="creative-map-action dark"
         >
-          {fullScreen
-            ? "Close map ×"
-            : "Full map"}
+          {fullScreen ? "Close map ×" : "Full map"}
         </button>
       </div>
-
-      {hasVerifiedPrices && (
-        <div className="absolute bottom-3 left-3 z-[1100] flex flex-wrap gap-2">
-          <span className="rounded-full border border-[#dddddd] bg-white/95 px-3 py-1.5 text-[9px] font-black text-[#222] shadow-sm">
-            ● Bookable
-          </span>
-          {points.some((point) => point.kind === "CONTACT") && (
-            <span className="rounded-full border border-[#dddddd] bg-white/95 px-3 py-1.5 text-[9px] font-black text-[#717171] shadow-sm">
-              ● Contact only
-            </span>
-          )}
-        </div>
-      )}
-
-      {searchArea && areaBounds && (
-        <button
-          type="button"
-          onClick={applyAreaSearch}
-          className="absolute left-1/2 top-4 z-[1200] -translate-x-1/2 rounded-full border border-zinc-700 bg-zinc-950/95 px-5 py-2.5 text-xs font-black text-white shadow-2xl backdrop-blur hover:border-sky-500 hover:text-sky-300"
-        >
-          Search this area
-        </button>
-      )}
     </div>
-  );
-}
-
-function cssEscape(value: string) {
-  if (
-    typeof CSS !== "undefined" &&
-    CSS.escape
-  ) {
-    return CSS.escape(value);
-  }
-  return value.replace(/["\\]/g, "\\$&");
-}
-
-function escapeHtml(value: string) {
-  return value.replace(
-    /[&<>'"]/g,
-    (char) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        "'": "&#39;",
-        '"': "&quot;",
-      })[char] || char,
-  );
-}
-
-function compactMarkerName(value: string) {
-  const clean = value
-    .trim()
-    .replace(/\s+/g, " ");
-  if (clean.length <= 22) return clean;
-  return (
-    clean.slice(0, 20).trimEnd() + "…"
   );
 }

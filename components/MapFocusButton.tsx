@@ -20,7 +20,7 @@ export function MapFocusButton({
           .getElementById("directory-map")
           ?.scrollIntoView({ behavior: "smooth", block: "center" });
       }}
-      className="text-[11px] font-black text-zinc-500 transition hover:text-sky-300"
+      className="creative-card-map-link"
     >
       Show on map
     </button>

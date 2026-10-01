@@ -1,4 +1,8 @@
-import { DiscoveryStudioCategory, Prisma } from "@prisma/client";
+import {
+  DiscoveryStudioCategory,
+  Prisma,
+  StudioCategory,
+} from "@prisma/client";
 import Link from "next/link";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -7,7 +11,7 @@ import {
   type DirectoryLocationOption,
 } from "@/components/DirectoryLocationPicker";
 import { MapFocusButton } from "@/components/MapFocusButton";
-import { StudioMap } from "@/components/StudioMap";
+import { StudioMap, type StudioMapPoint } from "@/components/StudioMap";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
@@ -19,17 +23,44 @@ import {
 import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
 
 export const metadata = {
-  title: "Global studio contacts · 36",
+  title: "Explore creative spaces · 36",
   description:
-    "Browse public contact details for creative studios discovered by 36. Discovery listings are not bookable until a studio joins and is verified.",
+    "Explore recording, podcast, photo, video, rehearsal and other creative spaces around the world.",
 };
 
+const CATEGORY_TABS = [
+  { value: "", label: "All", icon: "⌘", tone: "all" },
+  { value: "RECORDING", label: "Recording", icon: "●", tone: "recording" },
+  { value: "PODCAST", label: "Podcast", icon: "◉", tone: "podcast" },
+  { value: "PHOTO", label: "Photo", icon: "▣", tone: "photo" },
+  { value: "VIDEO", label: "Video", icon: "▶", tone: "video" },
+  { value: "REHEARSAL", label: "Rehearsal", icon: "♪", tone: "rehearsal" },
+  { value: "IMAGE_LAB", label: "Image Lab", icon: "△", tone: "lab" },
+  { value: "VOICE_OVER", label: "Voice-over", icon: "▮", tone: "voice" },
+  { value: "OTHER", label: "More", icon: "•••", tone: "more" },
+] as const;
+
+type UiCategory = (typeof CATEGORY_TABS)[number]["value"];
+
 function labelCategory(value: string) {
+  if (value === "IMAGE_LAB") return "Image Lab";
   return value
     .toLowerCase()
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function candidateCategoryKey(name: string, category: DiscoveryStudioCategory) {
+  const looksLikeLab = /\b(lab|laboratory|darkroom|film processing|photo processing)\b/i.test(name);
+  if (
+    looksLikeLab &&
+    (category === DiscoveryStudioCategory.PHOTO ||
+      category === DiscoveryStudioCategory.POST_PRODUCTION)
+  ) {
+    return "IMAGE_LAB";
+  }
+  return category;
 }
 
 function cleanPhoneHref(value: string) {
@@ -74,7 +105,6 @@ function haversineKm(
     Math.cos(radians(lat1)) *
       Math.cos(radians(lat2)) *
       Math.sin(deltaLng / 2) ** 2;
-
   return 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -90,6 +120,75 @@ function countryName(code: string | null | undefined) {
   }
 }
 
+function candidateCategoryFilters(category: UiCategory): Prisma.CandidateStudioWhereInput[] {
+  if (!category) return [];
+  if (category === "IMAGE_LAB") {
+    return [
+      {
+        AND: [
+          {
+            category: {
+              in: [
+                DiscoveryStudioCategory.PHOTO,
+                DiscoveryStudioCategory.POST_PRODUCTION,
+              ],
+            },
+          },
+          {
+            OR: [
+              { name: { contains: "lab", mode: "insensitive" } },
+              { normalizedName: { contains: "lab", mode: "insensitive" } },
+              { name: { contains: "darkroom", mode: "insensitive" } },
+              { name: { contains: "film", mode: "insensitive" } },
+            ],
+          },
+        ],
+      },
+    ];
+  }
+  if (Object.values(DiscoveryStudioCategory).includes(category as DiscoveryStudioCategory)) {
+    return [{ category: category as DiscoveryStudioCategory }];
+  }
+  return [];
+}
+
+function bookableCategoryWhere(category: UiCategory): Prisma.StudioWhereInput[] {
+  if (!category) return [];
+  if (Object.values(StudioCategory).includes(category as StudioCategory)) {
+    return [{ primaryCategory: category as StudioCategory }];
+  }
+  return [{ id: "00000000-0000-0000-0000-000000000000" }];
+}
+
+function categoryHref(
+  category: UiCategory,
+  query: {
+    q: string;
+    country: string;
+    city: string;
+    lat: number | null;
+    lng: number | null;
+    radiusKm: number | null;
+  },
+) {
+  const params = new URLSearchParams();
+  if (query.q) params.set("q", query.q);
+  if (query.country) params.set("country", query.country);
+  if (query.city) params.set("city", query.city);
+  if (query.lat != null) params.set("lat", String(query.lat));
+  if (query.lng != null) params.set("lng", String(query.lng));
+  if (query.radiusKm != null) params.set("radius", String(query.radiusKm));
+  if (category) params.set("category", category);
+  return "/discover" + (params.toString() ? "?" + params.toString() : "");
+}
+
+function categoryIcon(category: string) {
+  return (
+    CATEGORY_TABS.find((item) => item.value === category)?.icon ||
+    (category === "POST_PRODUCTION" ? "△" : "•")
+  );
+}
+
 export default async function DiscoverStudiosPage({
   searchParams,
 }: {
@@ -98,9 +197,6 @@ export default async function DiscoverStudiosPage({
     country?: string;
     city?: string;
     category?: string;
-    verified?: string;
-    website?: string;
-    email?: string;
     lat?: string;
     lng?: string;
     radius?: string;
@@ -113,25 +209,24 @@ export default async function DiscoverStudiosPage({
 }) {
   const user = await getCurrentUser();
   const query = await searchParams;
+
   const q = String(query.q || "").trim().slice(0, 120);
   const country = /^[A-Za-z]{2}$/.test(String(query.country || "").trim())
     ? String(query.country).trim().toUpperCase()
     : "";
   const city = String(query.city || "").trim().slice(0, 120);
-  const category = Object.values(DiscoveryStudioCategory).includes(
-    String(query.category || "") as DiscoveryStudioCategory,
-  )
-    ? (String(query.category) as DiscoveryStudioCategory)
+  const rawCategory = String(query.category || "").trim().toUpperCase();
+  const category = CATEGORY_TABS.some((item) => item.value === rawCategory)
+    ? (rawCategory as UiCategory)
     : "";
-  const verifiedOnly = query.verified === "1";
-  const websiteOnly = query.website === "1";
-  const emailOnly = query.email === "1";
+
   const centerLat = parseCoordinate(query.lat, -90, 90);
   const centerLng = parseCoordinate(query.lng, -180, 180);
   const radiusValue = Number.parseInt(String(query.radius || ""), 10);
   const radiusKm = [5, 10, 25, 50, 100].includes(radiusValue)
     ? radiusValue
     : null;
+
   const north = parseCoordinate(query.north, -90, 90);
   const south = parseCoordinate(query.south, -90, 90);
   const east = parseCoordinate(query.east, -180, 180);
@@ -143,26 +238,18 @@ export default async function DiscoverStudiosPage({
     west != null &&
     north > south &&
     east > west;
+
   const radiusActive =
     !mapBoundsActive &&
     radiusKm != null &&
     centerLat != null &&
     centerLng != null;
-  const qualityFilters: Prisma.CandidateStudioWhereInput[] = [];
-  if (verifiedOnly) {
-    qualityFilters.push({ claims: { some: { status: "VERIFIED" } } });
-  }
-  if (websiteOnly) {
-    qualityFilters.push({ website: { not: null } });
-  }
-  if (emailOnly) {
-    qualityFilters.push({ email: { not: null } });
-  }
+
   const page = Math.max(
     1,
     Math.min(5000, Number.parseInt(String(query.page || "1"), 10) || 1),
   );
-  const pageSize = 48;
+  const pageSize = 30;
   const staleCutoff = discoveryStaleCutoff();
 
   let radiusCandidateIds: string[] | null = null;
@@ -176,14 +263,8 @@ export default async function DiscoverStudiosPage({
 
     const coordinateCandidates = await db.candidateStudio.findMany({
       where: {
-        latitude: {
-          gte: centerLat - latDelta,
-          lte: centerLat + latDelta,
-        },
-        longitude: {
-          gte: centerLng - lngDelta,
-          lte: centerLng + lngDelta,
-        },
+        latitude: { gte: centerLat - latDelta, lte: centerLat + latDelta },
+        longitude: { gte: centerLng - lngDelta, lte: centerLng + lngDelta },
       },
       select: { id: true, latitude: true, longitude: true },
       take: 20_000,
@@ -217,12 +298,10 @@ export default async function DiscoverStudiosPage({
         city: { contains: city, mode: "insensitive" as const },
       });
     }
-    if (radiusCandidateIds) {
-      geoFilters.push({ id: { in: radiusCandidateIds } });
-    }
+    if (radiusCandidateIds) geoFilters.push({ id: { in: radiusCandidateIds } });
   }
 
-  const visibility: Prisma.CandidateStudioWhereInput = {
+  const candidateBase: Prisma.CandidateStudioWhereInput = {
     AND: [
       discoveryRolloutWhere("PUBLIC_DISCOVERY"),
       { phone: { not: null } },
@@ -248,15 +327,16 @@ export default async function DiscoverStudiosPage({
                 { city: { contains: q, mode: "insensitive" as const } },
                 { district: { contains: q, mode: "insensitive" as const } },
                 { country: { contains: q, mode: "insensitive" as const } },
-                { phone: { contains: q } },
               ],
             },
           ]
         : []),
       ...geoFilters,
-      ...(category ? [{ category }] : []),
-      ...qualityFilters,
     ],
+  };
+
+  const candidateVisibility: Prisma.CandidateStudioWhereInput = {
+    AND: [candidateBase, ...candidateCategoryFilters(category)],
   };
 
   const geographyVisibility: Prisma.CandidateStudioWhereInput = {
@@ -276,26 +356,62 @@ export default async function DiscoverStudiosPage({
           },
         ],
       },
-      ...qualityFilters,
     ],
   };
 
-  const [candidates, total, countryRows, cityRows, mapCandidates] = await Promise.all([
+  const bookableGeo: Prisma.StudioWhereInput[] = [];
+  if (mapBoundsActive) {
+    bookableGeo.push(
+      { latitude: { gte: south!, lte: north! } },
+      { longitude: { gte: west!, lte: east! } },
+    );
+  } else {
+    if (city) bookableGeo.push({ city: { contains: city, mode: "insensitive" } });
+    if (country && country !== "MA") {
+      bookableGeo.push({ id: "00000000-0000-0000-0000-000000000000" });
+    }
+  }
+
+  const bookableWhere: Prisma.StudioWhereInput = {
+    AND: [
+      { status: "VERIFIED" },
+      { latitude: { not: null } },
+      { longitude: { not: null } },
+      ...(q
+        ? [
+            {
+              OR: [
+                { name: { contains: q, mode: "insensitive" as const } },
+                { city: { contains: q, mode: "insensitive" as const } },
+                { neighborhood: { contains: q, mode: "insensitive" as const } },
+                { address: { contains: q, mode: "insensitive" as const } },
+              ],
+            },
+          ]
+        : []),
+      ...bookableGeo,
+      ...bookableCategoryWhere(category),
+    ],
+  };
+
+  const [
+    candidates,
+    contactTotal,
+    mapCandidates,
+    countryRows,
+    cityRows,
+    categoryRows,
+    bookableStudios,
+  ] = await Promise.all([
     db.candidateStudio.findMany({
-      where: visibility,
+      where: candidateVisibility,
       include: {
-        convertedStudio: {
-          select: { status: true },
-        },
+        convertedStudio: { select: { status: true } },
         sources: {
           where: { active: true },
           orderBy: { collectedAt: "desc" },
           take: 2,
-          select: {
-            id: true,
-            provider: true,
-            attribution: true,
-          },
+          select: { id: true, provider: true },
         },
         claims: {
           where: { status: "VERIFIED" },
@@ -313,7 +429,28 @@ export default async function DiscoverStudiosPage({
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    db.candidateStudio.count({ where: visibility }),
+    db.candidateStudio.count({ where: candidateVisibility }),
+    db.candidateStudio.findMany({
+      where: {
+        AND: [
+          candidateVisibility,
+          { latitude: { not: null } },
+          { longitude: { not: null } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        latitude: true,
+        longitude: true,
+        category: true,
+        city: true,
+        countryCode: true,
+        convertedStudio: { select: { status: true } },
+      },
+      orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
+    }),
     db.candidateStudio.groupBy({
       by: ["countryCode"],
       where: geographyVisibility,
@@ -337,26 +474,29 @@ export default async function DiscoverStudiosPage({
       orderBy: { _count: { city: "desc" } },
       take: 250,
     }),
-    db.candidateStudio.findMany({
-      where: {
-        AND: [
-          visibility,
-          { latitude: { not: null } },
-          { longitude: { not: null } },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        latitude: true,
-        longitude: true,
-        category: true,
-        convertedStudio: {
-          select: { status: true },
+    db.candidateStudio.groupBy({
+      by: ["category"],
+      where: candidateBase,
+      _count: { category: true },
+    }),
+    db.studio.findMany({
+      where: bookableWhere,
+      include: {
+        rooms: {
+          where: { active: true },
+          orderBy: { hourlyRateMad: "asc" },
+          take: 1,
+          select: { hourlyRateMad: true },
         },
+        photos: {
+          orderBy: { sortOrder: "asc" },
+          take: 1,
+          select: { url: true },
+        },
+        reviews: { select: { rating: true } },
       },
-      orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
+      orderBy: [{ verifiedAt: "desc" }, { name: "asc" }],
+      take: 5000,
     }),
   ]);
 
@@ -371,10 +511,7 @@ export default async function DiscoverStudiosPage({
       )
       .map((row) => ({
         key: "city:" + row.countryCode + ":" + row.city,
-        label:
-          row.city +
-          ", " +
-          countryName(row.countryCode),
+        label: row.city + ", " + countryName(row.countryCode),
         city: row.city || "",
         countryCode: row.countryCode || "",
         lat: row._avg.latitude == null ? null : Number(row._avg.latitude),
@@ -410,39 +547,84 @@ export default async function DiscoverStudiosPage({
       else if (candidate.status === "APPROVED") value += 35;
       if (candidate.website) value += 12;
       if (candidate.email) value += 10;
-      if (candidate.instagram) value += 8;
       if (candidate.address) value += 6;
-      if (candidate.latitude != null && candidate.longitude != null) value += 4;
       value += Math.min(6, candidate.sources.length * 3);
       return value;
     }
-
-    const scoreDifference = score(b) - score(a);
-    if (scoreDifference !== 0) return scoreDifference;
-    return b.updatedAt.getTime() - a.updatedAt.getTime();
+    return score(b) - score(a) || b.updatedAt.getTime() - a.updatedAt.getTime();
   });
 
-  const mapPoints = mapCandidates
+  const contactMapPoints: StudioMapPoint[] = mapCandidates
     .filter(
       (candidate) =>
         candidate.convertedStudio?.status !== "VERIFIED" &&
         candidate.latitude != null &&
         candidate.longitude != null,
     )
-    .map((candidate) => ({
-      id: candidate.id,
-      name: candidate.name,
-      lat: Number(candidate.latitude),
-      lng: Number(candidate.longitude),
-      href: "/discover/" + candidate.slug,
-      price: null,
-      kind: "CONTACT" as const,
-      category: labelCategory(candidate.category),
-      rating: null,
-      photoUrl: null,
-    }));
+    .map((candidate) => {
+      const key = candidateCategoryKey(candidate.name, candidate.category);
+      return {
+        id: "contact:" + candidate.id,
+        name: candidate.name,
+        lat: Number(candidate.latitude),
+        lng: Number(candidate.longitude),
+        href: "/discover/" + candidate.slug,
+        price: null,
+        kind: "CONTACT" as const,
+        category: labelCategory(key),
+        categoryKey: key,
+        rating: null,
+        photoUrl: null,
+        city: candidate.city,
+        countryCode: candidate.countryCode,
+      };
+    });
 
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const bookableMapPoints: StudioMapPoint[] = bookableStudios.map((studio) => {
+    const rating = studio.reviews.length
+      ? studio.reviews.reduce((sum, review) => sum + review.rating, 0) /
+        studio.reviews.length
+      : null;
+    return {
+      id: "bookable:" + studio.id,
+      name: studio.name,
+      lat: Number(studio.latitude),
+      lng: Number(studio.longitude),
+      href: "/studios/" + studio.slug,
+      price: studio.rooms[0]?.hourlyRateMad || null,
+      kind: "BOOKABLE" as const,
+      category: labelCategory(studio.primaryCategory),
+      categoryKey: studio.primaryCategory,
+      rating,
+      photoUrl: studio.photos[0]?.url || null,
+      city: studio.city,
+      countryCode: null,
+    };
+  });
+
+  const mapPoints = [...bookableMapPoints, ...contactMapPoints];
+  const totalSpaces = contactTotal + bookableStudios.length;
+
+  const categoryCountMap = new Map<string, number>();
+  categoryRows.forEach((row) => {
+    categoryCountMap.set(row.category, row._count.category);
+  });
+  bookableStudios.forEach((studio) => {
+    categoryCountMap.set(
+      studio.primaryCategory,
+      (categoryCountMap.get(studio.primaryCategory) || 0) + 1,
+    );
+  });
+
+  function displayCount(value: UiCategory) {
+    if (!value) return totalSpaces;
+    if (value === "IMAGE_LAB") {
+      return mapPoints.filter((point) => point.categoryKey === "IMAGE_LAB").length;
+    }
+    return categoryCountMap.get(value) || 0;
+  }
+
+  const pageCount = Math.max(1, Math.ceil(contactTotal / pageSize));
 
   function pageHref(target: number) {
     const params = new URLSearchParams();
@@ -450,9 +632,6 @@ export default async function DiscoverStudiosPage({
     if (country) params.set("country", country);
     if (city) params.set("city", city);
     if (category) params.set("category", category);
-    if (verifiedOnly) params.set("verified", "1");
-    if (websiteOnly) params.set("website", "1");
-    if (emailOnly) params.set("email", "1");
     if (radiusActive && centerLat != null && centerLng != null && radiusKm != null) {
       params.set("lat", String(centerLat));
       params.set("lng", String(centerLng));
@@ -472,35 +651,15 @@ export default async function DiscoverStudiosPage({
     <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
 
-      <section className="mx-auto max-w-[1500px] px-5 py-10">
-        <div className="max-w-4xl">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-sky-600">
-            36 Global Directory
-          </span>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
-            Studio contacts around the world
-          </h1>
-          <p className="mt-4 text-sm leading-7 text-[#717171]">
-            Public business phone numbers from external place data. These listings
-            are contact-only and are not bookable on 36 unless the real studio
-            later joins and passes verification.
-          </p>
-        </div>
-
-        <form
-          action="/discover"
-          method="GET"
-          className="mt-8 grid gap-3 rounded-3xl border border-[#dddddd] bg-white p-3 lg:grid-cols-[minmax(220px,1fr)_minmax(250px,1fr)_190px_auto]"
-        >
-          <label className="rounded-2xl px-4 py-2">
-            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
-              Search
-            </span>
+      <section className="creative-explorer-toolbar">
+        <form action="/discover" method="GET" className="creative-explorer-searchbar">
+          <label className="creative-explorer-query">
+            <span>⌕</span>
             <input
               name="q"
               defaultValue={q}
-              placeholder="Studio, city, area or phone"
-              className="mt-1 w-full bg-transparent text-sm font-semibold text-[#222] outline-none placeholder:text-[#a3a3a3]"
+              placeholder="Search creative spaces..."
+              autoComplete="off"
             />
           </label>
 
@@ -514,320 +673,218 @@ export default async function DiscoverStudiosPage({
             mapAreaActive={mapBoundsActive}
           />
 
-          <label className="rounded-2xl border-t border-[#ebebeb] px-4 py-2 lg:border-l lg:border-t-0">
-            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
-              Studio type
-            </span>
-            <select
-              name="category"
-              defaultValue={category}
-              className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-[#222] outline-none"
-            >
-              <option value="" className="bg-white">
-                All types
-              </option>
-              {Object.values(DiscoveryStudioCategory).map((value) => (
-                <option key={value} value={value} className="bg-white">
-                  {labelCategory(value)}
-                </option>
-              ))}
-            </select>
-          </label>
+          {category && <input type="hidden" name="category" value={category} />}
 
-          <button className="rounded-2xl bg-sky-300 px-6 py-3 text-sm font-black text-black">
-            Search
-          </button>
-
-          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-[#ebebeb] px-4 py-3 text-xs font-bold text-[#555555]">
-            <input
-              type="checkbox"
-              name="verified"
-              value="1"
-              defaultChecked={verifiedOnly}
-              className="accent-sky-300"
-            />
-            Owner verified
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-[#ebebeb] px-4 py-3 text-xs font-bold text-[#555555]">
-            <input
-              type="checkbox"
-              name="website"
-              value="1"
-              defaultChecked={websiteOnly}
-              className="accent-sky-300"
-            />
-            Has website
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-[#ebebeb] px-4 py-3 text-xs font-bold text-[#555555]">
-            <input
-              type="checkbox"
-              name="email"
-              value="1"
-              defaultChecked={emailOnly}
-              className="accent-sky-300"
-            />
-            Has email
-          </label>
+          <button className="creative-explorer-search-button">Search</button>
         </form>
 
-        <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm text-[#717171]">
-            <b className="text-[#222222]">{total}</b> contact listing
-            {total === 1 ? "" : "s"}
-            {mapBoundsActive
-              ? " · Map area"
-              : country
-                ? " in " + countryName(country)
-                : ""}
-            {!mapBoundsActive && city ? " · " + city : ""}
-            {radiusActive && radiusKm ? " · within " + radiusKm + " km" : ""}
-            {category ? " · " + labelCategory(category) : ""}
-            {verifiedOnly ? " · Owner verified" : ""}
-            {websiteOnly ? " · Website" : ""}
-            {emailOnly ? " · Email" : ""}
-          </p>
-          <div className="flex flex-wrap items-center gap-4">
+        <nav className="creative-category-strip" aria-label="Creative space categories">
+          {CATEGORY_TABS.map((item) => (
             <Link
-              href={user ? "/discover/add" : "/auth/login?next=%2Fdiscover%2Fadd"}
-              className="text-xs font-black text-sky-600 hover:text-[#222222]"
-            >
-              + Suggest a missing studio
-            </Link>
-            <Link href="/studios" className="text-xs font-black text-acid">
-              Show verified bookable studios →
-            </Link>
-          </div>
-        </div>
-
-        {visibleCandidates.length === 0 ? (
-          <div className="mt-8 rounded-3xl border border-dashed border-[#dddddd] p-14 text-center">
-            <h2 className="text-xl font-black">No contact listings match this search</h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#8a8a8a]">
-              Try another country, city or studio name.
-            </p>
-          </div>
-        ) : (
-          <div
-            className={
-              mapPoints.length > 0
-                ? "mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.05fr)_minmax(460px,.95fr)]"
-                : "mt-7"
-            }
-          >
-            {mapPoints.length > 0 && (
-              <aside className="order-1 xl:order-2">
-                <div className="sticky top-5">
-                  <div className="mb-3 flex items-center justify-between">
-                    <b className="text-sm">Map</b>
-                    <span className="text-xs text-[#8a8a8a]">
-                      {mapPoints.length} mapped location{mapPoints.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <StudioMap points={mapPoints} searchArea />
-                </div>
-              </aside>
-            )}
-
-            <div
+              key={item.value || "all"}
+              href={categoryHref(item.value, {
+                q,
+                country,
+                city,
+                lat: radiusActive ? centerLat : null,
+                lng: radiusActive ? centerLng : null,
+                radiusKm: radiusActive ? radiusKm : null,
+              })}
               className={
-                mapPoints.length > 0
-                  ? "order-2 grid gap-5 md:grid-cols-2 xl:order-1"
-                  : "grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+                "creative-category-chip tone-" +
+                item.tone +
+                (category === item.value ? " active" : "")
               }
             >
-              {rankedCandidates.map((candidate) => {
-                const ownershipVerified = candidate.claims.length > 0;
-                const profileV2 = ownershipVerified
-                  ? parseDirectoryProfileV2(candidate.transitions[0]?.metadata)
-                  : parseDirectoryProfileV2(null);
-                const heroPhoto = profileV2.photoUrls[0] || null;
-                const website = safeExternalUrl(candidate.website);
-                const reviewed =
-                  candidate.status === "APPROVED" ||
-                  candidate.status === "CONVERTED";
+              <span>{item.icon}</span>
+              <b>{item.label}</b>
+              {item.value && <small>{displayCount(item.value)}</small>}
+            </Link>
+          ))}
+        </nav>
+      </section>
 
-                return (
-                  <article
-                    key={candidate.id}
-                    id={"studio-card-" + candidate.id}
-                    data-directory-card
-                    data-studio-id={candidate.id}
-                    data-map-active="false"
-                    className="rounded-3xl border border-[#ebebeb] bg-white p-5 transition"
-                  >
-                    {heroPhoto && (
-                      <a
-                        href={"/discover/" + candidate.slug}
-                        className="-mx-5 -mt-5 mb-5 block overflow-hidden rounded-t-3xl border-b border-[#ebebeb]"
-                      >
-                        <img
-                          src={heroPhoto}
-                          alt={candidate.name + " studio"}
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                          className="h-48 w-full object-cover transition duration-300 hover:scale-[1.02]"
-                        />
-                      </a>
+      <section className="creative-explorer-shell">
+        <aside className="creative-explorer-list">
+          <div className="creative-explorer-list-head">
+            <div>
+              <b>{totalSpaces.toLocaleString("en")} creative spaces</b>
+              <span>
+                {city
+                  ? city + (country ? ", " + countryName(country) : "")
+                  : country
+                    ? countryName(country)
+                    : "Worldwide"}
+                {category ? " · " + labelCategory(category) : ""}
+              </span>
+            </div>
+            <Link href={pageHref(1)}>Sort ↕</Link>
+          </div>
+
+          <div className="creative-explorer-cards">
+            {bookableStudios.slice(0, 8).map((studio) => {
+              const pointId = "bookable:" + studio.id;
+              const rating = studio.reviews.length
+                ? studio.reviews.reduce((sum, review) => sum + review.rating, 0) /
+                  studio.reviews.length
+                : null;
+              const photo = studio.photos[0]?.url || null;
+              return (
+                <article
+                  key={pointId}
+                  data-directory-card
+                  data-studio-id={pointId}
+                  data-map-active="false"
+                  className="creative-space-card"
+                >
+                  <Link href={"/studios/" + studio.slug} className="creative-space-card-media">
+                    {photo ? (
+                      <img src={photo} alt={studio.name} loading="lazy" />
+                    ) : (
+                      <div className="creative-space-card-fallback">
+                        {categoryIcon(studio.primaryCategory)}
+                      </div>
                     )}
+                    <span className="creative-space-heart">♡</span>
+                  </Link>
 
-                    <div className="flex items-start justify-between gap-3">
-                      <span
-                        className={
-                          "rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] " +
-                          (ownershipVerified
-                            ? "border-emerald-900/50 bg-emerald-950/20 text-emerald-600"
-                            : candidate.status === "CONVERTED"
-                              ? "border-amber-900/50 bg-amber-950/20 text-amber-600"
-                              : reviewed
-                                ? "border-sky-200/50 bg-sky-950/20 text-sky-600"
-                                : "border-[#dddddd] text-[#555555]")
-                        }
-                      >
-                        {ownershipVerified
-                          ? "Owner verified"
-                          : candidate.status === "CONVERTED"
-                            ? "Owner onboarding"
-                            : reviewed
-                              ? "Reviewed contact"
-                              : "Public contact"}
-                      </span>
-                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#a3a3a3]">
-                        {labelCategory(candidate.category)}
-                      </span>
+                  <div className="creative-space-card-copy">
+                    <div className="creative-space-card-title">
+                      <div>
+                        <Link href={"/studios/" + studio.slug}>{studio.name}</Link>
+                        <span>{labelCategory(studio.primaryCategory)}</span>
+                      </div>
+                      <button aria-label="Save studio">♡</button>
+                    </div>
+                    <p>{[studio.neighborhood, studio.city].filter(Boolean).join(", ")}</p>
+                    <div className="creative-space-card-rating">
+                      <span>★ {rating ? rating.toFixed(1) : "New"}</span>
+                      {studio.reviews.length > 0 && <small>({studio.reviews.length})</small>}
+                    </div>
+                    <div className="creative-space-card-bottom">
+                      <strong>
+                        {studio.rooms[0]?.hourlyRateMad
+                          ? studio.rooms[0].hourlyRateMad + " MAD"
+                          : "Price on request"}{" "}
+                        <small>{studio.rooms[0]?.hourlyRateMad ? "/ hour" : ""}</small>
+                      </strong>
+                      <span className="creative-space-status bookable">Bookable</span>
+                    </div>
+                    <MapFocusButton studioId={pointId} hasCoordinates />
+                  </div>
+                </article>
+              );
+            })}
+
+            {rankedCandidates.map((candidate) => {
+              const pointId = "contact:" + candidate.id;
+              const ownershipVerified = candidate.claims.length > 0;
+              const profileV2 = ownershipVerified
+                ? parseDirectoryProfileV2(candidate.transitions[0]?.metadata)
+                : parseDirectoryProfileV2(null);
+              const heroPhoto = profileV2.photoUrls[0] || null;
+              const website = safeExternalUrl(candidate.website);
+              const key = candidateCategoryKey(candidate.name, candidate.category);
+
+              return (
+                <article
+                  key={pointId}
+                  data-directory-card
+                  data-studio-id={pointId}
+                  data-map-active="false"
+                  className="creative-space-card"
+                >
+                  <Link href={"/discover/" + candidate.slug} className="creative-space-card-media">
+                    {heroPhoto ? (
+                      <img
+                        src={heroPhoto}
+                        alt={candidate.name}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className={"creative-space-card-fallback category-" + String(key).toLowerCase()}>
+                        {categoryIcon(key)}
+                      </div>
+                    )}
+                  </Link>
+
+                  <div className="creative-space-card-copy">
+                    <div className="creative-space-card-title">
+                      <div>
+                        <Link href={"/discover/" + candidate.slug}>{candidate.name}</Link>
+                        <span>{labelCategory(key)}</span>
+                      </div>
+                      <button aria-label="Save place">♡</button>
                     </div>
 
-                    <h2 className="mt-5 text-xl font-black">{candidate.name}</h2>
-                    <p className="mt-2 text-sm text-[#717171]">
+                    <p>
                       {[
                         candidate.district,
                         candidate.city,
                         candidate.countryCode ? countryName(candidate.countryCode) : null,
                       ]
                         .filter(Boolean)
-                        .join(" · ") || "Location available"}
+                        .join(", ") || "Location available"}
                     </p>
 
-                    {profileV2.description && (
-                      <p className="mt-3 line-clamp-2 text-xs leading-5 text-[#717171]">
-                        {profileV2.description}
-                      </p>
-                    )}
-
-                    {profileV2.services.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {profileV2.services.slice(0, 3).map((service) => (
-                          <span
-                            key={service}
-                            className="rounded-full border border-sky-200/30 bg-sky-950/10 px-2 py-1 text-[9px] font-bold text-sky-600"
-                          >
-                            {service}
-                          </span>
-                        ))}
-                        {profileV2.services.length > 3 && (
-                          <span className="rounded-full border border-[#ebebeb] px-2 py-1 text-[9px] text-[#8a8a8a]">
-                            +{profileV2.services.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {candidate.phone && (
-                      <a
-                        href={cleanPhoneHref(candidate.phone)}
-                        className="mt-4 flex items-center justify-between rounded-xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-sm transition hover:border-sky-800"
-                      >
-                        <span className="text-[#717171]">☎ Public phone</span>
-                        <b className="text-sky-600">{candidate.phone}</b>
-                      </a>
-                    )}
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="rounded-full border border-[#dddddd] px-2.5 py-1 text-[10px] font-bold text-[#717171]">
-                        Phone ✓
-                      </span>
+                    <div className="creative-space-card-links">
+                      {candidate.phone && (
+                        <a href={cleanPhoneHref(candidate.phone)}>Call</a>
+                      )}
                       {website && (
-                        <a
-                          href={website}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="rounded-full border border-[#dddddd] px-2.5 py-1 text-[10px] font-bold text-[#555555] hover:border-sky-800 hover:text-sky-600"
-                        >
+                        <a href={website} target="_blank" rel="noreferrer noopener">
                           Website ↗
                         </a>
                       )}
-                      {candidate.email && (
-                        <a
-                          href={"mailto:" + candidate.email}
-                          className="rounded-full border border-[#dddddd] px-2.5 py-1 text-[10px] font-bold text-[#555555] hover:border-sky-800 hover:text-sky-600"
-                        >
-                          Email
-                        </a>
-                      )}
                     </div>
 
-                    <p className="mt-4 text-xs leading-5 text-[#8a8a8a]">
-                      Contact-only listing · not bookable on 36.
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {candidate.sources.map((source) => (
-                        <span
-                          key={source.id}
-                          className="rounded-full border border-[#dddddd] px-2.5 py-1 text-[10px] text-[#717171]"
-                        >
-                          {source.provider}
-                        </span>
-                      ))}
+                    <div className="creative-space-card-bottom">
+                      <strong>Public contact</strong>
+                      <span className="creative-space-status contact">Contact only</span>
                     </div>
 
-                    <div className="mt-5 flex items-center justify-between gap-3">
-                      <Link
-                        href={"/discover/" + candidate.slug}
-                        className="inline-flex text-xs font-black text-sky-600 hover:text-[#222222]"
-                      >
-                        View contact listing →
-                      </Link>
-                      <MapFocusButton
-                        studioId={candidate.id}
-                        hasCoordinates={
-                          candidate.latitude != null &&
-                          candidate.longitude != null
-                        }
-                      />
-                    </div>
-                  </article>
-                );
-              })}
+                    <MapFocusButton
+                      studioId={pointId}
+                      hasCoordinates={
+                        candidate.latitude != null && candidate.longitude != null
+                      }
+                    />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {pageCount > 1 && (
+            <div className="creative-explorer-pagination">
+              {page > 1 ? <Link href={pageHref(page - 1)}>← Previous</Link> : <span />}
+              <span>
+                {page} / {pageCount}
+              </span>
+              {page < pageCount ? <Link href={pageHref(page + 1)}>Next →</Link> : <span />}
             </div>
+          )}
+        </aside>
 
+        <section className="creative-explorer-map-pane">
+          <div className="creative-explorer-map-head">
+            <div>
+              <b>Map</b>
+              <span>{mapPoints.length.toLocaleString("en")} mapped spaces</span>
+            </div>
+            <small>
+              Zoom: world → country → city → individual spaces
+            </small>
           </div>
-        )}
-
-        {pageCount > 1 && (
-          <div className="mt-8 flex items-center justify-between">
-            <Link
-              href={pageHref(Math.max(1, page - 1))}
-              className={
-                "button-dark " +
-                (page <= 1 ? "pointer-events-none opacity-40" : "")
-              }
-            >
-              ← Previous
-            </Link>
-            <span className="text-xs text-[#8a8a8a]">
-              Page {page} of {pageCount}
-            </span>
-            <Link
-              href={pageHref(Math.min(pageCount, page + 1))}
-              className={
-                "button-dark " +
-                (page >= pageCount ? "pointer-events-none opacity-40" : "")
-              }
-            >
-              Next →
-            </Link>
-          </div>
-        )}
+          {mapPoints.length > 0 ? (
+            <StudioMap points={mapPoints} searchArea />
+          ) : (
+            <div className="creative-explorer-map-empty">
+              No mapped spaces match this search.
+            </div>
+          )}
+        </section>
       </section>
     </main>
   );
