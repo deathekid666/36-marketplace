@@ -511,6 +511,7 @@ export function BookingWidget({
           <span className="text-xs text-[#8a8a8a]">Casablanca time</span>
         </button>
       </div>
+      </div>
 
       {calendarOpen && (
         <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/65 p-0 backdrop-blur-sm sm:items-center sm:p-6">
