@@ -51,11 +51,21 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
-  const location = [
-    booking.studio.address,
-    booking.studio.neighborhood,
-    booking.studio.city,
-  ]
+  const canRevealExactLocation = [
+    "CONFIRMED",
+    "COMPLETED",
+    "DISPUTED",
+  ].includes(booking.status);
+
+  const location = (
+    canRevealExactLocation
+      ? [
+          booking.studio.address,
+          booking.studio.neighborhood,
+          booking.studio.city,
+        ]
+      : [booking.studio.neighborhood, booking.studio.city]
+  )
     .filter(Boolean)
     .join(", ");
 
@@ -81,7 +91,10 @@ export async function GET(
           reference +
           ". Status: " +
           booking.status.replaceAll("_", " ") +
-          ".",
+          "." +
+          (canRevealExactLocation
+            ? ""
+            : " Exact studio address is revealed after booking confirmation."),
       ),
     location ? "LOCATION:" + escapeIcs(location) : "",
     "END:VEVENT",

@@ -149,6 +149,15 @@ function haversineKm(
   return 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function publicPlaceCoordinates(place: MapPlace) {
+  if (place.kind !== "BOOKABLE") return place;
+  return {
+    ...place,
+    lat: Math.round(place.lat * 100) / 100,
+    lng: Math.round(place.lng * 100) / 100,
+  };
+}
+
 function response(nodes: MapNode[], meta: Record<string, unknown>) {
   return NextResponse.json(
     { nodes, meta },
@@ -553,7 +562,7 @@ export async function GET(request: Request) {
 
   const nodes: MapNode[] = visiblePlaces.map((place) => ({
     type: "place" as const,
-    ...place,
+    ...publicPlaceCoordinates(place),
   }));
 
   return response(nodes, {
