@@ -3,9 +3,13 @@
 export function MapFocusButton({
   studioId,
   hasCoordinates,
+  lat,
+  lng,
 }: {
   studioId: string;
   hasCoordinates: boolean;
+  lat?: number | null;
+  lng?: number | null;
 }) {
   if (!hasCoordinates) return null;
 
@@ -14,7 +18,9 @@ export function MapFocusButton({
       type="button"
       onClick={() => {
         window.dispatchEvent(
-          new CustomEvent("36:focus-studio", { detail: { studioId } }),
+          new CustomEvent("36:focus-studio", {
+            detail: { studioId, lat, lng },
+          }),
         );
         document
           .getElementById("directory-map")

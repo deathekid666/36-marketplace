@@ -6,8 +6,8 @@ import {
   DirectoryLocationPicker,
   type DirectoryLocationOption,
 } from "@/components/DirectoryLocationPicker";
+import { CreativeExplorerMap } from "@/components/CreativeExplorerMap";
 import { MapFocusButton } from "@/components/MapFocusButton";
-import { StudioMap, type StudioMapPoint } from "@/components/StudioMap";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -539,55 +539,6 @@ export default async function DiscoverStudiosPage({
     return score(b) - score(a) || b.updatedAt.getTime() - a.updatedAt.getTime();
   });
 
-  const contactMapPoints: StudioMapPoint[] = selectedClassifiedContacts
-    .filter(
-      ({ candidate }) =>
-        candidate.latitude != null &&
-        candidate.longitude != null,
-    )
-    .map(({ candidate, classification }) => ({
-      id: "contact:" + candidate.id,
-      name: candidate.name,
-      lat: Number(candidate.latitude),
-      lng: Number(candidate.longitude),
-      href: "/discover/" + candidate.slug,
-      price: null,
-      kind: "CONTACT" as const,
-      category: creativeCategoryLabel(classification.key),
-      categoryKey: classification.key,
-      rating: null,
-      photoUrl: null,
-      city: candidate.city,
-      countryCode: candidate.countryCode,
-    }));
-
-  const bookableMapPoints: StudioMapPoint[] = bookableStudios.map((studio) => {
-    const classification = classifyCreativeSpace({
-      name: studio.name,
-      storedCategory: studio.primaryCategory,
-    });
-    const rating = studio.reviews.length
-      ? studio.reviews.reduce((sum, review) => sum + review.rating, 0) /
-        studio.reviews.length
-      : null;
-    return {
-      id: "bookable:" + studio.id,
-      name: studio.name,
-      lat: Number(studio.latitude),
-      lng: Number(studio.longitude),
-      href: "/studios/" + studio.slug,
-      price: studio.rooms[0]?.hourlyRateMad || null,
-      kind: "BOOKABLE" as const,
-      category: creativeCategoryLabel(classification.key),
-      categoryKey: classification.key,
-      rating,
-      photoUrl: studio.photos[0]?.url || null,
-      city: studio.city,
-      countryCode: "MA",
-    };
-  });
-
-  const mapPoints = [...bookableMapPoints, ...contactMapPoints];
   const totalSpaces = contactTotal + bookableStudios.length;
 
   const categoryCountMap = new Map<string, number>();
@@ -759,7 +710,12 @@ export default async function DiscoverStudiosPage({
                       </strong>
                       <span className="creative-space-status bookable">Bookable</span>
                     </div>
-                    <MapFocusButton studioId={pointId} hasCoordinates />
+                    <MapFocusButton
+                      studioId={pointId}
+                      hasCoordinates
+                      lat={Number(studio.latitude)}
+                      lng={Number(studio.longitude)}
+                    />
                   </div>
                 </article>
               );
@@ -846,6 +802,16 @@ export default async function DiscoverStudiosPage({
                       hasCoordinates={
                         candidate.latitude != null && candidate.longitude != null
                       }
+                      lat={
+                        candidate.latitude == null
+                          ? null
+                          : Number(candidate.latitude)
+                      }
+                      lng={
+                        candidate.longitude == null
+                          ? null
+                          : Number(candidate.longitude)
+                      }
                     />
                   </div>
                 </article>
@@ -868,19 +834,28 @@ export default async function DiscoverStudiosPage({
           <div className="creative-explorer-map-head">
             <div>
               <b>Map</b>
-              <span>{mapPoints.length.toLocaleString("en")} mapped spaces</span>
+              <span>Live creative-space map</span>
             </div>
             <small>
-              Zoom: world → country → city → individual spaces
+              World → country → city → category → place
             </small>
           </div>
-          {mapPoints.length > 0 ? (
-            <StudioMap points={mapPoints} searchArea />
-          ) : (
-            <div className="creative-explorer-map-empty">
-              No mapped spaces match this search.
-            </div>
-          )}
+
+          <CreativeExplorerMap
+            filters={{
+              q,
+              country,
+              city,
+              category,
+              lat: radiusActive ? centerLat : null,
+              lng: radiusActive ? centerLng : null,
+              radius: radiusActive ? radiusKm : null,
+              north: mapBoundsActive ? north : null,
+              south: mapBoundsActive ? south : null,
+              east: mapBoundsActive ? east : null,
+              west: mapBoundsActive ? west : null,
+            }}
+          />
         </section>
       </section>
     </main>

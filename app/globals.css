@@ -7407,3 +7407,67 @@ label.air-search-segment:hover {
     font-size: 8px;
   }
 }
+
+
+/* Creative explorer map v2 — server-aggregated map diagnostics */
+.creative-map-diagnostics {
+  position: absolute;
+  z-index: 1100;
+  left: 13px;
+  bottom: 13px;
+  display: flex;
+  max-width: calc(100% - 26px);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(0,0,0,.10);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(255,255,255,.94);
+  color: #717171;
+  font-size: 8px;
+  box-shadow: 0 5px 16px rgba(0,0,0,.08);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.creative-map-diagnostics b {
+  color: #222;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.creative-map-diagnostics span + span::before,
+.creative-map-diagnostics b + span::before {
+  content: "·";
+  margin-right: 7px;
+  color: #b0b0b0;
+}
+
+.creative-map-diagnostics .error {
+  color: #a43b48;
+  font-weight: 800;
+}
+
+.creative-map-cluster.country small {
+  max-width: 92px;
+}
+
+.creative-map-cluster.country {
+  min-width: 58px;
+  min-height: 58px;
+}
+
+.creative-map-cluster.country strong {
+  font-size: 15px;
+}
+
+@media (max-width: 560px) {
+  .creative-map-diagnostics {
+    right: 9px;
+    left: 9px;
+    bottom: 9px;
+    width: fit-content;
+    max-width: calc(100% - 18px);
+  }
+}
