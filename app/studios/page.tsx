@@ -375,14 +375,27 @@ export default async function StudiosPage({
 
   const mapPoints = results
     .filter((studio) => studio.latitude != null && studio.longitude != null)
-    .map((studio) => ({
-      id: studio.id,
-      name: studio.name,
-      lat: Number(studio.latitude),
-      lng: Number(studio.longitude),
-      href: "/studios/" + studio.slug,
-      price: studio.rooms[0]?.hourlyRateMad || null,
-    }));
+    .map((studio) => {
+      const mapRating = studio.reviews.length
+        ? studio.reviews.reduce(
+            (sum, review) => sum + review.rating,
+            0,
+          ) / studio.reviews.length
+        : null;
+
+      return {
+        id: studio.id,
+        name: studio.name,
+        lat: Number(studio.latitude),
+        lng: Number(studio.longitude),
+        href: "/studios/" + studio.slug,
+        price: studio.rooms[0]?.hourlyRateMad || null,
+        kind: "BOOKABLE" as const,
+        category: categoryLabel(studio.primaryCategory),
+        rating: mapRating,
+        photoUrl: studio.photos[0]?.url || null,
+      };
+    });
 
   const locationSuggestions = Array.from(
     new Set([

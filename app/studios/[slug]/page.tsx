@@ -180,6 +180,10 @@ export default async function StudioDetailPage({
         lng: Number(studio.longitude),
         href: "/studios/" + studio.slug,
         price: studio.rooms[0]?.hourlyRateMad || null,
+        kind: "BOOKABLE" as const,
+        category: categoryLabel(studio.primaryCategory),
+        rating: average,
+        photoUrl: studio.photos[0]?.url || null,
       }]
     : [];
 

@@ -406,14 +406,24 @@ export default async function DiscoverStudiosPage({
       (candidate) =>
         candidate.latitude != null && candidate.longitude != null,
     )
-    .map((candidate) => ({
-      id: candidate.id,
-      name: candidate.name,
-      lat: Number(candidate.latitude),
-      lng: Number(candidate.longitude),
-      href: "/discover/" + candidate.slug,
-      price: null,
-    }));
+    .map((candidate) => {
+      const profile = parseDirectoryProfileV2(
+        candidate.transitions[0]?.metadata,
+      );
+
+      return {
+        id: candidate.id,
+        name: candidate.name,
+        lat: Number(candidate.latitude),
+        lng: Number(candidate.longitude),
+        href: "/discover/" + candidate.slug,
+        price: null,
+        kind: "CONTACT" as const,
+        category: labelCategory(candidate.category),
+        rating: null,
+        photoUrl: profile.photoUrls[0] || null,
+      };
+    });
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
