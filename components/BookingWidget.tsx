@@ -242,6 +242,31 @@ export function BookingWidget({
       }));
   }
 
+  function bookingReturnPath() {
+    const params = new URLSearchParams();
+    params.set("date", date);
+    params.set("duration", String(durationHours));
+    if (selected) params.set("startAt", selected);
+    return (
+      window.location.pathname +
+      (params.toString() ? "?" + params.toString() : "")
+    );
+  }
+
+  async function switchToCreatorAccount() {
+    setMessage("");
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Continue to login even if the session endpoint has a transient error.
+    }
+    router.push(
+      "/auth/login?next=" +
+        encodeURIComponent(bookingReturnPath()),
+    );
+    router.refresh();
+  }
+
   async function reviewCheckout() {
     if (!selected) {
       setCalendarOpen(true);
@@ -250,42 +275,61 @@ export function BookingWidget({
 
     if (!userRole) {
       router.push(
-        "/auth/login?next=" + encodeURIComponent(window.location.pathname),
+        "/auth/login?next=" +
+          encodeURIComponent(bookingReturnPath()),
       );
       return;
     }
 
+    if (userRole === "ADMIN") {
+      router.push("/admin/test-marketplace");
+      return;
+    }
+
     if (userRole !== "CREATOR") {
-      setMessage("Booking requires a Creator account.");
+      setMessage(
+        "You are signed in as a Studio Owner. Booking requires a Creator account.",
+      );
       return;
     }
 
     setQuoteLoading(true);
     setMessage("");
 
-    const response = await fetch("/api/bookings/quote", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        roomId,
-        startAt: selected,
-        durationMinutes: durationHours * 60,
-        addons: selectedAddonPayload(),
-        promoCode: promoCode.trim(),
-      }),
-    });
+    try {
+      const response = await fetch("/api/bookings/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId,
+          startAt: selected,
+          durationMinutes: durationHours * 60,
+          addons: selectedAddonPayload(),
+          promoCode: promoCode.trim(),
+        }),
+      });
 
-    const data = await response.json().catch(() => ({}));
-    setQuoteLoading(false);
+      const data = await response.json().catch(() => ({}));
 
-    if (!response.ok || !data.quote) {
+      if (!response.ok || !data.quote) {
+        setQuote(null);
+        setMessage(
+          data.error ||
+            "Unable to review this booking. Please choose another time and try again.",
+        );
+        return;
+      }
+
+      setQuote(data.quote as BookingQuote);
+      setCheckoutOpen(true);
+    } catch {
       setQuote(null);
-      setMessage(data.error || "Unable to review this booking.");
-      return;
+      setMessage(
+        "The booking review could not be loaded. Check your connection and try again.",
+      );
+    } finally {
+      setQuoteLoading(false);
     }
-
-    setQuote(data.quote as BookingQuote);
-    setCheckoutOpen(true);
   }
 
   async function book() {
@@ -297,32 +341,44 @@ export function BookingWidget({
     setBooking(true);
     setMessage("");
 
-    const response = await fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        roomId,
-        startAt: selected,
-        durationMinutes: durationHours * 60,
-        addons: selectedAddonPayload(),
-        promoCode: promoCode.trim(),
-        expectedTotalMad: quote.totalAmountMad,
-        paymentMethod,
-      }),
-    });
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId,
+          startAt: selected,
+          durationMinutes: durationHours * 60,
+          addons: selectedAddonPayload(),
+          promoCode: promoCode.trim(),
+          expectedTotalMad: quote.totalAmountMad,
+          paymentMethod,
+        }),
+      });
 
-    const data = await response.json().catch(() => ({}));
-    setBooking(false);
+      const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
+      if (!response.ok) {
+        setCheckoutOpen(false);
+        setQuote(null);
+        setMessage(
+          data.error ||
+            "Booking failed. Your slot was not confirmed.",
+        );
+        return;
+      }
+
+      router.push(data.redirectTo || "/creator/bookings");
+      router.refresh();
+    } catch {
       setCheckoutOpen(false);
       setQuote(null);
-      setMessage(data.error || "Booking failed.");
-      return;
+      setMessage(
+        "The booking could not be confirmed. No booking was created. Please try again.",
+      );
+    } finally {
+      setBooking(false);
     }
-
-    router.push(data.redirectTo || "/creator/bookings");
-    router.refresh();
   }
 
   if (!room) {
@@ -647,6 +703,24 @@ export function BookingWidget({
         />
       </div>
 
+      {message && (
+        <div
+          role="alert"
+          className="mt-4 rounded-xl border border-amber-900/45 bg-amber-950/15 p-4 text-xs leading-5 text-amber-200"
+        >
+          <p>{message}</p>
+          {userRole === "STUDIO_OWNER" && (
+            <button
+              type="button"
+              onClick={switchToCreatorAccount}
+              className="mt-3 font-black text-white underline decoration-zinc-600 underline-offset-4"
+            >
+              Sign out and use a Creator account →
+            </button>
+          )}
+        </div>
+      )}
+
       <button
         type="button"
         disabled={booking || quoteLoading}
@@ -659,16 +733,20 @@ export function BookingWidget({
             ? "Choose date & time"
             : !userRole
               ? "Log in to reserve"
-              : "Review & reserve"}
+              : userRole === "ADMIN"
+                ? "Open Creator test setup"
+                : userRole === "STUDIO_OWNER"
+                  ? "Creator account required"
+                  : "Review & reserve"}
       </button>
 
       <p className="mt-3 text-center text-[10px] text-zinc-600">
-        Exact price and availability are verified by 36 before confirmation. No online payment is required.
+        {userRole === "ADMIN"
+          ? "Admin accounts do not create marketplace bookings. Use the controlled Creator test account."
+          : userRole === "STUDIO_OWNER"
+            ? "Studio Owner accounts manage inventory; Creator accounts make bookings."
+            : "Exact price and availability are verified by 36 before confirmation. No online payment is required."}
       </p>
-
-      {message && (
-        <p className="mt-3 text-xs leading-5 text-amber-300">{message}</p>
-      )}
 
       {checkoutOpen && quote && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6">

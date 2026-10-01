@@ -105,13 +105,19 @@ export function StudioMap({
       const bounds = L.latLngBounds([]);
 
       points.forEach((point) => {
-        const label = point.price ? `${point.price} MAD` : "36";
+        const label = point.price
+          ? `${point.price} MAD`
+          : compactMarkerName(point.name);
+        const markerWidth = point.price
+          ? 86
+          : Math.max(92, Math.min(190, 30 + label.length * 7));
+
         const marker = L.marker([point.lat, point.lng], {
           icon: L.divIcon({
             className: "studio-map-marker-wrap",
-            html: `<div class="studio-map-marker">${escapeHtml(label)}</div>`,
-            iconSize: point.price ? [86, 38] : [46, 46],
-            iconAnchor: point.price ? [43, 19] : [23, 23],
+            html: `<div class="studio-map-marker" title="${escapeHtml(point.name)}">${escapeHtml(label)}</div>`,
+            iconSize: [markerWidth, 38],
+            iconAnchor: [Math.round(markerWidth / 2), 19],
           }),
         }).addTo(map);
 
@@ -257,4 +263,11 @@ function escapeHtml(value: string) {
         '"': "&quot;",
       })[char] || char,
   );
+}
+
+
+function compactMarkerName(value: string) {
+  const clean = value.trim().replace(/\s+/g, " ");
+  if (clean.length <= 22) return clean;
+  return clean.slice(0, 20).trimEnd() + "…";
 }
