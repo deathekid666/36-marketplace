@@ -305,6 +305,7 @@ export function StudioLocationFields(props: {
         <div className="border-t border-[#e5e5e5] bg-white px-4 py-3 text-[10px] leading-5 text-[#8a8a8a]">
           Click the map or drag the <b className="text-[#222]">36</b> pin to the studio entrance.
           The exact coordinates are used for map placement and availability discovery.
+          <span className="ml-1">Location search may use OpenStreetMap data when the primary geocoder is unavailable.</span>
         </div>
       </div>
 
