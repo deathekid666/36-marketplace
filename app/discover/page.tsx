@@ -1,8 +1,4 @@
-import {
-  DiscoveryStudioCategory,
-  Prisma,
-  StudioCategory,
-} from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import Link from "next/link";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -14,6 +10,12 @@ import { MapFocusButton } from "@/components/MapFocusButton";
 import { StudioMap, type StudioMapPoint } from "@/components/StudioMap";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  classifyCreativeSpace,
+  creativeCategoryLabel,
+  matchesCreativeCategory,
+  type CreativeSpaceCategoryKey,
+} from "@/lib/discovery/creative-classification";
 import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
 import { directoryStudioIdentityWhere } from "@/lib/discovery/public-eligibility";
 import {
@@ -43,24 +45,16 @@ const CATEGORY_TABS = [
 type UiCategory = (typeof CATEGORY_TABS)[number]["value"];
 
 function labelCategory(value: string) {
-  if (value === "IMAGE_LAB") return "Image Lab";
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function candidateCategoryKey(name: string, category: DiscoveryStudioCategory) {
-  const looksLikeLab = /\b(lab|laboratory|darkroom|film processing|photo processing)\b/i.test(name);
-  if (
-    looksLikeLab &&
-    (category === DiscoveryStudioCategory.PHOTO ||
-      category === DiscoveryStudioCategory.POST_PRODUCTION)
-  ) {
-    return "IMAGE_LAB";
+  const normalized = String(value || "").toUpperCase() as CreativeSpaceCategoryKey;
+  try {
+    return creativeCategoryLabel(normalized);
+  } catch {
+    return value
+      .toLowerCase()
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
   }
-  return category;
 }
 
 function cleanPhoneHref(value: string) {
@@ -118,46 +112,6 @@ function countryName(code: string | null | undefined) {
   } catch {
     return normalized;
   }
-}
-
-function candidateCategoryFilters(category: UiCategory): Prisma.CandidateStudioWhereInput[] {
-  if (!category) return [];
-  if (category === "IMAGE_LAB") {
-    return [
-      {
-        AND: [
-          {
-            category: {
-              in: [
-                DiscoveryStudioCategory.PHOTO,
-                DiscoveryStudioCategory.POST_PRODUCTION,
-              ],
-            },
-          },
-          {
-            OR: [
-              { name: { contains: "lab", mode: "insensitive" } },
-              { normalizedName: { contains: "lab", mode: "insensitive" } },
-              { name: { contains: "darkroom", mode: "insensitive" } },
-              { name: { contains: "film", mode: "insensitive" } },
-            ],
-          },
-        ],
-      },
-    ];
-  }
-  if (Object.values(DiscoveryStudioCategory).includes(category as DiscoveryStudioCategory)) {
-    return [{ category: category as DiscoveryStudioCategory }];
-  }
-  return [];
-}
-
-function bookableCategoryWhere(category: UiCategory): Prisma.StudioWhereInput[] {
-  if (!category) return [];
-  if (Object.values(StudioCategory).includes(category as StudioCategory)) {
-    return [{ primaryCategory: category as StudioCategory }];
-  }
-  return [{ id: "00000000-0000-0000-0000-000000000000" }];
 }
 
 function categoryHref(
@@ -335,10 +289,6 @@ export default async function DiscoverStudiosPage({
     ],
   };
 
-  const candidateVisibility: Prisma.CandidateStudioWhereInput = {
-    AND: [candidateBase, ...candidateCategoryFilters(category)],
-  };
-
   const geographyVisibility: Prisma.CandidateStudioWhereInput = {
     AND: [
       discoveryRolloutWhere("PUBLIC_DISCOVERY"),
@@ -372,7 +322,7 @@ export default async function DiscoverStudiosPage({
     }
   }
 
-  const bookableWhere: Prisma.StudioWhereInput = {
+  const bookableBaseWhere: Prisma.StudioWhereInput = {
     AND: [
       { status: "VERIFIED" },
       { latitude: { not: null } },
@@ -390,18 +340,66 @@ export default async function DiscoverStudiosPage({
           ]
         : []),
       ...bookableGeo,
-      ...bookableCategoryWhere(category),
     ],
+  };
+
+  const classificationCandidates = await db.candidateStudio.findMany({
+    where: candidateBase,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      category: true,
+      latitude: true,
+      longitude: true,
+      city: true,
+      countryCode: true,
+      convertedStudio: { select: { status: true } },
+      sources: {
+        where: { active: true },
+        orderBy: { collectedAt: "desc" },
+        take: 3,
+        select: { providerCategory: true },
+      },
+    },
+    orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
+  });
+
+  const classifiedContacts = classificationCandidates
+    .filter((candidate) => candidate.convertedStudio?.status !== "VERIFIED")
+    .map((candidate) => ({
+      candidate,
+      classification: classifyCreativeSpace({
+        name: candidate.name,
+        storedCategory: candidate.category,
+        providerCategories: candidate.sources.map((source) => source.providerCategory),
+      }),
+    }));
+
+  const selectedClassifiedContacts = category
+    ? classifiedContacts.filter((entry) =>
+        matchesCreativeCategory(entry.classification.key, category),
+      )
+    : classifiedContacts;
+
+  const selectedContactIds = selectedClassifiedContacts.map(
+    (entry) => entry.candidate.id,
+  );
+
+  const candidateVisibility: Prisma.CandidateStudioWhereInput = {
+    id: {
+      in:
+        selectedContactIds.length > 0
+          ? selectedContactIds
+          : ["00000000-0000-0000-0000-000000000000"],
+    },
   };
 
   const [
     candidates,
-    contactTotal,
-    mapCandidates,
     countryRows,
     cityRows,
-    categoryRows,
-    bookableStudios,
+    allBookableStudios,
   ] = await Promise.all([
     db.candidateStudio.findMany({
       where: candidateVisibility,
@@ -411,7 +409,7 @@ export default async function DiscoverStudiosPage({
           where: { active: true },
           orderBy: { collectedAt: "desc" },
           take: 2,
-          select: { id: true, provider: true },
+          select: { id: true, provider: true, providerCategory: true },
         },
         claims: {
           where: { status: "VERIFIED" },
@@ -428,28 +426,6 @@ export default async function DiscoverStudiosPage({
       orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
-    }),
-    db.candidateStudio.count({ where: candidateVisibility }),
-    db.candidateStudio.findMany({
-      where: {
-        AND: [
-          candidateVisibility,
-          { latitude: { not: null } },
-          { longitude: { not: null } },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        latitude: true,
-        longitude: true,
-        category: true,
-        city: true,
-        countryCode: true,
-        convertedStudio: { select: { status: true } },
-      },
-      orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
     }),
     db.candidateStudio.groupBy({
       by: ["countryCode"],
@@ -474,13 +450,8 @@ export default async function DiscoverStudiosPage({
       orderBy: { _count: { city: "desc" } },
       take: 250,
     }),
-    db.candidateStudio.groupBy({
-      by: ["category"],
-      where: candidateBase,
-      _count: { category: true },
-    }),
     db.studio.findMany({
-      where: bookableWhere,
+      where: bookableBaseWhere,
       include: {
         rooms: {
           where: { active: true },
@@ -499,6 +470,20 @@ export default async function DiscoverStudiosPage({
       take: 5000,
     }),
   ]);
+
+  const bookableStudios = category
+    ? allBookableStudios.filter((studio) =>
+        matchesCreativeCategory(
+          classifyCreativeSpace({
+            name: studio.name,
+            storedCategory: studio.primaryCategory,
+          }).key,
+          category,
+        ),
+      )
+    : allBookableStudios;
+
+  const contactTotal = selectedClassifiedContacts.length;
 
   const locationOptions: DirectoryLocationOption[] = [
     ...cityRows
@@ -554,33 +539,33 @@ export default async function DiscoverStudiosPage({
     return score(b) - score(a) || b.updatedAt.getTime() - a.updatedAt.getTime();
   });
 
-  const contactMapPoints: StudioMapPoint[] = mapCandidates
+  const contactMapPoints: StudioMapPoint[] = selectedClassifiedContacts
     .filter(
-      (candidate) =>
-        candidate.convertedStudio?.status !== "VERIFIED" &&
+      ({ candidate }) =>
         candidate.latitude != null &&
         candidate.longitude != null,
     )
-    .map((candidate) => {
-      const key = candidateCategoryKey(candidate.name, candidate.category);
-      return {
-        id: "contact:" + candidate.id,
-        name: candidate.name,
-        lat: Number(candidate.latitude),
-        lng: Number(candidate.longitude),
-        href: "/discover/" + candidate.slug,
-        price: null,
-        kind: "CONTACT" as const,
-        category: labelCategory(key),
-        categoryKey: key,
-        rating: null,
-        photoUrl: null,
-        city: candidate.city,
-        countryCode: candidate.countryCode,
-      };
-    });
+    .map(({ candidate, classification }) => ({
+      id: "contact:" + candidate.id,
+      name: candidate.name,
+      lat: Number(candidate.latitude),
+      lng: Number(candidate.longitude),
+      href: "/discover/" + candidate.slug,
+      price: null,
+      kind: "CONTACT" as const,
+      category: creativeCategoryLabel(classification.key),
+      categoryKey: classification.key,
+      rating: null,
+      photoUrl: null,
+      city: candidate.city,
+      countryCode: candidate.countryCode,
+    }));
 
   const bookableMapPoints: StudioMapPoint[] = bookableStudios.map((studio) => {
+    const classification = classifyCreativeSpace({
+      name: studio.name,
+      storedCategory: studio.primaryCategory,
+    });
     const rating = studio.reviews.length
       ? studio.reviews.reduce((sum, review) => sum + review.rating, 0) /
         studio.reviews.length
@@ -593,8 +578,8 @@ export default async function DiscoverStudiosPage({
       href: "/studios/" + studio.slug,
       price: studio.rooms[0]?.hourlyRateMad || null,
       kind: "BOOKABLE" as const,
-      category: labelCategory(studio.primaryCategory),
-      categoryKey: studio.primaryCategory,
+      category: creativeCategoryLabel(classification.key),
+      categoryKey: classification.key,
       rating,
       photoUrl: studio.photos[0]?.url || null,
       city: studio.city,
@@ -606,21 +591,25 @@ export default async function DiscoverStudiosPage({
   const totalSpaces = contactTotal + bookableStudios.length;
 
   const categoryCountMap = new Map<string, number>();
-  categoryRows.forEach((row) => {
-    categoryCountMap.set(row.category, row._count.category);
-  });
-  bookableStudios.forEach((studio) => {
-    categoryCountMap.set(
-      studio.primaryCategory,
-      (categoryCountMap.get(studio.primaryCategory) || 0) + 1,
-    );
-  });
+  for (const entry of classifiedContacts) {
+    const key = matchesCreativeCategory(entry.classification.key, "OTHER")
+      ? "OTHER"
+      : entry.classification.key;
+    categoryCountMap.set(key, (categoryCountMap.get(key) || 0) + 1);
+  }
+  for (const studio of allBookableStudios) {
+    const keyRaw = classifyCreativeSpace({
+      name: studio.name,
+      storedCategory: studio.primaryCategory,
+    }).key;
+    const key = matchesCreativeCategory(keyRaw, "OTHER") ? "OTHER" : keyRaw;
+    categoryCountMap.set(key, (categoryCountMap.get(key) || 0) + 1);
+  }
+
+  const allSpacesCount = classifiedContacts.length + allBookableStudios.length;
 
   function displayCount(value: UiCategory) {
-    if (!value) return totalSpaces;
-    if (value === "IMAGE_LAB") {
-      return mapPoints.filter((point) => point.categoryKey === "IMAGE_LAB").length;
-    }
+    if (!value) return allSpacesCount;
     return categoryCountMap.get(value) || 0;
   }
 
@@ -784,7 +773,15 @@ export default async function DiscoverStudiosPage({
                 : parseDirectoryProfileV2(null);
               const heroPhoto = profileV2.photoUrls[0] || null;
               const website = safeExternalUrl(candidate.website);
-              const key = candidateCategoryKey(candidate.name, candidate.category);
+              const classification = classifyCreativeSpace({
+                name: candidate.name,
+                storedCategory: candidate.category,
+                providerCategories: candidate.sources.map(
+                  (source) => source.providerCategory,
+                ),
+                services: profileV2.services,
+              });
+              const key = classification.key;
 
               return (
                 <article
