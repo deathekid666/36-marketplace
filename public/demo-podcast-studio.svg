@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<rect width="1600" height="1000" fill="#0b0c0a"/><rect x="90" y="90" width="1420" height="820" rx="50" fill="#151713" stroke="#30332b" stroke-width="4"/>
+<ellipse cx="800" cy="470" rx="430" ry="180" fill="#0d0f0c" stroke="#3a3e34" stroke-width="4"/>
+<g stroke="#d9ff43" stroke-width="10" fill="none"><path d="M520 270 L610 430"/><path d="M1080 270 L990 430"/><path d="M700 245 L740 420"/><path d="M900 245 L860 420"/></g>
+<g fill="#d9ff43"><circle cx="610" cy="430" r="26"/><circle cx="990" cy="430" r="26"/><circle cx="740" cy="420" r="26"/><circle cx="860" cy="420" r="26"/></g>
+<text x="150" y="790" fill="#f4f4f4" font-family="Arial" font-size="68" font-weight="800">PODCAST &amp; CONTENT</text>
+<text x="154" y="845" fill="#7a8071" font-family="Arial" font-size="28">36 CONTROLLED DEMO — NOT A REAL BUSINESS</text></svg>

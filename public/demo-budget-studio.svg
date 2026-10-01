@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<rect width="1600" height="1000" fill="#0b0c0a"/><rect x="90" y="90" width="1420" height="820" rx="50" fill="#151713" stroke="#30332b" stroke-width="4"/>
+<circle cx="430" cy="455" r="130" fill="#0d0f0c" stroke="#d9ff43" stroke-width="8"/><circle cx="430" cy="455" r="45" fill="#d9ff43"/>
+<rect x="690" y="280" width="500" height="350" rx="30" fill="#0d0f0c" stroke="#3a3e34" stroke-width="4"/>
+<path d="M760 520 C820 360 900 600 960 410 S1100 580 1140 430" fill="none" stroke="#d9ff43" stroke-width="8"/>
+<text x="150" y="790" fill="#f4f4f4" font-family="Arial" font-size="68" font-weight="800">BUDGET RECORDING</text>
+<text x="154" y="845" fill="#7a8071" font-family="Arial" font-size="28">36 CONTROLLED DEMO — NOT A REAL BUSINESS</text></svg>

@@ -46,8 +46,8 @@ export function DemoMarketplaceSetup() {
           className="w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-black disabled:opacity-50"
         >
           {pending
-            ? "Creating demo environment…"
-            : "Create / reset demo environment"}
+            ? "Creating 3 demo studios…"
+            : "Create / reset 3-studio demo"}
         </button>
       </form>
 
@@ -81,15 +81,33 @@ export function DemoMarketplaceSetup() {
               password={state.creatorPassword}
             />
             <p className="text-[10px] leading-5 text-amber-300">
-              Copy these passwords now. Creating/resetting the demo again
-              generates new passwords and invalidates these credentials.
+              Copy these passwords now. Resetting the demo generates new
+              passwords and invalidates these credentials.
             </p>
-            {state.studioUrl && (
+
+            {state.studioUrls && state.studioUrls.length > 0 && (
+              <div className="rounded-2xl border border-zinc-900 bg-black/20 p-4">
+                <span className="label">Demo listings</span>
+                <div className="mt-3 space-y-2">
+                  {state.studioUrls.map((studio) => (
+                    <a
+                      key={studio.url}
+                      href={studio.url}
+                      className="block text-xs font-black text-acid"
+                    >
+                      {studio.name} →
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {state.compareUrl && (
               <a
-                href={state.studioUrl}
-                className="inline-flex text-xs font-black text-acid"
+                href={state.compareUrl}
+                className="inline-flex rounded-xl border border-acid/30 px-4 py-3 text-xs font-black text-acid"
               >
-                Open public demo studio →
+                Compare all 3 demo studios →
               </a>
             )}
           </div>
