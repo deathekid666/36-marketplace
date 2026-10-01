@@ -131,8 +131,9 @@ function CoverFallback() {
       <div className="air-profile-cover-grid" />
       <div className="air-profile-cover-ring air-profile-cover-ring-a" />
       <div className="air-profile-cover-ring air-profile-cover-ring-b" />
-      <div className="air-profile-cover-disc">
+      <div className="air-profile-cover-brand">
         <span>36</span>
+        <small>creative spaces</small>
       </div>
     </div>
   );
@@ -249,7 +250,7 @@ export function AirbnbUserProfile({
           )}
           {isSelf && (
             <div className="air-profile-avatar-edit">
-              <ProfileImageUploader kind="avatar" compact />
+              <ProfileImageUploader kind="avatar" compact iconOnly />
             </div>
           )}
         </div>

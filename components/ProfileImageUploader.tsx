@@ -14,12 +14,33 @@ const ALLOWED = new Set([
   "image/avif",
 ]);
 
+function CameraIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 7h3l1.2-2h5.6L16 7h3a2 2 0 0 1 2 2v9H3V9a2 2 0 0 1 2-2Z" />
+      <circle cx="12" cy="13" r="3.2" />
+    </svg>
+  );
+}
+
 export function ProfileImageUploader({
   kind,
   compact = false,
+  iconOnly = false,
 }: {
   kind: Kind;
   compact?: boolean;
+  iconOnly?: boolean;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -130,12 +151,20 @@ export function ProfileImageUploader({
         type="button"
         disabled={busy}
         onClick={() => inputRef.current?.click()}
+        aria-label={kind === "avatar" ? "Change profile photo" : "Change cover photo"}
+        title={kind === "avatar" ? "Change profile photo" : "Change cover photo"}
       >
-        {busy
-          ? "Uploading " + progress + "%"
-          : kind === "avatar"
-            ? "Change photo"
-            : "Change cover"}
+        <CameraIcon />
+        {!iconOnly && (
+          <span>
+            {busy
+              ? "Uploading " + progress + "%"
+              : kind === "avatar"
+                ? "Change photo"
+                : "Change cover"}
+          </span>
+        )}
+        {iconOnly && busy && <span className="air-profile-upload-progress">{progress}%</span>}
       </button>
       {error && <span role="alert">{error}</span>}
     </div>
