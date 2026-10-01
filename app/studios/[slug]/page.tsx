@@ -361,9 +361,17 @@ export default async function StudioDetailPage({
           }))}
         />
 
-        <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1fr)_390px]">
+        <nav className="studio-detail-anchor-nav" aria-label="Studio sections">
+          <a href="#about">About</a>
+          <a href="#amenities">Amenities</a>
+          <a href="#rooms">Rooms</a>
+          <a href="#reviews">Reviews</a>
+          <a href="#location">Location</a>
+        </nav>
+
+        <div className="studio-detail-content-grid">
           <div className="min-w-0">
-            <section className="flex items-center justify-between gap-5 border-b border-[#dddddd] pb-7">
+            <section className="studio-detail-host-summary">
               <div>
                 <h2 className="text-2xl font-black">
                   {categoryLabel(
@@ -393,12 +401,16 @@ export default async function StudioDetailPage({
                 </p>
               </div>
 
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-acid text-sm font-black text-black">
+              <Link
+                href={"/profile/" + studio.owner.id}
+                className="studio-detail-host-avatar"
+                aria-label={"View " + studio.owner.name + "'s profile"}
+              >
                 {initials(studio.owner.name) || "36"}
-              </div>
+              </Link>
             </section>
 
-            <section className="grid gap-4 border-b border-[#dddddd] py-7 sm:grid-cols-3">
+            <section className="studio-detail-trust-row">
               <div className="flex gap-3">
                 <span className="text-lg">✓</span>
                 <div>
@@ -450,30 +462,32 @@ export default async function StudioDetailPage({
               </div>
             </section>
 
-            <section className="border-b border-[#dddddd] py-8">
-              <h2 className="text-2xl font-black">
-                About this studio
-              </h2>
+            <section id="about" className="studio-detail-section">
+              <div className="studio-detail-section-heading">
+                <span>About</span>
+                <h2>About this studio</h2>
+              </div>
               <p className="mt-4 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-[#555555]">
                 {studio.description ||
                   "The studio owner has not added a full description yet."}
               </p>
             </section>
 
-            <section className="border-b border-[#dddddd] py-8">
-              <h2 className="text-2xl font-black">
-                What this studio offers
-              </h2>
+            <section id="amenities" className="studio-detail-section">
+              <div className="studio-detail-section-heading">
+                <span>Amenities</span>
+                <h2>What this studio offers</h2>
+              </div>
 
               {studio.amenities.length ? (
-                <div className="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                <div className="studio-detail-amenities-grid">
                   {studio.amenities.map(
                     (amenity) => (
                       <div
                         key={amenity.id}
-                        className="flex items-center gap-3 text-sm text-[#333333]"
+                        className="studio-detail-amenity"
                       >
-                        <span className="grid h-8 w-8 place-items-center rounded-full bg-[#f3f3f3] text-xs">
+                        <span className="studio-detail-amenity-icon">
                           ✓
                         </span>
                         {amenity.name}
@@ -488,25 +502,22 @@ export default async function StudioDetailPage({
               )}
             </section>
 
-            <section className="border-b border-[#dddddd] py-8">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">
-                  Rooms
-                </span>
-                <h2 className="mt-2 text-2xl font-black">
-                  Choose your setup
-                </h2>
+            <section id="rooms" className="studio-detail-section">
+              <div className="studio-detail-section-heading">
+                <span>Rooms</span>
+                <h2>Choose your setup</h2>
+                <p>Select the room that fits your session. Final availability is checked in the booking panel.</p>
               </div>
 
-              <div className="mt-6 grid gap-4">
+              <div className="studio-detail-room-list">
                 {studio.rooms.map((room) => (
                   <article
                     key={room.id}
-                    className="rounded-2xl border border-[#dddddd] bg-white p-5"
+                    className="studio-detail-room-card"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.12em] text-acid">
+                        <span className="studio-detail-room-category">
                           {categoryLabel(room.category)}
                         </span>
                         <h3 className="mt-2 text-xl font-black">
@@ -524,13 +535,9 @@ export default async function StudioDetailPage({
                         </p>
                       </div>
 
-                      <div className="text-right">
-                        <b className="text-xl">
-                          {room.hourlyRateMad} MAD
-                        </b>
-                        <span className="block text-[10px] text-[#8a8a8a]">
-                          per hour
-                        </span>
+                      <div className="studio-detail-room-price">
+                        <b>{room.hourlyRateMad} MAD</b>
+                        <span>/ hour</span>
                       </div>
                     </div>
 
@@ -546,7 +553,7 @@ export default async function StudioDetailPage({
                           (item) => (
                             <span
                               key={item.id}
-                              className="rounded-lg border border-[#ebebeb] bg-[#f7f7f7] px-3 py-2 text-[10px] text-[#717171]"
+                              className="studio-detail-equipment-chip"
                             >
                               {item.name}
                               {item.quantity > 1
@@ -558,15 +565,19 @@ export default async function StudioDetailPage({
                         )}
                       </div>
                     )}
+                    <a href="#booking" className="studio-detail-room-select">
+                      Check availability
+                    </a>
                   </article>
                 ))}
               </div>
             </section>
 
-            <section className="border-b border-[#dddddd] py-8">
-              <h2 className="text-2xl font-black">
-                Opening hours
-              </h2>
+            <section className="studio-detail-section">
+              <div className="studio-detail-section-heading">
+                <span>Schedule</span>
+                <h2>Opening hours</h2>
+              </div>
               <div className="mt-5 max-w-xl divide-y divide-[#ebebeb]">
                 {DAYS.map((day, index) => {
                   const row =
@@ -596,7 +607,7 @@ export default async function StudioDetailPage({
 
             <section
               id="reviews"
-              className="border-b border-[#dddddd] py-8"
+              className="studio-detail-section"
             >
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
@@ -619,7 +630,7 @@ export default async function StudioDetailPage({
               </div>
 
               {trust.verifiedReviewCount > 0 && (
-                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <div className="studio-detail-rating-metrics">
                   {[
                     [
                       "Accuracy",
@@ -636,7 +647,7 @@ export default async function StudioDetailPage({
                   ].map(([label, value]) => (
                     <div
                       key={String(label)}
-                      className="rounded-xl border border-[#ebebeb] p-4"
+                      className="studio-detail-rating-metric"
                     >
                       <span className="text-xs text-[#8a8a8a]">
                         {label}
@@ -651,7 +662,7 @@ export default async function StudioDetailPage({
                 </div>
               )}
 
-              <div className="mt-6 grid gap-5 md:grid-cols-2">
+              <div className="studio-detail-review-grid">
                 {studio.reviews.length === 0 ? (
                   <div className="rounded-2xl border border-[#ebebeb] p-5 text-sm text-[#8a8a8a]">
                     No verified reviews yet.
@@ -660,10 +671,10 @@ export default async function StudioDetailPage({
                   studio.reviews.map((review) => (
                     <article
                       key={review.id}
-                      className="rounded-2xl border border-[#ebebeb] p-5"
+                      className="studio-detail-review-card"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="grid h-10 w-10 place-items-center rounded-full bg-[#f3f3f3] text-xs font-black">
+                        <div className="studio-detail-review-avatar">
                           {initials(
                             review.creator.name,
                           ) || "36"}
@@ -690,7 +701,7 @@ export default async function StudioDetailPage({
                       )}
 
                       {review.ownerReply && (
-                        <div className="mt-4 rounded-xl bg-white p-4">
+                        <div className="studio-detail-host-reply">
                           <b className="text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">
                             Host response
                           </b>
@@ -707,11 +718,12 @@ export default async function StudioDetailPage({
 
             <section
               id="location"
-              className="border-b border-[#dddddd] py-8"
+              className="studio-detail-section"
             >
-              <h2 className="text-2xl font-black">
-                Where you’ll be
-              </h2>
+              <div className="studio-detail-section-heading">
+                <span>Location</span>
+                <h2>Where you’ll be</h2>
+              </div>
               <p className="mt-2 text-sm text-[#717171]">
                 {studio.neighborhood
                   ? studio.neighborhood + ", "
@@ -731,12 +743,12 @@ export default async function StudioDetailPage({
               )}
             </section>
 
-            <section className="py-8">
-              <div className="flex flex-wrap items-start justify-between gap-6">
+            <section id="host" className="studio-detail-host-section">
+              <div className="studio-detail-host-layout">
                 <div className="flex items-start gap-4">
-                  <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-acid text-sm font-black text-black">
+                  <Link href={"/profile/" + studio.owner.id} className="studio-detail-host-avatar large">
                     {initials(studio.owner.name) || "36"}
-                  </div>
+                  </Link>
                   <div>
                     <h2 className="text-2xl font-black">
                       Hosted by{" "}
@@ -761,7 +773,7 @@ export default async function StudioDetailPage({
                   </div>
                 </div>
 
-                <div className="w-full max-w-sm rounded-2xl border border-[#dddddd] bg-white p-5">
+                <div className="studio-detail-host-stats">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="block text-[10px] text-[#8a8a8a]">
@@ -790,7 +802,7 @@ export default async function StudioDetailPage({
                         "/messages?booking=" +
                         creatorBooking.id
                       }
-                      className="mt-5 flex w-full justify-center rounded-xl border border-[#cfcfcf] px-4 py-3 text-xs font-black hover:border-white"
+                      className="studio-detail-host-message"
                     >
                       Message host
                     </Link>
@@ -807,7 +819,7 @@ export default async function StudioDetailPage({
                             studio.slug,
                         )
                       }
-                      className="mt-5 flex w-full justify-center rounded-xl border border-[#cfcfcf] px-4 py-3 text-xs font-black"
+                      className="studio-detail-host-message"
                     >
                       Log in to book
                     </Link>

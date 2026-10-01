@@ -8,6 +8,17 @@ type Photo = {
   alt: string;
 };
 
+function GalleryIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
 export function StudioProfileGallery({
   studioName,
   photos,
@@ -36,12 +47,11 @@ export function StudioProfileGallery({
 
   if (photos.length === 0) {
     return (
-      <div className="mt-6 grid h-[420px] place-items-center overflow-hidden rounded-[1.75rem] bg-[#f3f3f3]">
-        <div className="text-center">
-          <div className="text-7xl font-black text-acid">36</div>
-          <p className="mt-3 text-sm text-[#8a8a8a]">
-            Studio photos coming soon
-          </p>
+      <div className="studio-detail-gallery-empty">
+        <div>
+          <span>36</span>
+          <b>Photos coming soon</b>
+          <p>This verified studio has not uploaded a gallery yet.</p>
         </div>
       </div>
     );
@@ -49,79 +59,58 @@ export function StudioProfileGallery({
 
   return (
     <>
-      <div className="relative mt-6 grid h-[360px] gap-2 overflow-hidden rounded-[1.75rem] sm:h-[460px] md:grid-cols-4 md:grid-rows-2">
+      <div className={"studio-detail-gallery studio-detail-gallery-count-" + Math.min(visible.length, 5)}>
         {visible.map((photo, index) => (
           <button
             type="button"
             key={photo.id}
             onClick={() => setOpen(true)}
-            className={
-              "group relative overflow-hidden bg-[#f3f3f3] " +
-              (index === 0
-                ? "md:col-span-2 md:row-span-2"
-                : "")
-            }
+            className={"studio-detail-gallery-item studio-detail-gallery-item-" + index}
+            aria-label={"Open " + studioName + " photos"}
           >
-            <img
-              src={photo.url}
-              alt={photo.alt || studioName}
-              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
-            />
-            <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+            <img src={photo.url} alt={photo.alt || studioName} />
+            <span className="studio-detail-gallery-hover" />
           </button>
         ))}
-
-        {visible.length < 5 &&
-          Array.from({ length: 5 - visible.length }, (_, index) => (
-            <div
-              key={"placeholder-" + index}
-              className="hidden bg-[#f3f3f3] md:block"
-            />
-          ))}
 
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="absolute bottom-4 right-4 rounded-xl border border-black/20 bg-white px-4 py-2.5 text-xs font-black text-black shadow-xl"
+          className="studio-detail-show-photos"
         >
-          ▦ Show all photos · {photos.length}
+          <GalleryIcon />
+          <span>Show all photos</span>
+          <b>{photos.length}</b>
         </button>
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-[6000] overflow-y-auto bg-black text-white">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#ebebeb] bg-black/90 px-5 py-4 backdrop-blur">
+        <div className="studio-detail-lightbox">
+          <div className="studio-detail-lightbox-bar">
             <div>
-              <b className="text-sm">{studioName}</b>
-              <span className="ml-2 text-xs text-[#8a8a8a]">
-                {photos.length} photo{photos.length === 1 ? "" : "s"}
-              </span>
+              <b>{studioName}</b>
+              <span>{photos.length} photo{photos.length === 1 ? "" : "s"}</span>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="grid h-10 w-10 place-items-center rounded-full border border-[#dddddd] text-lg text-[#333333]"
               aria-label="Close photos"
             >
               ×
             </button>
           </div>
 
-          <div className="mx-auto grid max-w-5xl gap-4 px-4 py-6 sm:grid-cols-2 sm:px-6">
+          <div className="studio-detail-lightbox-grid">
             {photos.map((photo, index) => (
-              <div
+              <figure
                 key={photo.id}
-                className={
-                  "overflow-hidden rounded-2xl bg-white " +
-                  (index % 5 === 0 ? "sm:col-span-2" : "")
-                }
+                className={index % 5 === 0 ? "wide" : ""}
               >
                 <img
                   src={photo.url}
                   alt={photo.alt || studioName}
-                  className="h-auto w-full object-cover"
                 />
-              </div>
+              </figure>
             ))}
           </div>
         </div>
