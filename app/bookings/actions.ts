@@ -54,13 +54,14 @@ export async function sendBookingMessageAction(form: FormData) {
     type: "BOOKING_MESSAGE",
     title: `New message about ${booking.studio.name}`,
     body: body.slice(0, 180),
-    href: user.role === "CREATOR" ? `/owner/bookings/${bookingId}` : `/creator/bookings/${bookingId}`,
+    href: "/messages?booking=" + bookingId,
     email: true,
   });
 
   revalidatePath(`/creator/bookings/${bookingId}`);
   revalidatePath(`/owner/bookings/${bookingId}`);
-  redirect(bookingPath(user.role, bookingId));
+  revalidatePath("/messages");
+  redirect("/messages?booking=" + bookingId);
 }
 
 export async function cancelBookingAction(form: FormData) {
