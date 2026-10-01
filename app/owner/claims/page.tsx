@@ -5,6 +5,8 @@ import { startClaimedStudioOnboardingAction } from "@/app/owner/claims/onboardin
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ownerAcquisitionReadiness } from "@/lib/discovery/acquisition";
+import { parseDirectoryProfileV2 } from "@/lib/discovery/profile-v2";
 import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
 export const metadata = { title: "Studio claims · 36" };
@@ -37,9 +39,22 @@ export default async function OwnerClaimsPage({
           countryCode: true,
           category: true,
           status: true,
+          phone: true,
+          email: true,
+          website: true,
+          instagram: true,
+          address: true,
           convertedStudioId: true,
           convertedStudio: {
             select: { id: true, status: true },
+          },
+          transitions: {
+            where: {
+              reasonCode: "VERIFIED_OWNER_PROFILE_UPDATE",
+            },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { metadata: true },
           },
         },
       },
@@ -56,9 +71,12 @@ export default async function OwnerClaimsPage({
             <span className="text-xs font-bold uppercase tracking-[0.18em] text-sky-300">
               Ownership
             </span>
-            <h1 className="mt-3 text-4xl font-black">Your studio claims</h1>
+            <h1 className="mt-3 text-4xl font-black">
+              Your studio claims
+            </h1>
             <p className="mt-3 text-sm leading-6 text-zinc-500">
-              Track ownership verification for studios 36 discovered before you joined.
+              Track ownership verification, complete the public profile and move
+              into booking onboarding where supported.
             </p>
           </div>
           <Link href="/discover" className="button-dark">
@@ -71,15 +89,17 @@ export default async function OwnerClaimsPage({
             Ownership claim submitted for review.
           </div>
         )}
+
         {query.result === "withdrawn" && (
           <div className="mt-6 rounded-xl border border-zinc-800 p-4 text-sm text-zinc-400">
             Claim withdrawn.
           </div>
         )}
+
         {query.error && (
           <div className="mt-6 rounded-xl border border-red-900/50 bg-red-950/10 p-4 text-sm text-red-300">
             {query.error === "market-not-supported"
-              ? "This discovery record is outside the currently supported Morocco booking market."
+              ? "This directory record is outside the currently supported booking-onboarding market."
               : query.error === "claim-not-verified"
                 ? "Ownership must be verified before onboarding can start."
                 : "The claim action could not be completed."}
@@ -88,107 +108,253 @@ export default async function OwnerClaimsPage({
 
         {claims.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-dashed border-zinc-800 p-10 text-center">
-            <h2 className="text-xl font-black">No ownership claims yet</h2>
+            <h2 className="text-xl font-black">
+              No ownership claims yet
+            </h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
-              If 36 has already discovered your studio, open its discovery listing and submit a claim.
+              If 36 has already discovered your studio, open its directory listing
+              and submit a claim.
             </p>
-            <Link href="/discover" className="mt-5 inline-flex rounded-full bg-sky-300 px-5 py-3 text-sm font-black text-black">
+            <Link
+              href="/discover"
+              className="mt-5 inline-flex rounded-full bg-sky-300 px-5 py-3 text-sm font-black text-black"
+            >
               Browse discovery
             </Link>
           </div>
         ) : (
           <div className="mt-8 space-y-4">
-            {claims.map((claim) => (
-              <article key={claim.id} className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${STATUS_STYLE[claim.status] || "border-zinc-800"}`}>
-                      {claim.status.replaceAll("_", " ")}
-                    </span>
-                    <h2 className="mt-4 text-2xl font-black">{claim.candidateStudio.name}</h2>
-                    <p className="mt-1 text-sm text-zinc-600">
-                      {[claim.candidateStudio.district, claim.candidateStudio.city].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                  <Link href={"/discover/" + claim.candidateStudio.slug} className="text-xs font-black text-sky-300">
-                    Discovery listing →
-                  </Link>
-                </div>
+            {claims.map((claim) => {
+              const candidate = claim.candidateStudio;
+              const profile = parseDirectoryProfileV2(
+                candidate.transitions[0]?.metadata,
+              );
+              const onboardingAvailable =
+                isDiscoveryRolloutEnabled(
+                  candidate,
+                  "ONBOARDING",
+                );
+              const readiness = ownerAcquisitionReadiness({
+                claimStatus: claim.status,
+                candidate,
+                profile,
+                onboardingAvailable,
+                converted: Boolean(
+                  candidate.convertedStudioId,
+                ),
+              });
 
-                <div className="mt-5 grid gap-3 text-xs sm:grid-cols-3">
-                  <div className="rounded-xl border border-zinc-900 p-3">
-                    <span className="label">Relationship</span>
-                    <b>{claim.relationship.replaceAll("_", " ")}</b>
-                  </div>
-                  <div className="rounded-xl border border-zinc-900 p-3">
-                    <span className="label">Business email</span>
-                    <b className="break-all">{claim.businessEmail}</b>
-                  </div>
-                  <div className="rounded-xl border border-zinc-900 p-3">
-                    <span className="label">Submitted</span>
-                    <b>{claim.submittedAt.toLocaleDateString("en", { timeZone: "UTC" })}</b>
-                  </div>
-                </div>
-
-                {claim.adminNote && (
-                  <div className="mt-4 rounded-xl border border-zinc-900 p-4 text-sm leading-6 text-zinc-400">
-                    <b className="block text-xs text-zinc-300">Admin note</b>
-                    {claim.adminNote}
-                  </div>
-                )}
-
-                {claim.status === "SUBMITTED" && (
-                  <form action={withdrawCandidateClaimAction} className="mt-4">
-                    <input type="hidden" name="claimId" value={claim.id} />
-                    <button className="rounded-xl border border-zinc-800 px-4 py-2 text-xs font-black text-zinc-500 hover:text-white">
-                      Withdraw claim
-                    </button>
-                  </form>
-                )}
-
-                {claim.status === "VERIFIED" && claim.candidateStudio.convertedStudio ? (
-                  <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
-                    <b className="text-sm text-emerald-300">Booking onboarding started</b>
-                    <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      A private 36 Studio draft exists. Complete rooms, pricing and availability, then submit it for marketplace verification.
-                    </p>
+              return (
+                <article
+                  key={claim.id}
+                  className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-6"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <span
+                        className={
+                          "rounded-full border px-2.5 py-1 text-[10px] font-black uppercase " +
+                          (STATUS_STYLE[claim.status] ||
+                            "border-zinc-800")
+                        }
+                      >
+                        {claim.status.replaceAll("_", " ")}
+                      </span>
+                      <h2 className="mt-4 text-2xl font-black">
+                        {candidate.name}
+                      </h2>
+                      <p className="mt-1 text-sm text-zinc-600">
+                        {[candidate.district, candidate.city]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
                     <Link
-                      href={`/owner/studios/${claim.candidateStudio.convertedStudio.id}`}
-                      className="button-dark mt-3 inline-flex"
+                      href={"/discover/" + candidate.slug}
+                      className="text-xs font-black text-sky-300"
                     >
-                      Continue booking onboarding →
+                      Directory listing →
                     </Link>
                   </div>
-                ) : claim.status === "VERIFIED" ? (
-                  <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
-                    <b className="text-sm text-emerald-300">Ownership verified</b>
-                    <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      You can manage the public directory profile now. This does not create prices, rooms, availability or bookings.
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Link
-                        href={`/owner/claims/${claim.id}/profile`}
-                        className="rounded-xl bg-sky-300 px-5 py-3 text-xs font-black text-black"
-                      >
-                        Manage public profile
-                      </Link>
-                      {isDiscoveryRolloutEnabled(claim.candidateStudio, "ONBOARDING") ? (
-                        <form action={startClaimedStudioOnboardingAction}>
-                          <input type="hidden" name="claimId" value={claim.id} />
-                          <button className="rounded-xl bg-acid px-5 py-3 text-xs font-black text-black">
-                            Enable booking
-                          </button>
-                        </form>
-                      ) : (
-                        <span className="rounded-xl border border-zinc-800 px-4 py-3 text-xs font-bold text-zinc-500">
-                          Booking onboarding not launched in this market
-                        </span>
-                      )}
+
+                  <div className="mt-5 grid gap-3 text-xs sm:grid-cols-3">
+                    <div className="rounded-xl border border-zinc-900 p-3">
+                      <span className="label">Relationship</span>
+                      <b>{claim.relationship.replaceAll("_", " ")}</b>
+                    </div>
+                    <div className="rounded-xl border border-zinc-900 p-3">
+                      <span className="label">Business email</span>
+                      <b className="break-all">
+                        {claim.businessEmail}
+                      </b>
+                    </div>
+                    <div className="rounded-xl border border-zinc-900 p-3">
+                      <span className="label">Submitted</span>
+                      <b>
+                        {claim.submittedAt.toLocaleDateString(
+                          "en",
+                          { timeZone: "UTC" },
+                        )}
+                      </b>
                     </div>
                   </div>
-                ) : null}
-              </article>
-            ))}
+
+                  {claim.adminNote && (
+                    <div className="mt-4 rounded-xl border border-zinc-900 p-4 text-sm leading-6 text-zinc-400">
+                      <b className="block text-xs text-zinc-300">
+                        Admin note
+                      </b>
+                      {claim.adminNote}
+                    </div>
+                  )}
+
+                  {claim.status === "SUBMITTED" && (
+                    <div className="mt-4 rounded-xl border border-sky-900/40 bg-sky-950/10 p-4">
+                      <b className="text-sm text-sky-300">
+                        Waiting for ownership review
+                      </b>
+                      <p className="mt-1 text-xs leading-5 text-zinc-600">
+                        36 will review the evidence before owner-managed profile
+                        controls are unlocked.
+                      </p>
+                      <form
+                        action={withdrawCandidateClaimAction}
+                        className="mt-3"
+                      >
+                        <input
+                          type="hidden"
+                          name="claimId"
+                          value={claim.id}
+                        />
+                        <button className="rounded-xl border border-zinc-800 px-4 py-2 text-xs font-black text-zinc-500 hover:text-white">
+                          Withdraw claim
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  {claim.status === "VERIFIED" && (
+                    <div className="mt-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <b className="text-sm text-emerald-300">
+                            Owner profile readiness
+                          </b>
+                          <p className="mt-1 text-xs leading-5 text-zinc-600">
+                            Complete the public profile first; it becomes the
+                            starting point for booking onboarding.
+                          </p>
+                        </div>
+                        <b
+                          className={
+                            "text-2xl " +
+                            (readiness.percent >= 75
+                              ? "text-emerald-300"
+                              : "text-amber-300")
+                          }
+                        >
+                          {readiness.percent}%
+                        </b>
+                      </div>
+
+                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-900">
+                        <div
+                          className="h-full rounded-full bg-acid"
+                          style={{
+                            width: readiness.percent + "%",
+                          }}
+                        />
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {readiness.steps.map((step) => (
+                          <span
+                            key={step.key}
+                            className={
+                              "rounded-full border px-2.5 py-1 text-[9px] font-bold " +
+                              (step.complete
+                                ? "border-emerald-900/40 text-emerald-300"
+                                : "border-zinc-800 text-zinc-600")
+                            }
+                          >
+                            {step.complete ? "✓ " : "○ "}
+                            {step.label}
+                          </span>
+                        ))}
+                      </div>
+
+                      {candidate.convertedStudio ? (
+                        <div className="mt-4">
+                          <b className="text-sm text-acid">
+                            Booking onboarding started
+                          </b>
+                          <p className="mt-1 text-xs leading-5 text-zinc-500">
+                            A private 36 Studio draft exists. Complete rooms,
+                            pricing and availability, then submit it for marketplace
+                            verification.
+                          </p>
+                          <Link
+                            href={
+                              "/owner/studios/" +
+                              candidate.convertedStudio.id
+                            }
+                            className="button-dark mt-3 inline-flex"
+                          >
+                            Continue booking onboarding →
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Link
+                            href={
+                              "/owner/claims/" +
+                              claim.id +
+                              "/profile"
+                            }
+                            className="rounded-xl bg-sky-300 px-5 py-3 text-xs font-black text-black"
+                          >
+                            Manage public profile
+                          </Link>
+
+                          {onboardingAvailable ? (
+                            <form
+                              action={
+                                startClaimedStudioOnboardingAction
+                              }
+                            >
+                              <input
+                                type="hidden"
+                                name="claimId"
+                                value={claim.id}
+                              />
+                              <button className="rounded-xl bg-acid px-5 py-3 text-xs font-black text-black">
+                                {readiness.readyForBookingOnboarding
+                                  ? "Enable booking"
+                                  : "Enable booking anyway"}
+                              </button>
+                            </form>
+                          ) : (
+                            <span className="rounded-xl border border-zinc-800 px-4 py-3 text-xs font-bold text-zinc-500">
+                              Booking onboarding not launched in this market
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {onboardingAvailable &&
+                        !candidate.convertedStudio &&
+                        !readiness.readyForBookingOnboarding && (
+                          <p className="mt-3 text-[10px] leading-5 text-amber-300">
+                            Recommended: reach 75% profile readiness before
+                            enabling booking so the draft starts with useful
+                            content.
+                          </p>
+                        )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

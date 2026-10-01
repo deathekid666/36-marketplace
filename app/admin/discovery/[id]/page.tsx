@@ -14,6 +14,7 @@ import {
   verifyCandidateClaimAction,
 } from "@/app/admin/discovery/claim-actions";
 import { AppHeader } from "@/components/AppHeader";
+import { OwnerInviteTools } from "@/components/OwnerInviteTools";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -175,6 +176,17 @@ export default async function AdminDiscoveryCandidatePage({
   const canMarkEnriched =
     candidate.status === CandidateStudioStatus.DISCOVERED ||
     candidate.status === CandidateStudioStatus.REVIEW_REQUIRED;
+  const hasVerifiedClaim = candidate.claims.some(
+    (claim) => claim.status === "VERIFIED",
+  );
+  const hasPendingClaim = candidate.claims.some(
+    (claim) => claim.status === "SUBMITTED",
+  );
+  const canInviteOwner =
+    (candidate.status === CandidateStudioStatus.ENRICHED ||
+      candidate.status === CandidateStudioStatus.APPROVED) &&
+    !hasVerifiedClaim &&
+    !hasPendingClaim;
 
   const freshness = discoveryFreshness(candidate.lastCheckedAt);
   const quality = assessDiscoveryQuality({
@@ -264,6 +276,15 @@ export default async function AdminDiscoveryCandidatePage({
             <span className="mt-1 block">Last checked {dateTime(candidate.lastCheckedAt)}</span>
           </div>
         </div>
+
+        {canInviteOwner && (
+          <div className="mt-6 max-w-2xl">
+            <OwnerInviteTools
+              studioName={candidate.name}
+              slug={candidate.slug}
+            />
+          </div>
+        )}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_370px]">
           <div className="space-y-6">

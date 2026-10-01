@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { submitCandidateClaimAction } from "@/app/discover/[slug]/claim/actions";
 import { AppHeader } from "@/components/AppHeader";
 import { getCurrentUser } from "@/lib/auth";
+import { trackMarketplaceEvent } from "@/lib/analytics";
 import { db } from "@/lib/db";
 import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
 
@@ -29,13 +30,25 @@ export default async function ClaimDiscoveryStudioPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; source?: string }>;
 }) {
   const { slug } = await params;
   const query = await searchParams;
   const user = await getCurrentUser();
 
-  if (!user) redirect(`/auth/login?next=${encodeURIComponent(`/discover/${slug}/claim`)}`);
+  const invited = query.source === "owner-invite";
+  const claimPath =
+    "/discover/" +
+    slug +
+    "/claim" +
+    (invited ? "?source=owner-invite" : "");
+
+  if (!user) {
+    redirect(
+      "/auth/login?next=" +
+        encodeURIComponent(claimPath),
+    );
+  }
 
   const candidate = await db.candidateStudio.findUnique({
     where: { slug },
@@ -54,6 +67,17 @@ export default async function ClaimDiscoveryStudioPage({
     !isDiscoveryRolloutEnabled(candidate, "CLAIMS")
   ) {
     notFound();
+  }
+
+  if (invited) {
+    await trackMarketplaceEvent({
+      eventType: "OWNER_INVITE_LANDING",
+      userId: user.id,
+      metadata: {
+        candidateStudioId: candidate.id,
+        candidateSlug: candidate.slug,
+      },
+    });
   }
 
   if (user.role !== "STUDIO_OWNER") {
@@ -96,6 +120,11 @@ export default async function ClaimDiscoveryStudioPage({
           <p className="mt-3 text-sm leading-7 text-zinc-500">
             Tell 36 how you are connected to this studio. Claims are available globally for fresh directory records. Verification lets you manage the public directory profile; it does not make the studio bookable.
           </p>
+          {invited && (
+            <div className="mt-4 rounded-2xl border border-sky-900/40 bg-sky-950/10 p-4 text-xs leading-5 text-sky-200">
+              You opened an owner invitation from 36. Claiming is free. Nothing becomes bookable until ownership is verified and you explicitly start booking onboarding in a supported market.
+            </div>
+          )}
         </div>
 
         {query.error && ERRORS[query.error] && (

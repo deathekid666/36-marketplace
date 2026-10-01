@@ -17,6 +17,7 @@ const ALLOWED_EVENTS = new Set([
   "DISCOVERY_CONTACT_REPORTED",
   "DISCOVERY_COMMUNITY_SUBMITTED",
   "DISCOVERY_ONBOARDING_STARTED",
+  "OWNER_INVITE_LANDING",
 ]);
 
 export async function trackMarketplaceEvent(input: {
