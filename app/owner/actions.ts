@@ -85,6 +85,184 @@ export async function createStudioAction(form: FormData) {
   redirect(`/owner/studios/${studio.id}`);
 }
 
+
+export async function createStudioWizardAction(form: FormData) {
+  const user = await requireRole("STUDIO_OWNER");
+
+  const name = text(form, "name", 120);
+  const description = text(form, "description", 5000);
+  const primaryCategory = parseCategory(form.get("primaryCategory"));
+  const city = text(form, "city", 80);
+  const neighborhood = text(form, "neighborhood", 100);
+  const address = text(form, "address", 300);
+  const phone = text(form, "phone", 40);
+  const instagram = text(form, "instagram", 200);
+  const website = text(form, "website", 300);
+  const latitude = optionalNumber(form.get("latitude"), -90, 90);
+  const longitude = optionalNumber(form.get("longitude"), -180, 180);
+
+  const roomName = text(form, "roomName", 120);
+  const roomDescription = text(form, "roomDescription", 1500);
+  const roomCategory = parseCategory(form.get("roomCategory"));
+  const hourlyRateMad = positiveInt(form.get("hourlyRateMad"), 100);
+  const minimumHours = positiveInt(form.get("minimumHours"), 1);
+  const capacity = positiveInt(form.get("capacity"), 1);
+  const engineerIncluded = form.get("engineerIncluded") === "on";
+
+  const depositPercent = Math.max(
+    0,
+    Math.min(100, Math.round(Number(form.get("depositPercent")) || 30)),
+  );
+  const freeCancellationHours = Math.max(
+    0,
+    Math.min(336, Math.round(Number(form.get("freeCancellationHours")) || 24)),
+  );
+
+  if (
+    name.length < 3 ||
+    description.length < 40 ||
+    !city ||
+    !address ||
+    !phone ||
+    latitude == null ||
+    longitude == null ||
+    roomName.length < 2 ||
+    hourlyRateMad < 1 ||
+    minimumHours < 1 ||
+    capacity < 1
+  ) {
+    redirect("/owner/studios/new?error=incomplete");
+  }
+
+  const allowedAmenities = new Set([
+    "Wi-Fi",
+    "Air conditioning",
+    "Parking",
+    "Waiting area",
+    "Kitchen",
+    "Restroom",
+    "Wheelchair access",
+    "Natural light",
+    "Soundproofing",
+    "Engineer available",
+    "24/7 access",
+    "Freight elevator",
+  ]);
+
+  const amenities = Array.from(
+    new Set(
+      form
+        .getAll("amenities")
+        .map((value) => String(value).trim())
+        .filter((value) => allowedAmenities.has(value)),
+    ),
+  ).slice(0, 20);
+
+  const equipment = Array.from(
+    new Set(
+      text(form, "equipment", 1800)
+        .split(/[\n,;]+/)
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 40);
+
+  const schedulePreset = text(form, "schedulePreset", 40);
+  const schedule =
+    schedulePreset === "WEEKDAYS"
+      ? DAYS.map((_, dayOfWeek) => ({
+          dayOfWeek,
+          opensAt: "09:00",
+          closesAt: "18:00",
+          closed: dayOfWeek >= 5,
+        }))
+      : schedulePreset === "EVERYDAY"
+        ? DAYS.map((_, dayOfWeek) => ({
+            dayOfWeek,
+            opensAt: "09:00",
+            closesAt: "22:00",
+            closed: false,
+          }))
+        : DAYS.map((_, dayOfWeek) => ({
+            dayOfWeek,
+            opensAt: "09:00",
+            closesAt: "22:00",
+            closed: dayOfWeek === 6,
+          }));
+
+  const slug = await uniqueSlug(name);
+
+  const studio = await db.$transaction(async (tx) => {
+    const created = await tx.studio.create({
+      data: {
+        ownerId: user.id,
+        name,
+        slug,
+        description,
+        primaryCategory,
+        city,
+        neighborhood,
+        address,
+        phone,
+        instagram,
+        website,
+        latitude,
+        longitude,
+        depositPercent,
+        freeCancellationHours,
+      },
+    });
+
+    const room = await tx.room.create({
+      data: {
+        studioId: created.id,
+        name: roomName,
+        description: roomDescription,
+        category: roomCategory,
+        hourlyRateMad,
+        minimumHours,
+        capacity,
+        engineerIncluded,
+        active: true,
+      },
+    });
+
+    if (equipment.length) {
+      await tx.roomEquipment.createMany({
+        data: equipment.map((item) => ({
+          roomId: room.id,
+          name: item.slice(0, 120),
+          quantity: 1,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    if (amenities.length) {
+      await tx.studioAmenity.createMany({
+        data: amenities.map((item) => ({
+          studioId: created.id,
+          name: item,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    await tx.openingHour.createMany({
+      data: schedule.map((item) => ({
+        studioId: created.id,
+        ...item,
+      })),
+    });
+
+    return created;
+  });
+
+  revalidatePath("/owner");
+  revalidatePath("/owner/studios");
+  redirect(`/owner/studios/${studio.id}?onboarding=created#media`);
+}
+
 export async function updateStudioAction(form: FormData) {
   const user = await requireRole("STUDIO_OWNER");
   const studioId = text(form, "studioId", 80);

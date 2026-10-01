@@ -40,7 +40,7 @@ export default async function StudioBuilderPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ submit?: string; from?: string }>;
+  searchParams: Promise<{ submit?: string; from?: string; onboarding?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -90,6 +90,26 @@ export default async function StudioBuilderPage({
             </Link>
           </div>
         </div>
+
+        {query.onboarding === "created" && (
+          <div className="mt-6 rounded-2xl border border-acid/35 bg-acid/[0.055] p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <b className="text-sm text-acid">Core listing created</b>
+                <p className="mt-2 max-w-2xl text-xs leading-5 text-zinc-500">
+                  Your identity, location, first room, starting price, amenities and opening-hours preset are saved.
+                  Add real photos below, review the details, then preview and submit the listing for verification.
+                </p>
+              </div>
+              <Link
+                href={`/owner/studios/${studio.id}/preview`}
+                className="rounded-full border border-acid/30 px-4 py-2 text-xs font-black text-acid"
+              >
+                Preview so far →
+              </Link>
+            </div>
+          </div>
+        )}
 
         {query.submit === "incomplete" && (
           <div className="mt-6 rounded-xl border border-amber-800/50 bg-amber-950/20 p-4 text-sm text-amber-200">
@@ -220,7 +240,7 @@ export default async function StudioBuilderPage({
               </details>
             </section>
 
-            <section className="panel">
+            <section id="media" className="panel scroll-mt-28">
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">03 · Media & amenities</span><h2 className="mt-2 text-2xl font-black">Make the listing credible</h2>
               <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {studio.photos.map((photo) => <div key={photo.id} className="overflow-hidden rounded-xl border border-zinc-900 bg-zinc-950"><img src={photo.url} alt={photo.alt || studio.name} className="h-36 w-full object-cover" /><div className="flex items-center justify-between gap-2 p-3 text-xs text-zinc-600"><span>{photo.alt || "Studio photo"}</span><form action={removePhotoAction}><input type="hidden" name="studioId" value={studio.id} /><input type="hidden" name="photoId" value={photo.id} /><button className="text-red-400/70 hover:text-red-300">Remove</button></form></div></div>)}

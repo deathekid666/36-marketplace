@@ -1,29 +1,63 @@
 import Link from "next/link";
+
 import { AppHeader } from "@/components/AppHeader";
+import { StudioOnboardingWizard } from "@/components/StudioOnboardingWizard";
 import { requireRole } from "@/lib/auth";
 import { STUDIO_CATEGORIES } from "@/lib/studio";
-import { createStudioAction } from "@/app/owner/actions";
 
-export default async function NewStudioPage() {
+export default async function NewStudioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const user = await requireRole("STUDIO_OWNER");
-  return (
-    <main className="min-h-screen">
-      <AppHeader user={user} />
-      <section className="mx-auto max-w-3xl px-5 py-12">
-        <Link href="/owner/studios" className="text-xs font-bold text-zinc-500 hover:text-white">← My studios</Link>
-        <span className="mt-9 block text-xs font-bold uppercase tracking-[0.2em] text-acid">Step 1</span>
-        <h1 className="mt-3 text-4xl font-black tracking-[-0.045em]">Create your studio listing</h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-500">Start with the identity. Rooms, equipment, photos and availability come next.</p>
+  const query = await searchParams;
 
-        <form action={createStudioAction} className="panel mt-8 space-y-5">
-          <label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">Studio name</span><input className="field" name="name" required minLength={3} maxLength={120} placeholder="e.g. Atlas Sound Lab" /></label>
-          <label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">Primary category</span><select className="field" name="primaryCategory">{STUDIO_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">City</span><input className="field" name="city" defaultValue="Casablanca" required /></label>
-            <label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">Neighborhood</span><input className="field" name="neighborhood" placeholder="Maarif, Gauthier…" /></label>
+  return (
+    <main className="min-h-screen bg-[#f7f7f7] text-[#222]">
+      <AppHeader user={user} />
+
+      <section className="mx-auto max-w-7xl px-5 py-9 sm:py-12">
+        <div className="mb-8">
+          <Link
+            href="/owner/studios"
+            className="text-xs font-bold text-[#717171] hover:text-[#222]"
+          >
+            ← My studios
+          </Link>
+
+          <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">
+                List a studio
+              </span>
+              <h1 className="mt-3 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
+                Build your 36 listing.
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
+                A guided setup for the studio identity, exact location, first room,
+                amenities, availability and booking policies.
+              </p>
+            </div>
+
+            <div className="rounded-full border border-[#dddddd] bg-white px-4 py-2 text-[10px] font-black text-[#717171]">
+              Draft only · nothing goes public until verified
+            </div>
           </div>
-          <button className="w-full rounded-xl bg-acid px-5 py-3.5 text-sm font-black text-black">Create listing →</button>
-        </form>
+        </div>
+
+        {query.error === "incomplete" && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Some required listing details were missing. Please review the steps and choose an exact address suggestion before creating the draft.
+          </div>
+        )}
+
+        <StudioOnboardingWizard
+          categories={STUDIO_CATEGORIES.map((category) => ({
+            value: category.value,
+            label: category.label,
+          }))}
+        />
       </section>
     </main>
   );
