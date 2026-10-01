@@ -28,7 +28,83 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  priority_seed:
+    name: seed-${{ matrix.hub }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        include:
+          - hub: london
+            bbox: "-0.55,51.28,0.35,51.70"
+            countries: "GB"
+          - hub: paris
+            bbox: "2.10,48.70,2.55,49.05"
+            countries: "FR"
+          - hub: berlin
+            bbox: "13.05,52.30,13.80,52.70"
+            countries: "DE"
+          - hub: madrid
+            bbox: "-3.95,40.20,-3.45,40.60"
+            countries: "ES"
+          - hub: cairo
+            bbox: "30.80,29.80,31.65,30.35"
+            countries: "EG"
+          - hub: lagos
+            bbox: "3.00,6.20,3.80,6.85"
+            countries: "NG"
+          - hub: nairobi
+            bbox: "36.55,-1.55,37.10,-1.00"
+            countries: "KE"
+          - hub: johannesburg
+            bbox: "27.70,-26.50,28.45,-25.85"
+            countries: "ZA"
+          - hub: dubai
+            bbox: "54.90,24.75,55.75,25.55"
+            countries: "AE"
+          - hub: tokyo
+            bbox: "139.40,35.40,140.10,36.00"
+            countries: "JP"
+          - hub: seoul
+            bbox: "126.70,37.35,127.25,37.75"
+            countries: "KR"
+          - hub: bangkok
+            bbox: "100.25,13.45,100.95,14.15"
+            countries: "TH"
+          - hub: new-york
+            bbox: "-74.30,40.45,-73.65,40.95"
+            countries: "US"
+          - hub: los-angeles
+            bbox: "-118.70,33.65,-117.70,34.40"
+            countries: "US"
+          - hub: toronto
+            bbox: "-79.75,43.45,-79.05,43.95"
+            countries: "CA"
+          - hub: mexico-city
+            bbox: "-99.40,19.10,-98.90,19.70"
+            countries: "MX"
+
+    env:
+      REGION_NAME: "seed-${{ matrix.hub }}"
+      COUNTRIES: ${{ matrix.countries }}
+      BBOX: ${{ matrix.bbox }}
+      MAX_RECORDS: "80"
+      COUNTRY_LIMIT: "80"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install importer dependencies
+        run: python -m pip install --disable-pip-version-check duckdb==1.4.1 "phonenumbers>=8.13,<10"
+      - name: Import priority creative-hub contacts
+        run: python scripts/import-global-studio-business-contacts.py
+
   import:
+    needs: priority_seed
     name: import-${{ matrix.region }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
@@ -45,7 +121,7 @@ jobs:
             countries: "AL,AD,AT,BY,BE,BA,BG,HR,CY,CZ,DK,EE,FI,FR,DE,GR,HU,IS,IE,IT,XK,LV,LI,LT,LU,MT,MD,MC,ME,NL,MK,NO,PL,PT,RO,RU,SM,RS,SK,SI,ES,SE,CH,UA,GB,VA"
           - region: asia
             bbox: "25,-10,180,82"
-            countries: "AF,AM,AZ,BH,BD,BT,BN,KH,CN,GE,HK,IN,ID,IR,IQ,IL,JP,JO,KZ,KW,KG,LA,LB,MO,MY,MV,MN,MM,NP,KP,PS,PH,QA,SA,SG,LK,SY,TW,TJ,TH,TL,TR,TM,AE,UZ,VN,YE"
+            countries: "AF,AM,AZ,BH,BD,BT,BN,KH,CN,GE,HK,IN,ID,IR,IQ,IL,JP,JO,KZ,KW,KG,KR,LA,LB,MO,MY,MV,MN,MM,NP,KP,PS,PH,QA,SA,SG,LK,SY,TW,TJ,TH,TL,TR,TM,AE,UZ,VN,YE"
           - region: north-america
             bbox: "-170,5,-50,85"
             countries: "CA,US,MX,GT,BZ,HN,SV,NI,CR,PA,BS,BB,CU,JM,HT,DO,TT,GD,LC,VC,AG,DM,KN,GL,BM,PM"

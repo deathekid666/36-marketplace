@@ -7881,3 +7881,232 @@ label.air-search-segment:hover {
     width: 235px;
   }
 }
+
+
+/* Creative explorer map v4 — stable bundled renderer + Airbnb-like visual hierarchy */
+.creative-explorer-map-pane {
+  padding: 0;
+  border-left: 1px solid #eeeeee;
+  background: #f6f7f7;
+}
+
+.creative-explorer-map-head {
+  min-height: 56px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid #eeeeee;
+  background: rgba(255,255,255,.96);
+}
+
+.creative-explorer-map-head b {
+  font-size: 14px;
+  font-weight: 850;
+  letter-spacing: -.02em;
+}
+
+.creative-explorer-map-head span,
+.creative-explorer-map-head small {
+  font-size: 9px;
+}
+
+.air-map-shell {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #eef0f1;
+}
+
+.air-map-canvas {
+  width: 100%;
+  height: calc(100vh - 237px);
+  min-height: 560px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #eef0f1;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.035);
+}
+
+.air-map-country-pin,
+.air-map-city-pin,
+.air-map-category-pin,
+.air-map-price-pin,
+.air-map-mini-pin {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 2px 9px rgba(0,0,0,.18);
+}
+
+.air-map-country-pin {
+  gap: 7px;
+  min-height: 34px;
+  padding: 8px 11px;
+  border-color: rgba(0,0,0,.18);
+  background: rgba(255,255,255,.98);
+}
+
+.air-map-country-pin span {
+  order: 1;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: -.015em;
+}
+
+.air-map-country-pin b {
+  order: 2;
+  display: inline;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #717171;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.air-map-country-pin:hover,
+.air-map-city-pin:hover,
+.air-map-category-pin:hover,
+.air-map-price-pin:hover {
+  z-index: 3;
+  transform: translateY(-1px) scale(1.035);
+  border-color: #222;
+}
+
+.air-map-city-pin {
+  min-height: 35px;
+  padding: 8px 11px;
+  background: rgba(255,255,255,.98);
+}
+
+.air-map-city-pin b {
+  font-size: 10px;
+}
+
+.air-map-city-pin span {
+  font-size: 9px;
+}
+
+.air-map-category-pin {
+  min-height: 35px;
+  padding: 5px 10px 5px 5px;
+  background: rgba(255,255,255,.98);
+}
+
+.air-map-category-pin i {
+  width: 25px;
+  height: 25px;
+}
+
+.air-map-price-pin {
+  min-height: 34px;
+  padding: 8px 12px;
+  background: #fff;
+  border-color: rgba(0,0,0,.22);
+}
+
+.air-map-price-pin b {
+  font-size: 10px;
+}
+
+.air-map-mini-pin {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #fff;
+  background: #222;
+  box-shadow: 0 2px 8px rgba(0,0,0,.22);
+}
+
+.air-map-mini-pin span {
+  width: 7px;
+  height: 7px;
+  background: #fff;
+}
+
+.air-map-fullscreen,
+.air-map-search-area {
+  z-index: 5;
+  min-height: 36px;
+  padding: 9px 14px;
+  font-size: 10px;
+}
+
+.air-map-fullscreen {
+  top: 14px;
+  right: 14px;
+  border-color: #222;
+  background: #222;
+}
+
+.air-map-search-area {
+  top: 14px;
+  background: #fff;
+}
+
+.air-map-loading,
+.air-map-error,
+.air-map-debug {
+  z-index: 6;
+  left: 14px;
+  bottom: 14px;
+  font-size: 10px;
+}
+
+.air-map-popup .maplibregl-popup-content {
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.22);
+}
+
+.air-map-popup-card {
+  width: 285px;
+}
+
+.air-map-popup-title strong {
+  font-size: 12px;
+}
+
+.air-map-popup-copy p,
+.air-map-popup-actions a {
+  font-size: 9px;
+}
+
+.air-map-canvas .maplibregl-ctrl-bottom-right {
+  right: 8px;
+  bottom: 8px;
+}
+
+.air-map-canvas .maplibregl-ctrl-bottom-left {
+  left: 8px;
+  bottom: 6px;
+}
+
+@media (max-width: 900px) {
+  .creative-explorer-map-pane {
+    border-left: 0;
+    border-top: 1px solid #eeeeee;
+  }
+
+  .air-map-canvas {
+    height: 58vh;
+    min-height: 430px;
+  }
+}
+
+@media (max-width: 560px) {
+  .creative-explorer-map-head {
+    min-height: 48px;
+    padding: 8px 11px;
+  }
+
+  .air-map-canvas {
+    min-height: 390px;
+  }
+
+  .air-map-country-pin span {
+    font-size: 10px;
+  }
+
+  .air-map-country-pin b {
+    font-size: 9px;
+  }
+}

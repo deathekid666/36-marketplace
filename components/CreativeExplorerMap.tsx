@@ -1,5 +1,7 @@
 "use client";
 
+import * as maplibregl from "maplibre-gl";
+
 import {
   usePathname,
   useRouter,
@@ -59,12 +61,6 @@ type MapMeta = {
   bookableCount: number;
 };
 
-declare global {
-  interface Window {
-    __36MapLibre?: any;
-  }
-}
-
 const CATEGORY_META: Record<string, { icon: string; color: string }> = {
   RECORDING: { icon: "●", color: "#ff385c" },
   PODCAST: { icon: "◉", color: "#7c3cff" },
@@ -78,6 +74,31 @@ const CATEGORY_META: Record<string, { icon: string; color: string }> = {
   VOICE_OVER: { icon: "▮", color: "#1888ff" },
   LIVE_STREAMING: { icon: "◍", color: "#00a6a6" },
   OTHER: { icon: "•", color: "#717171" },
+};
+
+const MAP_STYLE = {
+  version: 8 as const,
+  sources: {
+    cartoLight: {
+      type: "raster" as const,
+      tiles: [
+        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+      ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors © CARTO",
+    },
+  },
+  layers: [
+    {
+      id: "carto-light",
+      type: "raster" as const,
+      source: "cartoLight",
+      minzoom: 0,
+      maxzoom: 20,
+    },
+  ],
 };
 
 function categoryMeta(key: string | null | undefined) {
@@ -106,55 +127,6 @@ function compactName(value: string) {
 function cssEscape(value: string) {
   if (typeof CSS !== "undefined" && CSS.escape) return CSS.escape(value);
   return value.replace(/["\\]/g, "\\$&");
-}
-
-async function ensureMapLibre() {
-  if (window.__36MapLibre) return window.__36MapLibre;
-
-  if (!document.querySelector('link[data-maplibre="36"]')) {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href =
-      "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css";
-    link.dataset.maplibre = "36";
-    document.head.appendChild(link);
-  }
-
-  return await new Promise<any>((resolve, reject) => {
-    const ready = () => {
-      window.removeEventListener("36:maplibre-ready", ready);
-      if (window.__36MapLibre) resolve(window.__36MapLibre);
-      else reject(new Error("Map library failed to initialize."));
-    };
-
-    window.addEventListener("36:maplibre-ready", ready);
-
-    const existing = document.querySelector(
-      'script[data-maplibre="36"]',
-    ) as HTMLScriptElement | null;
-
-    if (existing) {
-      if (window.__36MapLibre) {
-        window.removeEventListener("36:maplibre-ready", ready);
-        resolve(window.__36MapLibre);
-      }
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.type = "module";
-    script.dataset.maplibre = "36";
-    script.textContent = `
-      import * as maplibregl from "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
-      window.__36MapLibre = maplibregl;
-      window.dispatchEvent(new Event("36:maplibre-ready"));
-    `;
-    script.onerror = () => {
-      window.removeEventListener("36:maplibre-ready", ready);
-      reject(new Error("Map library failed to load."));
-    };
-    document.head.appendChild(script);
-  });
 }
 
 export function CreativeExplorerMap({
@@ -528,16 +500,17 @@ export function CreativeExplorerMap({
     }
 
     async function initialize() {
-      const maplibre = await ensureMapLibre();
-      if (!maplibre || disposed || !ref.current) return;
+      const maplibre = maplibregl;
+      if (disposed || !ref.current) return;
 
       const map = new maplibre.Map({
         container: ref.current,
-        style: "https://tiles.openfreemap.org/styles/positron",
-        center: [0, 22],
-        zoom: 1.75,
-        minZoom: 1.5,
+        style: MAP_STYLE,
+        center: [0, 20],
+        zoom: 1.6,
+        minZoom: 1.35,
         maxZoom: 18,
+        renderWorldCopies: false,
         maxBounds: [
           [-180, -75],
           [180, 84],
@@ -563,9 +536,15 @@ export function CreativeExplorerMap({
         await refreshNodes(maplibre);
       });
 
-      map.on("zoomend", () => scheduleRefresh(maplibre, 100));
-      map.on("moveend", () => scheduleRefresh(maplibre, 160));
+      map.on("zoomend", () => scheduleRefresh(maplibre, 120));
+      map.on("moveend", () => scheduleRefresh(maplibre, 180));
       map.on("dragend", () => setAreaDirty(true));
+      map.on("error", (event: any) => {
+        const message = String(event?.error?.message || "");
+        if (/webgl|context/i.test(message) && !disposed) {
+          setMapError("This browser could not start the interactive map.");
+        }
+      });
 
       const focusListener = (event: Event) => {
         const custom = event as CustomEvent<{
