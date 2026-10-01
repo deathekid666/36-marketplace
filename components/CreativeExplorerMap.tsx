@@ -515,7 +515,7 @@ export function CreativeExplorerMap({
           [-180, -75],
           [180, 84],
         ],
-        attributionControl: true,
+        attributionControl: {},
         dragRotate: false,
         pitchWithRotate: false,
       });
