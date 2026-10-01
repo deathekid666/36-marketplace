@@ -878,6 +878,7 @@ export default async function StudioDetailPage({
                 }))}
                 userRole={user?.role || null}
                 depositPercent={studio.depositPercent}
+                freeCancellationHours={studio.freeCancellationHours}
                 taxRateBps={studio.taxRateBps}
                 initialDate={safeDate(query.date)}
                 initialDurationHours={safeDuration(

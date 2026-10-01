@@ -223,12 +223,26 @@ export default async function OwnerAvailabilityPage({
               Block dates and hours without changing your verified listing.
             </p>
           </div>
-          <Link
-            href="/owner/bookings"
-            className="rounded-full border border-[#cfcfcf] px-5 py-3 text-xs font-black"
-          >
-            Booking dashboard
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/owner/studios/${studio.id}/preview`}
+              className="rounded-full border border-[#cfcfcf] px-5 py-3 text-xs font-black"
+            >
+              Preview listing
+            </Link>
+            <Link
+              href={hrefFor({ month: localMonthKey(new Date()) })}
+              className="rounded-full border border-[#cfcfcf] px-5 py-3 text-xs font-black"
+            >
+              Today
+            </Link>
+            <Link
+              href="/owner/bookings"
+              className="rounded-full border border-[#cfcfcf] px-5 py-3 text-xs font-black"
+            >
+              Booking dashboard
+            </Link>
+          </div>
         </div>
 
         {query.error === "booking-conflict" && (

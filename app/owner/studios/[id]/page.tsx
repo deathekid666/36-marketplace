@@ -66,7 +66,7 @@ export default async function StudioBuilderPage({
     <main className="min-h-screen">
       <AppHeader user={user} />
       <section className="mx-auto max-w-7xl px-5 py-10">
-        <Link href="/owner" className="text-xs font-bold text-zinc-500 hover:text-white">← Your studios</Link>
+        <Link href="/owner/studios" className="text-xs font-bold text-zinc-500 hover:text-white">← My studios</Link>
 
         <div className="mt-7 flex flex-wrap items-end justify-between gap-5">
           <div>
@@ -77,9 +77,17 @@ export default async function StudioBuilderPage({
             <h1 className="mt-4 text-4xl font-black tracking-[-0.045em] sm:text-5xl">{studio.name}</h1>
             <p className="mt-2 text-sm text-zinc-500">{categoryLabel(studio.primaryCategory)} · {studio.neighborhood || studio.city}</p>
           </div>
-          <div className="min-w-56 rounded-2xl border border-zinc-900 bg-zinc-950 p-5">
-            <div className="flex items-end justify-between"><span className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-600">Listing readiness</span><b className="text-2xl text-acid">{completion}%</b></div>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-900"><div className="h-full bg-acid" style={{ width: `${completion}%` }} /></div>
+          <div className="flex min-w-56 flex-col gap-3">
+            <div className="rounded-2xl border border-zinc-900 bg-zinc-950 p-5">
+              <div className="flex items-end justify-between"><span className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-600">Listing readiness</span><b className="text-2xl text-acid">{completion}%</b></div>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-900"><div className="h-full bg-acid" style={{ width: `${completion}%` }} /></div>
+            </div>
+            <Link
+              href={`/owner/studios/${studio.id}/preview`}
+              className="rounded-xl border border-zinc-800 bg-white px-5 py-3 text-center text-xs font-black text-[#222] hover:border-acid/40"
+            >
+              Preview public listing →
+            </Link>
           </div>
         </div>
 

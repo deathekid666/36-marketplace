@@ -126,6 +126,19 @@ export function DateCalendar({
   const canGoBack = !minMonth || month.getTime() > minMonth.getTime();
   const furthestVisibleMonth = twoMonths ? nextMonth : month;
   const canGoForward = !maxMonth || furthestVisibleMonth.getTime() < maxMonth.getTime();
+  const todayValue = toDateValue(new Date());
+  const nextAvailable = availability
+    ? Object.entries(availability)
+        .filter(([key, count]) => count > 0 && key >= (min || todayValue))
+        .sort(([a], [b]) => a.localeCompare(b))[0]?.[0] || null
+    : null;
+
+  function jumpTo(value: string) {
+    const target = parseDateValue(value);
+    if (!target) return;
+    setMonth(new Date(target.getFullYear(), target.getMonth(), 1));
+    onChange(value);
+  }
 
   function shiftMonth(delta: number) {
     setMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
@@ -155,7 +168,19 @@ export function DateCalendar({
               </>
             )}
           </div>
-          {footer}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {minimum && todayValue >= toDateValue(minimum) && (!maximum || todayValue <= toDateValue(maximum)) && (
+              <button type="button" onClick={() => jumpTo(todayValue)} className="rounded-full border border-[#dddddd] px-3 py-1.5 text-[10px] font-black text-[#555]">
+                Today
+              </button>
+            )}
+            {nextAvailable && nextAvailable !== value && (
+              <button type="button" onClick={() => jumpTo(nextAvailable)} className="rounded-full border border-[#dddddd] px-3 py-1.5 text-[10px] font-black text-[#222]">
+                Next available
+              </button>
+            )}
+            {footer}
+          </div>
         </div>
       )}
     </div>

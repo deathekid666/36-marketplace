@@ -104,6 +104,7 @@ export function BookingWidget({
   initialStartAt,
   taxRateBps = 0,
   locationLabel,
+  freeCancellationHours = 24,
 }: {
   rooms: RoomOption[];
   addons?: AddonOption[];
@@ -114,6 +115,7 @@ export function BookingWidget({
   initialStartAt?: string;
   taxRateBps?: number;
   locationLabel?: string;
+  freeCancellationHours?: number;
 }) {
   const router = useRouter();
   const [roomId, setRoomId] = useState(rooms[0]?.id || "");
@@ -145,6 +147,8 @@ export function BookingWidget({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] =
     useState<OfflinePaymentMethod>("PAY_AT_STUDIO");
+  const [notes, setNotes] = useState("");
+  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
 
   const today = useMemo(() => toLocalDateValue(new Date()), []);
   const maxDate = useMemo(() => {
@@ -321,6 +325,7 @@ export function BookingWidget({
       }
 
       setQuote(data.quote as BookingQuote);
+      setAcceptedPolicies(false);
       setCheckoutOpen(true);
     } catch {
       setQuote(null);
@@ -353,6 +358,7 @@ export function BookingWidget({
           promoCode: promoCode.trim(),
           expectedTotalMad: quote.totalAmountMad,
           paymentMethod,
+          notes: notes.trim(),
         }),
       });
 
@@ -844,6 +850,25 @@ export function BookingWidget({
             </div>
 
             <div className="mt-5">
+              <label>
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8a8a8a]">
+                  Session notes
+                </span>
+                <textarea
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  maxLength={1200}
+                  rows={3}
+                  placeholder="Tell the studio what you are creating, arrival needs, setup requests or anything they should prepare."
+                  className="mt-3 w-full resize-none rounded-2xl border border-[#dddddd] bg-white px-4 py-3 text-sm leading-6 text-[#222] outline-none focus:border-[#bdbdbd]"
+                />
+                <span className="mt-1 block text-right text-[9px] text-[#a3a3a3]">
+                  {notes.length}/1200
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-5">
               <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8a8a8a]">
                 Payment method
               </span>
@@ -911,9 +936,40 @@ export function BookingWidget({
               No card processor or paid payment service is used.
             </div>
 
+            <div className="mt-3 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] p-4">
+              <div className="grid gap-2 text-xs sm:grid-cols-2">
+                <div>
+                  <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
+                    Cancellation
+                  </span>
+                  <b className="mt-1 block">
+                    Free up to {freeCancellationHours}h before the session
+                  </b>
+                </div>
+                <div>
+                  <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
+                    Studio deposit policy
+                  </span>
+                  <b className="mt-1 block">{depositPercent}%</b>
+                </div>
+              </div>
+            </div>
+
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-[#dddddd] p-4">
+              <input
+                type="checkbox"
+                checked={acceptedPolicies}
+                onChange={(event) => setAcceptedPolicies(event.target.checked)}
+                className="mt-0.5 accent-[#D9FF43]"
+              />
+              <span className="text-xs leading-5 text-[#717171]">
+                I confirm the date, room, payment method and studio cancellation policy shown above.
+              </span>
+            </label>
+
             <button
               type="button"
-              disabled={booking}
+              disabled={booking || !acceptedPolicies}
               onClick={book}
               className="mt-5 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-[#111] transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-[#e6e6e6] disabled:text-[#9a9a9a]"
             >
