@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install DuckDB
-        run: python -m pip install --disable-pip-version-check duckdb==1.4.1
+      - name: Install importer dependencies
+        run: python -m pip install --disable-pip-version-check duckdb==1.4.1 "phonenumbers>=8.13,<10"
       - name: Import structured public studio business contacts
         run: python scripts/import-global-studio-business-contacts.py

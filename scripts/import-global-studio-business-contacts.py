@@ -14,12 +14,39 @@ import urllib.parse
 import urllib.request
 
 import duckdb
+import phonenumbers
 
 API_URL = "https://36-marketplace.vercel.app/api/internal/discovery/global-contacts"
 CONSOLIDATE_URL = "https://36-marketplace.vercel.app/api/internal/discovery/consolidate"
 AUDIENCE = "36-marketplace-global-contacts"
 MAX_RECORDS = max(0, int(os.environ.get("MAX_RECORDS", "0") or "0"))
 BATCH_SIZE = 12
+
+def normalize_public_phone(raw_phone, country_code):
+    raw = str(raw_phone or "").strip()
+    region = str(country_code or "").strip().upper()
+
+    if not raw or len(region) != 2:
+        return None
+
+    try:
+        parsed = phonenumbers.parse(raw, region)
+    except phonenumbers.NumberParseException:
+        return None
+
+    if not phonenumbers.is_possible_number(parsed):
+        return None
+
+    # Overture is public business data, but only retain a phone when
+    # libphonenumber can map it to a valid international number.
+    if not phonenumbers.is_valid_number(parsed):
+        return None
+
+    return phonenumbers.format_number(
+        parsed,
+        phonenumbers.PhoneNumberFormat.E164,
+    )
+
 
 
 def latest_release():
@@ -184,6 +211,8 @@ columns = [
 batch = []
 selected = 0
 totals = {"accepted": 0, "enriched": 0, "review": 0, "matched": 0, "refreshed": 0}
+country_selected = {}
+phone_rejected = 0
 
 
 def flush():
@@ -206,10 +235,15 @@ while not stop:
 
     for row in rows:
         data = dict(zip(columns, row))
-        phone = str(data["phone"] or "").strip()
+        raw_phone = str(data["phone"] or "").strip()
         country = str(data["country"] or "").strip().upper()
 
-        if not phone.startswith("+") or len(country) != 2:
+        if len(country) != 2:
+            continue
+
+        phone = normalize_public_phone(raw_phone, country)
+        if not phone:
+            phone_rejected += 1
             continue
 
         hierarchy = [str(x) for x in (data["taxonomy_hierarchy"] or []) if x]
@@ -243,6 +277,7 @@ while not stop:
             }
         )
         selected += 1
+        country_selected[country] = country_selected.get(country, 0) + 1
 
         if len(batch) >= BATCH_SIZE:
             flush()
@@ -252,7 +287,23 @@ while not stop:
             break
 
 flush()
-print(json.dumps({"release": release, "selected": selected, "totals": totals}, indent=2))
+print(
+    json.dumps(
+        {
+            "release": release,
+            "selected": selected,
+            "phoneRejected": phone_rejected,
+            "countries": dict(
+                sorted(
+                    country_selected.items(),
+                    key=lambda item: (-item[1], item[0]),
+                )
+            ),
+            "totals": totals,
+        },
+        indent=2,
+    )
+)
 
 merged_duplicates = consolidate_duplicates()
 print(json.dumps({"duplicateConsolidationMerged": merged_duplicates}))
