@@ -1,7 +1,5 @@
 "use client";
 
-import * as maplibregl from "maplibre-gl";
-
 import {
   usePathname,
   useRouter,
@@ -76,31 +74,6 @@ const CATEGORY_META: Record<string, { icon: string; color: string }> = {
   OTHER: { icon: "•", color: "#717171" },
 };
 
-const MAP_STYLE = {
-  version: 8 as const,
-  sources: {
-    cartoLight: {
-      type: "raster" as const,
-      tiles: [
-        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
-        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
-        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
-      ],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors © CARTO",
-    },
-  },
-  layers: [
-    {
-      id: "carto-light",
-      type: "raster" as const,
-      source: "cartoLight",
-      minzoom: 0,
-      maxzoom: 20,
-    },
-  ],
-};
-
 function categoryMeta(key: string | null | undefined) {
   return CATEGORY_META[String(key || "OTHER")] || CATEGORY_META.OTHER;
 }
@@ -119,14 +92,117 @@ function escapeHtml(value: string) {
   );
 }
 
-function compactName(value: string) {
-  const cleaned = value.trim();
-  return cleaned.length > 26 ? cleaned.slice(0, 24) + "…" : cleaned;
-}
-
 function cssEscape(value: string) {
   if (typeof CSS !== "undefined" && CSS.escape) return CSS.escape(value);
   return value.replace(/["\\]/g, "\\$&");
+}
+
+function popupHtml(node: PlaceNode) {
+  const photo = node.photoUrl
+    ? '<img class="air-map-popup-photo" src="' +
+      escapeHtml(node.photoUrl) +
+      '" alt="" referrerpolicy="no-referrer" />'
+    : '<div class="air-map-popup-photo fallback">36</div>';
+
+  return (
+    '<div class="air-map-popup-card">' +
+    photo +
+    '<div class="air-map-popup-copy">' +
+    '<div class="air-map-popup-title">' +
+    "<strong>" +
+    escapeHtml(node.name) +
+    "</strong>" +
+    (node.rating ? "<span>★ " + node.rating.toFixed(1) + "</span>" : "") +
+    "</div>" +
+    "<p>" +
+    escapeHtml([node.category, node.city].filter(Boolean).join(" · ")) +
+    "</p>" +
+    (node.kind === "BOOKABLE" && node.price
+      ? "<b>" +
+        node.price.toLocaleString("en") +
+        " MAD <small>/ hour</small></b>"
+      : "<em>Contact only</em>") +
+    '<div class="air-map-popup-actions">' +
+    '<a href="' +
+    escapeHtml(node.href) +
+    '">View details</a>' +
+    '<a href="https://www.google.com/maps/dir/?api=1&destination=' +
+    encodeURIComponent(node.lat + "," + node.lng) +
+    '" target="_blank" rel="noreferrer">Directions ↗</a>' +
+    "</div></div></div>"
+  );
+}
+
+function markerSpec(L: any, node: MapNode) {
+  if (node.type === "country") {
+    return L.divIcon({
+      className: "air-map-leaflet-icon",
+      html:
+        '<div class="air-map-country-pin"><span>' +
+        escapeHtml(node.label) +
+        "</span><b>" +
+        node.count.toLocaleString("en") +
+        "</b></div>",
+      iconSize: [118, 36],
+      iconAnchor: [59, 18],
+    });
+  }
+
+  if (node.type === "city") {
+    return L.divIcon({
+      className: "air-map-leaflet-icon",
+      html:
+        '<div class="air-map-city-pin"><b>' +
+        escapeHtml(node.label) +
+        "</b><span>" +
+        node.count.toLocaleString("en") +
+        "</span></div>",
+      iconSize: [116, 36],
+      iconAnchor: [58, 18],
+    });
+  }
+
+  if (node.type === "category") {
+    const category = categoryMeta(node.categoryKey);
+    return L.divIcon({
+      className: "air-map-leaflet-icon",
+      html:
+        '<div class="air-map-category-pin"><i style="--pin-color:' +
+        category.color +
+        '">' +
+        escapeHtml(category.icon) +
+        "</i><b>" +
+        escapeHtml(node.label) +
+        "</b><span>" +
+        node.count.toLocaleString("en") +
+        "</span></div>",
+      iconSize: [126, 36],
+      iconAnchor: [63, 18],
+    });
+  }
+
+  if (node.kind === "BOOKABLE" && node.price) {
+    return L.divIcon({
+      className: "air-map-leaflet-icon",
+      html:
+        '<div class="air-map-price-pin"><b>' +
+        node.price.toLocaleString("en") +
+        " MAD</b></div>",
+      iconSize: [86, 34],
+      iconAnchor: [43, 17],
+    });
+  }
+
+  const category = categoryMeta(node.categoryKey);
+  return L.divIcon({
+    className: "air-map-leaflet-icon",
+    html:
+      '<div class="air-map-mini-pin" style="--pin-color:' +
+      category.color +
+      '"><span></span></div>',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
 }
 
 export function CreativeExplorerMap({
@@ -139,8 +215,9 @@ export function CreativeExplorerMap({
   const markersRef = useRef<any[]>([]);
   const fetchAbortRef = useRef<AbortController | null>(null);
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingFocusRef = useRef<string | null>(null);
   const didAutoFitRef = useRef(false);
+  const pendingFocusRef = useRef<string | null>(null);
+  const latestNodesRef = useRef<MapNode[]>([]);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -159,25 +236,34 @@ export function CreativeExplorerMap({
     if (!fullScreen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullScreen(false);
+    };
+    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
     };
   }, [fullScreen]);
 
   useEffect(() => {
-    mapRef.current?.resize?.();
+    const timer = window.setTimeout(() => {
+      mapRef.current?.invalidateSize?.();
+    }, 60);
+    return () => window.clearTimeout(timer);
   }, [fullScreen]);
 
   useEffect(() => {
     if (!ref.current) return;
 
     let disposed = false;
+    let L: any;
+    let markerLayer: any;
+    let fallbackTilesUsed = false;
 
     function clearMarkers() {
-      for (const marker of markersRef.current) {
-        marker.remove?.();
-      }
       markersRef.current = [];
+      markerLayer?.clearLayers?.();
     }
 
     function highlightCard(id: string) {
@@ -189,178 +275,51 @@ export function CreativeExplorerMap({
       );
     }
 
-    function countryElement(node: ClusterNode) {
-      const element = document.createElement("button");
-      element.type = "button";
-      element.className = "air-map-country-pin";
-      element.innerHTML =
-        "<b>" +
-        node.count.toLocaleString("en") +
-        "</b><span>" +
-        escapeHtml(node.label) +
-        "</span>";
-      return element;
-    }
-
-    function cityElement(node: ClusterNode) {
-      const element = document.createElement("button");
-      element.type = "button";
-      element.className = "air-map-city-pin";
-      element.innerHTML =
-        "<b>" +
-        escapeHtml(node.label) +
-        "</b><span>" +
-        node.count.toLocaleString("en") +
-        "</span>";
-      return element;
-    }
-
-    function categoryElement(node: ClusterNode) {
-      const category = categoryMeta(node.categoryKey);
-      const element = document.createElement("button");
-      element.type = "button";
-      element.className = "air-map-category-pin";
-      element.innerHTML =
-        '<i style="--pin-color:' +
-        category.color +
-        '">' +
-        escapeHtml(category.icon) +
-        "</i><b>" +
-        escapeHtml(node.label) +
-        "</b><span>" +
-        node.count.toLocaleString("en") +
-        "</span>";
-      return element;
-    }
-
-    function placeElement(node: PlaceNode) {
-      const category = categoryMeta(node.categoryKey);
-      const element = document.createElement("button");
-      element.type = "button";
-
-      if (node.kind === "BOOKABLE" && node.price) {
-        element.className = "air-map-price-pin";
-        element.innerHTML =
-          "<b>" + node.price.toLocaleString("en") + " MAD</b>";
-        return element;
-      }
-
-      element.className = "air-map-mini-pin";
-      element.title = node.name;
-      element.innerHTML =
-        '<span style="--pin-color:' +
-        category.color +
-        '"></span>';
-      return element;
-    }
-
-    function popupHtml(node: PlaceNode) {
-      const photo = node.photoUrl
-        ? '<img class="air-map-popup-photo" src="' +
-          escapeHtml(node.photoUrl) +
-          '" alt="" referrerpolicy="no-referrer" />'
-        : '<div class="air-map-popup-photo fallback">36</div>';
-
-      return (
-        '<div class="air-map-popup-card">' +
-        photo +
-        '<div class="air-map-popup-copy">' +
-        '<div class="air-map-popup-title">' +
-        "<strong>" +
-        escapeHtml(node.name) +
-        "</strong>" +
-        (node.rating
-          ? "<span>★ " + node.rating.toFixed(1) + "</span>"
-          : "") +
-        "</div>" +
-        "<p>" +
-        escapeHtml(
-          [node.category, node.city].filter(Boolean).join(" · "),
-        ) +
-        "</p>" +
-        (node.kind === "BOOKABLE" && node.price
-          ? "<b>" +
-            node.price.toLocaleString("en") +
-            " MAD <small>/ hour</small></b>"
-          : "<em>Contact only</em>") +
-        '<div class="air-map-popup-actions">' +
-        '<a href="' +
-        escapeHtml(node.href) +
-        '">View details</a>' +
-        '<a href="https://www.google.com/maps/dir/?api=1&destination=' +
-        encodeURIComponent(node.lat + "," + node.lng) +
-        '" target="_blank" rel="noreferrer">Directions ↗</a>' +
-        "</div></div></div>"
-      );
-    }
-
     function fitNodes(nodes: MapNode[]) {
       const map = mapRef.current;
-      if (!map || !nodes.length) return;
-
-      const lngs = nodes.map((node) => node.lng);
-      const lats = nodes.map((node) => node.lat);
-      const west = Math.min(...lngs);
-      const east = Math.max(...lngs);
-      const south = Math.min(...lats);
-      const north = Math.max(...lats);
+      if (!map || !L || nodes.length === 0) return;
 
       if (nodes.length === 1) {
-        map.easeTo({
-          center: [nodes[0].lng, nodes[0].lat],
-          zoom: filters.city ? 10 : 5.5,
-          duration: 0,
-        });
+        map.setView(
+          [nodes[0].lat, nodes[0].lng],
+          filters.city ? 11 : 6,
+          { animate: false },
+        );
         return;
       }
 
-      map.fitBounds(
-        [
-          [west, south],
-          [east, north],
-        ],
-        {
-          padding: 70,
-          maxZoom: filters.city ? 10 : 5.5,
-          duration: 0,
-        },
-      );
+      const bounds = L.latLngBounds(nodes.map((node) => [node.lat, node.lng]));
+      map.fitBounds(bounds, {
+        padding: [55, 55],
+        maxZoom: filters.city ? 11 : 6,
+        animate: false,
+      });
     }
 
-    function renderNodes(maplibre: any, nodes: MapNode[]) {
+    function renderNodes(nodes: MapNode[]) {
       const map = mapRef.current;
-      if (!map) return;
+      if (!map || !L || !markerLayer) return;
 
       clearMarkers();
+      latestNodesRef.current = nodes;
 
       for (const node of nodes) {
-        const element =
-          node.type === "country"
-            ? countryElement(node)
-            : node.type === "city"
-              ? cityElement(node)
-              : node.type === "category"
-                ? categoryElement(node)
-                : placeElement(node as PlaceNode);
-
-        const marker = new maplibre.Marker({
-          element,
-          anchor: "center",
-        })
-          .setLngLat([node.lng, node.lat])
-          .addTo(map);
+        const marker = L.marker([node.lat, node.lng], {
+          icon: markerSpec(L, node),
+          keyboard: true,
+          riseOnHover: true,
+          title: node.type === "place" ? node.name : node.label,
+        }).addTo(markerLayer);
 
         if (node.type === "place") {
-          const popup = new maplibre.Popup({
-            offset: 18,
+          marker.bindPopup(popupHtml(node), {
+            className: "air-map-leaflet-popup",
+            maxWidth: 310,
             closeButton: true,
-            maxWidth: "310px",
-            className: "air-map-popup",
-          }).setHTML(popupHtml(node));
+            autoPanPadding: [24, 24],
+          });
 
-          marker.setPopup(popup);
-
-          element.addEventListener("click", () => {
+          marker.on("click", () => {
             highlightCard(node.id);
             document
               .querySelector<HTMLElement>(
@@ -375,27 +334,23 @@ export function CreativeExplorerMap({
           });
 
           if (pendingFocusRef.current === node.id) {
-            map.easeTo({
-              center: [node.lng, node.lat],
-              zoom: 14,
-              duration: 350,
-            });
-            marker.togglePopup();
+            map.setView([node.lat, node.lng], 14, { animate: true });
+            window.setTimeout(() => marker.openPopup(), 180);
             pendingFocusRef.current = null;
           }
         } else {
-          element.addEventListener("click", () => {
+          marker.on("click", () => {
             const targetZoom =
               node.type === "country"
-                ? 5.5
+                ? 6
                 : node.type === "city"
-                  ? 8.5
+                  ? 9
                   : 12;
-            map.easeTo({
-              center: [node.lng, node.lat],
-              zoom: Math.max(map.getZoom() + 1.5, targetZoom),
-              duration: 500,
-            });
+            map.setView(
+              [node.lat, node.lng],
+              Math.max(map.getZoom() + 1.5, targetZoom),
+              { animate: true },
+            );
           });
         }
 
@@ -403,7 +358,7 @@ export function CreativeExplorerMap({
       }
     }
 
-    async function refreshNodes(maplibre: any) {
+    async function refreshNodes() {
       const map = mapRef.current;
       if (!map) return;
 
@@ -458,7 +413,7 @@ export function CreativeExplorerMap({
         if (disposed) return;
 
         setMeta(payload.meta);
-        renderNodes(maplibre, payload.nodes);
+        renderNodes(payload.nodes);
 
         if (
           !didAutoFitRef.current &&
@@ -478,6 +433,7 @@ export function CreativeExplorerMap({
         ) {
           return;
         }
+
         if (!disposed) {
           setMapError(
             error instanceof Error
@@ -490,61 +446,73 @@ export function CreativeExplorerMap({
       }
     }
 
-    function scheduleRefresh(maplibre: any, delay = 160) {
-      if (fetchTimerRef.current) {
-        clearTimeout(fetchTimerRef.current);
-      }
+    function scheduleRefresh(delay = 180) {
+      if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
       fetchTimerRef.current = setTimeout(() => {
-        refreshNodes(maplibre);
+        void refreshNodes();
       }, delay);
     }
 
     async function initialize() {
-      const maplibre = maplibregl;
+      L = (await import("leaflet")) as any;
       if (disposed || !ref.current) return;
 
-      const map = new maplibre.Map({
-        container: ref.current,
-        style: MAP_STYLE,
-        center: [0, 20],
-        zoom: 1.6,
-        minZoom: 1.35,
+      const map = L.map(ref.current, {
+        center: [20, 0],
+        zoom: 2,
+        minZoom: 2,
         maxZoom: 18,
-        renderWorldCopies: false,
+        zoomControl: false,
+        attributionControl: true,
+        worldCopyJump: false,
+        maxBoundsViscosity: 1,
         maxBounds: [
-          [-180, -75],
-          [180, 84],
+          [-85, -180],
+          [85, 180],
         ],
-        attributionControl: {},
-        dragRotate: false,
-        pitchWithRotate: false,
+        preferCanvas: false,
       });
 
       mapRef.current = map;
-      map.touchZoomRotate.disableRotation();
+      L.control.zoom({ position: "bottomright" }).addTo(map);
 
-      map.addControl(
-        new maplibre.NavigationControl({
-          showCompass: false,
-          visualizePitch: false,
-        }),
-        "bottom-right",
-      );
+      const cartoTiles = L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        {
+          subdomains: "abcd",
+          maxZoom: 20,
+          minZoom: 2,
+          noWrap: true,
+          keepBuffer: 3,
+          attribution: "© OpenStreetMap contributors © CARTO",
+        },
+      ).addTo(map);
 
-      map.on("load", async () => {
-        if (disposed) return;
-        await refreshNodes(maplibre);
+      cartoTiles.on("tileerror", () => {
+        if (fallbackTilesUsed || disposed) return;
+        fallbackTilesUsed = true;
+        cartoTiles.remove();
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          minZoom: 2,
+          noWrap: true,
+          keepBuffer: 3,
+          attribution: "© OpenStreetMap contributors",
+        }).addTo(map);
       });
 
-      map.on("zoomend", () => scheduleRefresh(maplibre, 120));
-      map.on("moveend", () => scheduleRefresh(maplibre, 180));
+      markerLayer = L.layerGroup().addTo(map);
+
+      map.whenReady(() => {
+        void refreshNodes();
+        window.setTimeout(() => map.invalidateSize(), 80);
+      });
+
+      map.on("zoomend", () => scheduleRefresh(100));
+      map.on("moveend", () => {
+        if (map.getZoom() >= 8) scheduleRefresh(170);
+      });
       map.on("dragend", () => setAreaDirty(true));
-      map.on("error", (event: any) => {
-        const message = String(event?.error?.message || "");
-        if (/webgl|context/i.test(message) && !disposed) {
-          setMapError("This browser could not start the interactive map.");
-        }
-      });
 
       const focusListener = (event: Event) => {
         const custom = event as CustomEvent<{
@@ -560,11 +528,25 @@ export function CreativeExplorerMap({
 
         pendingFocusRef.current = id;
         highlightCard(id);
-        map.easeTo({
-          center: [lng, lat],
-          zoom: 14,
-          duration: 450,
-        });
+        map.setView([lat, lng], 14, { animate: true });
+
+        const node = latestNodesRef.current.find(
+          (item): item is PlaceNode =>
+            item.type === "place" && item.id === id,
+        );
+        if (node) {
+          pendingFocusRef.current = null;
+          window.setTimeout(() => {
+            const marker = markersRef.current.find(
+              (item) =>
+                Math.abs(item.getLatLng().lat - node.lat) < 0.000001 &&
+                Math.abs(item.getLatLng().lng - node.lng) < 0.000001,
+            );
+            marker?.openPopup?.();
+          }, 200);
+        } else {
+          scheduleRefresh(220);
+        }
       };
 
       window.addEventListener("36:focus-studio", focusListener);
@@ -635,10 +617,15 @@ export function CreativeExplorerMap({
     >
       <div
         ref={ref}
-        className={
+        className="air-map-canvas"
+        style={
           fullScreen
-            ? "h-screen w-full"
-            : "air-map-canvas"
+            ? {
+                height: "100vh",
+                minHeight: 0,
+                borderRadius: 0,
+              }
+            : undefined
         }
         aria-label="Creative spaces map"
       />
