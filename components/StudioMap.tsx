@@ -118,6 +118,9 @@ export function StudioMap({
     }
 
     function markerLabel(point: StudioMapPoint) {
+      if (points.length === 1) {
+        return compactMarkerName(point.name);
+      }
       if (labelMode === "price" && point.price) {
         return point.price + " MAD";
       }
@@ -596,42 +599,44 @@ export function StudioMap({
         aria-label="Studio locations map"
       />
 
-      <div className="absolute left-3 top-3 z-[1100] flex overflow-hidden rounded-full border border-zinc-700 bg-zinc-950/95 p-1 shadow-xl backdrop-blur">
-        <button
-          type="button"
-          aria-pressed={
-            labelMode === "price"
-          }
-          onClick={() =>
-            setLabelMode("price")
-          }
-          className={
-            "rounded-full px-3 py-2 text-[10px] font-black " +
-            (labelMode === "price"
-              ? "bg-white text-black"
-              : "text-zinc-400")
-          }
-        >
-          Price
-        </button>
-        <button
-          type="button"
-          aria-pressed={
-            labelMode === "name"
-          }
-          onClick={() =>
-            setLabelMode("name")
-          }
-          className={
-            "rounded-full px-3 py-2 text-[10px] font-black " +
-            (labelMode === "name"
-              ? "bg-white text-black"
-              : "text-zinc-400")
-          }
-        >
-          Name
-        </button>
-      </div>
+      {points.length > 1 && (
+        <div className="absolute left-3 top-3 z-[1100] flex overflow-hidden rounded-full border border-zinc-700 bg-zinc-950/95 p-1 shadow-xl backdrop-blur">
+          <button
+            type="button"
+            aria-pressed={
+              labelMode === "price"
+            }
+            onClick={() =>
+              setLabelMode("price")
+            }
+            className={
+              "rounded-full px-3 py-2 text-[10px] font-black " +
+              (labelMode === "price"
+                ? "bg-white text-black"
+                : "text-zinc-400")
+            }
+          >
+            Price
+          </button>
+          <button
+            type="button"
+            aria-pressed={
+              labelMode === "name"
+            }
+            onClick={() =>
+              setLabelMode("name")
+            }
+            className={
+              "rounded-full px-3 py-2 text-[10px] font-black " +
+              (labelMode === "name"
+                ? "bg-white text-black"
+                : "text-zinc-400")
+            }
+          >
+            Name
+          </button>
+        </div>
+      )}
 
       <div className="absolute right-3 top-3 z-[1200] flex items-center gap-2">
         {navigationPoint && googleMapsUrl && wazeUrl && (
