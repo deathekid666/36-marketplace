@@ -12,6 +12,8 @@ import {
 } from "@/lib/booking";
 import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 import { localDateKey } from "@/lib/time";
+import { ensureInvoice } from "@/lib/invoices";
+import { notifyUser } from "@/lib/notifications";
 
 export type DemoSetupState = {
   ok: boolean;
@@ -426,6 +428,7 @@ export async function runMarketplaceLifecycleQaAction(
 
   const checks: MarketplaceQaCheck[] = [];
   const createdBookingIds: string[] = [];
+  const createdNotificationIds: string[] = [];
 
   const add = (name: string, ok: boolean, detail: string) => {
     checks.push({ name, ok, detail });
@@ -615,6 +618,43 @@ export async function runMarketplaceLifecycleQaAction(
       }),
     ]);
 
+    const invoice = await ensureInvoice(confirmed.id);
+
+    add(
+      "Invoice",
+      Boolean(invoice) &&
+        invoice?.bookingId === confirmed.id &&
+        invoice.totalMad === confirmed.totalAmountMad,
+      "Completed paid booking generated a booking-linked invoice.",
+    );
+
+    const notification = await notifyUser({
+      userId: creator.id,
+      type: "QA_LIFECYCLE",
+      title: "36 lifecycle QA notification",
+      body: "Automated in-app notification check.",
+      href: "/creator/bookings/" + confirmed.id,
+    });
+    if (notification) createdNotificationIds.push(notification.id);
+
+    const notificationCheck = notification
+      ? await db.notification.findUnique({
+          where: { id: notification.id },
+          include: { deliveries: true },
+        })
+      : null;
+
+    add(
+      "Notification",
+      Boolean(notificationCheck) &&
+        notificationCheck?.deliveries.some(
+          (delivery) =>
+            delivery.channel === "IN_APP" &&
+            delivery.status === "SENT",
+        ) === true,
+      "In-app notification and delivery record were created successfully.",
+    );
+
     await db.review.create({
       data: {
         bookingId: confirmed.id,
@@ -703,8 +743,8 @@ export async function runMarketplaceLifecycleQaAction(
           (payment) =>
             payment.kind === "REFUND" || payment.status === "FAILED",
         ) &&
-        expired.payout?.status === "HOLD",
-      "Expired deposit hold released inventory, failed pending charges and held payout.",
+        expired.payout === null,
+      "Expired unpaid deposit hold released inventory, failed pending charges and removed phantom payout.",
     );
 
     const ok = checks.every((check) => check.ok);
@@ -729,6 +769,14 @@ export async function runMarketplaceLifecycleQaAction(
       checks,
     };
   } finally {
+    if (createdNotificationIds.length) {
+      await db.notification
+        .deleteMany({
+          where: { id: { in: createdNotificationIds } },
+        })
+        .catch(() => undefined);
+    }
+
     if (createdBookingIds.length) {
       await db.booking
         .deleteMany({

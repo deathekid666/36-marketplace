@@ -73,13 +73,53 @@ export async function expireStaleBookingHolds(
         data: { status: "FAILED" },
       });
 
-      await tx.payout.updateMany({
+      const paid = await tx.payment.aggregate({
         where: {
           bookingId: booking.id,
-          status: { in: ["PENDING", "ELIGIBLE"] },
+          kind: { in: ["DEPOSIT", "BALANCE"] },
+          status: "PAID",
         },
-        data: { status: "HOLD" },
+        _sum: { amountMad: true },
       });
+      const paidAmountMad = Math.max(0, paid._sum.amountMad || 0);
+
+      if (paidAmountMad === 0) {
+        await tx.payout.deleteMany({
+          where: {
+            bookingId: booking.id,
+            status: { in: ["PENDING", "ELIGIBLE", "HOLD"] },
+          },
+        });
+      } else {
+        const currentPayout = await tx.payout.findUnique({
+          where: { bookingId: booking.id },
+        });
+        if (currentPayout && currentPayout.status !== "PAID") {
+          const grossAmountMad = Math.min(
+            currentPayout.grossAmountMad,
+            paidAmountMad,
+          );
+          const commissionAmountMad = Math.min(
+            grossAmountMad,
+            Math.round(
+              (grossAmountMad * currentPayout.commissionBps) / 10000,
+            ),
+          );
+          await tx.payout.update({
+            where: { id: currentPayout.id },
+            data: {
+              grossAmountMad,
+              commissionAmountMad,
+              netAmountMad: Math.max(
+                0,
+                grossAmountMad - commissionAmountMad,
+              ),
+              status: "HOLD",
+              availableAt: null,
+            },
+          });
+        }
+      }
 
       await tx.promoRedemption.deleteMany({
         where: { bookingId: booking.id },

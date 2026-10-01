@@ -91,6 +91,10 @@ export async function cancelBookingAction(form: FormData) {
   const leadHours = (booking.startAt.getTime() - Date.now()) / 3600000;
   const refundable = leadHours >= booking.studio.freeCancellationHours;
   const refundAmountMad = refundable ? paidAmountMad : 0;
+  const retainedGrossMad = Math.max(
+    0,
+    paidAmountMad - refundAmountMad,
+  );
 
   await db.$transaction(async (tx) => {
     await tx.booking.update({
@@ -108,7 +112,38 @@ export async function cancelBookingAction(form: FormData) {
       where: { bookingId: booking.id, status: "PENDING", kind: { not: "REFUND" } },
       data: { status: "FAILED" },
     });
-    await tx.payout.updateMany({ where: { bookingId: booking.id, status: { in: ["PENDING", "ELIGIBLE"] } }, data: { status: "HOLD" } });
+    const payout = await tx.payout.findUnique({
+      where: { bookingId: booking.id },
+    });
+
+    if (payout && payout.status !== "PAID") {
+      if (retainedGrossMad === 0) {
+        await tx.payout.delete({
+          where: { id: payout.id },
+        });
+      } else {
+        const commissionAmountMad = Math.min(
+          retainedGrossMad,
+          Math.round(
+            (retainedGrossMad * payout.commissionBps) / 10000,
+          ),
+        );
+        await tx.payout.update({
+          where: { id: payout.id },
+          data: {
+            grossAmountMad: retainedGrossMad,
+            commissionAmountMad,
+            netAmountMad: Math.max(
+              0,
+              retainedGrossMad - commissionAmountMad,
+            ),
+            status: "HOLD",
+            availableAt: null,
+          },
+        });
+      }
+    }
+
     if (refundAmountMad > 0) {
       const existing = await tx.payment.findFirst({
         where: { bookingId: booking.id, kind: "REFUND", status: { in: ["PENDING", "REFUNDED"] } },
@@ -132,10 +167,20 @@ export async function cancelBookingAction(form: FormData) {
         });
       }
     }
-    if (booking.flashSlotId && booking.flashSlot && booking.flashSlot.expiresAt > new Date()) {
-      await tx.flashSlot.update({
-        where: { id: booking.flashSlotId },
-        data: { status: "ACTIVE" },
+    if (booking.flashSlotId && booking.flashSlot) {
+      const now = new Date();
+      const canReturnToSale =
+        booking.flashSlot.startAt > now &&
+        booking.flashSlot.expiresAt > now;
+
+      await tx.flashSlot.updateMany({
+        where: {
+          id: booking.flashSlotId,
+          status: "BOOKED",
+        },
+        data: {
+          status: canReturnToSale ? "ACTIVE" : "EXPIRED",
+        },
       });
     }
   });
@@ -151,6 +196,7 @@ export async function cancelBookingAction(form: FormData) {
   });
   revalidatePath("/creator/bookings");
   revalidatePath("/owner/bookings");
+  revalidatePath("/owner/revenue");
   revalidatePath("/now");
   redirect(`/creator/bookings/${booking.id}?cancelled=1`);
 }

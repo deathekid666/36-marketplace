@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { StudioCategory } from "@prisma/client";
 
@@ -142,13 +143,53 @@ export async function releaseBookingHoldAction(form: FormData) {
       },
       data: { status: "FAILED" },
     });
-    await tx.payout.updateMany({
+    const paid = await tx.payment.aggregate({
       where: {
         bookingId: booking.id,
-        status: { in: ["PENDING", "ELIGIBLE"] },
+        kind: { in: ["DEPOSIT", "BALANCE"] },
+        status: "PAID",
       },
-      data: { status: "HOLD" },
+      _sum: { amountMad: true },
     });
+    const paidAmountMad = Math.max(0, paid._sum.amountMad || 0);
+
+    if (paidAmountMad === 0) {
+      await tx.payout.deleteMany({
+        where: {
+          bookingId: booking.id,
+          status: { in: ["PENDING", "ELIGIBLE", "HOLD"] },
+        },
+      });
+    } else {
+      const payout = await tx.payout.findUnique({
+        where: { bookingId: booking.id },
+      });
+      if (payout && payout.status !== "PAID") {
+        const grossAmountMad = Math.min(
+          payout.grossAmountMad,
+          paidAmountMad,
+        );
+        const commissionAmountMad = Math.min(
+          grossAmountMad,
+          Math.round(
+            (grossAmountMad * payout.commissionBps) / 10000,
+          ),
+        );
+        await tx.payout.update({
+          where: { id: payout.id },
+          data: {
+            grossAmountMad,
+            commissionAmountMad,
+            netAmountMad: Math.max(
+              0,
+              grossAmountMad - commissionAmountMad,
+            ),
+            status: "HOLD",
+            availableAt: null,
+          },
+        });
+      }
+    }
     await tx.promoRedemption.deleteMany({
       where: { bookingId: booking.id },
     });
@@ -171,6 +212,11 @@ export async function releaseBookingHoldAction(form: FormData) {
       });
     }
   });
+
+  revalidatePath("/creator/bookings");
+  revalidatePath("/owner/bookings");
+  revalidatePath("/owner/revenue");
+  revalidatePath("/now");
 
   redirect(
     status === "EXPIRED"
