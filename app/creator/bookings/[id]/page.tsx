@@ -66,9 +66,37 @@ export default async function CreatorBookingDetailPage({
       <section className="mx-auto max-w-5xl px-5 py-10">
         <Link href="/creator/bookings" className="text-xs font-bold text-zinc-500 hover:text-white">← Your bookings</Link>
         <div className="mt-7 flex flex-wrap items-start justify-between gap-5">
-          <div><span className="text-xs font-bold uppercase tracking-[0.15em] text-acid">{booking.status.replaceAll("_", " ")}</span><h1 className="mt-2 text-4xl font-black tracking-[-0.045em]">{booking.studio.name}</h1><p className="mt-2 text-sm text-zinc-500">{booking.room.name} · {formatMarketplaceDateTime(booking.startAt)} → {formatMarketplaceDateTime(booking.endAt)}</p></div>
-          <div className="text-right"><b className="text-3xl">{booking.totalAmountMad} MAD</b>{booking.baseAmountMad > booking.totalAmountMad && <span className="ml-2 text-sm text-zinc-600 line-through">{booking.baseAmountMad} MAD</span>}<span className="block text-xs text-zinc-600">total</span></div>
+          <div>
+            <span className="text-xs font-bold uppercase tracking-[0.15em] text-acid">{booking.status.replaceAll("_", " ")}</span>
+            <h1 className="mt-2 text-4xl font-black tracking-[-0.045em]">{booking.studio.name}</h1>
+            <p className="mt-2 text-sm text-zinc-500">{booking.room.name} · {formatMarketplaceDateTime(booking.startAt)} → {formatMarketplaceDateTime(booking.endAt)}</p>
+            <p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-700">
+              36-{booking.id.replaceAll("-", "").slice(0, 8).toUpperCase()}
+            </p>
+          </div>
+          <div className="text-right">
+            <b className="text-3xl">{booking.totalAmountMad} MAD</b>
+            {booking.baseAmountMad > booking.totalAmountMad && <span className="ml-2 text-sm text-zinc-600 line-through">{booking.baseAmountMad} MAD</span>}
+            <span className="block text-xs text-zinc-600">total</span>
+          </div>
         </div>
+
+        {!["CANCELLED", "EXPIRED"].includes(booking.status) && (
+          <div className="mt-5 flex flex-wrap gap-2">
+            <a
+              href={"/api/bookings/" + booking.id + "/calendar"}
+              className="button-dark"
+            >
+              Add to calendar
+            </a>
+            <Link
+              href={"/studios/" + booking.studio.slug}
+              className="button-dark"
+            >
+              Studio profile
+            </Link>
+          </div>
+        )}
 
         {query.booked === "1" && offlinePaymentMethod && (
           <div className="mt-6 rounded-2xl border border-emerald-800/40 bg-emerald-950/15 p-5">

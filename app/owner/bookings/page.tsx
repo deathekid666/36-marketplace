@@ -157,6 +157,12 @@ export default async function OwnerBookingsPage({
               Studios
             </Link>
             <Link
+              href="/owner/availability"
+              className="rounded-full border border-acid/30 px-5 py-3 text-xs font-black text-acid"
+            >
+              Availability
+            </Link>
+            <Link
               href="/owner/requests"
               className="rounded-full border border-zinc-700 px-5 py-3 text-xs font-black"
             >

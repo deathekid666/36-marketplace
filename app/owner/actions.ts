@@ -240,11 +240,24 @@ export async function addBlockedSlotAction(form: FormData) {
   const startAt = casablancaDateTimeLocalToUtc(String(form.get("startAt") ?? ""));
   const endAt = casablancaDateTimeLocalToUtc(String(form.get("endAt") ?? ""));
   if (!startAt || !endAt || endAt <= startAt) return;
-  await markListingDirty(studioId);
+  const overlap = await db.booking.findFirst({
+    where: {
+      roomId,
+      status: { in: ["PENDING_DEPOSIT", "CONFIRMED"] },
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
+    },
+    select: { id: true },
+  });
+  if (overlap) {
+    redirect(`/owner/availability?studioId=${studioId}&error=booking-conflict`);
+  }
+
   await db.blockedSlot.create({
     data: { roomId, startAt, endAt, reason: text(form, "reason", 200) },
   });
   revalidatePath(`/owner/studios/${studioId}`);
+  revalidatePath(`/owner/availability?studioId=${studioId}`);
 }
 
 
@@ -349,9 +362,9 @@ export async function removeBlockedSlotAction(form: FormData) {
   const slotId = text(form, "slotId", 80);
   const item = await db.blockedSlot.findFirst({ where: { id: slotId, room: { studio: { id: studioId, ownerId: user.id } } } });
   if (!item) return;
-  await markListingDirty(studioId);
   await db.blockedSlot.delete({ where: { id: item.id } });
   revalidatePath(`/owner/studios/${studioId}`);
+  revalidatePath(`/owner/availability?studioId=${studioId}`);
 }
 
 export async function submitStudioAction(form: FormData) {
@@ -422,4 +435,118 @@ export async function removeStudioAddonAction(form: FormData) {
   if (!addon) return;
   await db.studioAddon.delete({ where: { id: addon.id } });
   revalidatePath(`/owner/studios/${studioId}`);
+}
+
+
+function validDateKey(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function nextDateKey(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + 1);
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+export async function blockFullDayAction(form: FormData) {
+  const user = await requireRole("STUDIO_OWNER");
+  const studioId = text(form, "studioId", 80);
+  const roomId = text(form, "roomId", 80);
+  const date = text(form, "date", 10);
+  if (!validDateKey(date)) return;
+
+  const studio = await db.studio.findFirst({
+    where: { id: studioId, ownerId: user.id },
+    include: { rooms: { where: { active: true } } },
+  });
+  if (!studio) return;
+
+  const targetRooms =
+    roomId === "ALL"
+      ? studio.rooms
+      : studio.rooms.filter((room) => room.id === roomId);
+  if (!targetRooms.length) return;
+
+  const startAt = casablancaDateTimeLocalToUtc(date + "T00:00");
+  const endAt = casablancaDateTimeLocalToUtc(nextDateKey(date) + "T00:00");
+  if (!startAt || !endAt) return;
+
+  const conflict = await db.booking.findFirst({
+    where: {
+      roomId: { in: targetRooms.map((room) => room.id) },
+      status: { in: ["PENDING_DEPOSIT", "CONFIRMED"] },
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
+    },
+    select: { id: true },
+  });
+
+  if (conflict) {
+    redirect("/owner/availability?studioId=" + studioId + "&error=booking-conflict");
+  }
+
+  await db.blockedSlot.createMany({
+    data: targetRooms.map((room) => ({
+      roomId: room.id,
+      startAt,
+      endAt,
+      reason: "Full-day block",
+    })),
+  });
+
+  revalidatePath("/owner/availability");
+  revalidatePath("/owner/availability?studioId=" + studioId);
+}
+
+export async function blockVacationRangeAction(form: FormData) {
+  const user = await requireRole("STUDIO_OWNER");
+  const studioId = text(form, "studioId", 80);
+  const startDate = text(form, "startDate", 10);
+  const endDate = text(form, "endDate", 10);
+  const reason = text(form, "reason", 200) || "Vacation / unavailable";
+
+  if (!validDateKey(startDate) || !validDateKey(endDate) || endDate < startDate) {
+    return;
+  }
+
+  const studio = await db.studio.findFirst({
+    where: { id: studioId, ownerId: user.id },
+    include: { rooms: { where: { active: true } } },
+  });
+  if (!studio || !studio.rooms.length) return;
+
+  const startAt = casablancaDateTimeLocalToUtc(startDate + "T00:00");
+  const endAt = casablancaDateTimeLocalToUtc(nextDateKey(endDate) + "T00:00");
+  if (!startAt || !endAt) return;
+
+  const conflict = await db.booking.findFirst({
+    where: {
+      roomId: { in: studio.rooms.map((room) => room.id) },
+      status: { in: ["PENDING_DEPOSIT", "CONFIRMED"] },
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
+    },
+    select: { id: true },
+  });
+
+  if (conflict) {
+    redirect("/owner/availability?studioId=" + studioId + "&error=booking-conflict");
+  }
+
+  await db.blockedSlot.createMany({
+    data: studio.rooms.map((room) => ({
+      roomId: room.id,
+      startAt,
+      endAt,
+      reason,
+    })),
+  });
+
+  revalidatePath("/owner/availability");
+  revalidatePath("/owner/availability?studioId=" + studioId);
 }
