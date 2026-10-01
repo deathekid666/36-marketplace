@@ -283,6 +283,7 @@ export async function confirmOfflinePaymentAction(form: FormData) {
 
   revalidatePath("/owner/bookings");
   revalidatePath("/owner/bookings/" + booking.id);
+  revalidatePath("/owner/revenue");
   revalidatePath("/creator/bookings");
   revalidatePath("/creator/bookings/" + booking.id);
 
@@ -306,6 +307,7 @@ export async function completeBookingAction(form: FormData) {
   await ensureInvoice(booking.id).catch(() => null);
   await notifyUser({ userId: booking.creatorId, type: "BOOKING_COMPLETED", title: "Session completed", body: "You can now leave a verified review for the studio.", href: `/creator/bookings/${booking.id}`, email: true });
   revalidatePath(`/owner/bookings/${booking.id}`);
+  revalidatePath("/owner/revenue");
   revalidatePath(`/creator/bookings/${booking.id}`);
   redirect(`/owner/bookings/${booking.id}?completed=1`);
 }
@@ -348,7 +350,8 @@ export async function submitReviewAction(form: FormData) {
   });
   await notifyUser({ userId: booking.studio.ownerId, type: "NEW_REVIEW", title: `New verified review from ${user.name}`, body: `Overall rating: ${values.rating}/5`, href: `/owner/bookings/${bookingId}`, email: true });
   revalidatePath(`/creator/bookings/${bookingId}`);
-  revalidatePath(`/studios`);
+  revalidatePath("/studios");
+  revalidatePath(`/studios/${booking.studio.slug}`);
   redirect(`/creator/bookings/${bookingId}?reviewed=1`);
 }
 
@@ -359,9 +362,11 @@ export async function replyToReviewAction(form: FormData) {
   const reply = text(form, "reply", 1500);
   const review = await db.review.findFirst({
     where: { id: reviewId, studio: { ownerId: user.id } },
+    include: { studio: { select: { slug: true } } },
   });
   if (!review) return;
   await db.review.update({ where: { id: review.id }, data: { ownerReply: reply } });
   revalidatePath(`/owner/bookings/${bookingId}`);
-  revalidatePath(`/studios`);
+  revalidatePath("/studios");
+  revalidatePath(`/studios/${review.studio.slug}`);
 }
