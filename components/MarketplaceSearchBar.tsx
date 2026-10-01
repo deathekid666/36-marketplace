@@ -24,7 +24,14 @@ export function MarketplaceSearchBar({
   city,
   date,
   durationHours,
+  minPrice,
   maxPrice,
+  capacity,
+  engineerIncluded,
+  equipment,
+  amenity,
+  minRating,
+  sort,
   categories,
   locationSuggestions,
 }: {
@@ -32,7 +39,14 @@ export function MarketplaceSearchBar({
   city: string;
   date: string;
   durationHours: number;
+  minPrice?: number;
   maxPrice?: number;
+  capacity?: number;
+  engineerIncluded: boolean;
+  equipment: string;
+  amenity: string;
+  minRating?: number;
+  sort: string;
   categories: CategoryOption[];
   locationSuggestions: string[];
 }) {
@@ -70,7 +84,7 @@ export function MarketplaceSearchBar({
             <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">
               When
             </span>
-            <span className={`mt-1 block text-sm font-semibold ${selectedDate ? "text-white" : "text-zinc-600"}`}>
+            <span className={"mt-1 block text-sm font-semibold " + (selectedDate ? "text-white" : "text-zinc-600")}>
               {friendlyDate(selectedDate)}
             </span>
 
@@ -140,19 +154,135 @@ export function MarketplaceSearchBar({
         </div>
       </div>
 
+      <details
+        className="mt-3 rounded-2xl border border-zinc-900 bg-zinc-950/50"
+        open={Boolean(
+          minPrice ||
+            maxPrice ||
+            capacity ||
+            engineerIncluded ||
+            equipment ||
+            amenity ||
+            minRating ||
+            (sort && sort !== "recommended"),
+        )}
+      >
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-black text-zinc-400">
+          Advanced filters
+          <span className="ml-2 text-zinc-700">
+            price · capacity · equipment · amenities · rating
+          </span>
+        </summary>
+
+        <div className="grid gap-3 border-t border-zinc-900 p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label>
+            <span className="label">Min price · MAD/h</span>
+            <input
+              className="field"
+              type="number"
+              min="1"
+              name="minPrice"
+              defaultValue={minPrice || ""}
+              placeholder="Any"
+            />
+          </label>
+          <label>
+            <span className="label">Max price · MAD/h</span>
+            <input
+              className="field"
+              type="number"
+              min="1"
+              name="maxPrice"
+              defaultValue={maxPrice || ""}
+              placeholder="Any"
+            />
+          </label>
+          <label>
+            <span className="label">Minimum capacity</span>
+            <input
+              className="field"
+              type="number"
+              min="1"
+              max="500"
+              name="capacity"
+              defaultValue={capacity || ""}
+              placeholder="Any"
+            />
+          </label>
+          <label>
+            <span className="label">Minimum rating</span>
+            <select
+              className="field"
+              name="minRating"
+              defaultValue={minRating ? String(minRating) : ""}
+            >
+              <option value="">Any rating</option>
+              <option value="3">3.0+</option>
+              <option value="4">4.0+</option>
+              <option value="4.5">4.5+</option>
+            </select>
+          </label>
+          <label>
+            <span className="label">Equipment</span>
+            <input
+              className="field"
+              name="equipment"
+              defaultValue={equipment}
+              maxLength={100}
+              placeholder="Neumann, piano, monitors…"
+            />
+          </label>
+          <label>
+            <span className="label">Amenity</span>
+            <input
+              className="field"
+              name="amenity"
+              defaultValue={amenity}
+              maxLength={100}
+              placeholder="Wi-Fi, lounge, parking…"
+            />
+          </label>
+          <label>
+            <span className="label">Sort by</span>
+            <select
+              className="field"
+              name="sort"
+              defaultValue={sort}
+            >
+              <option value="recommended">Recommended</option>
+              <option value="price_asc">Price · low to high</option>
+              <option value="price_desc">Price · high to low</option>
+              <option value="rating_desc">Rating · highest first</option>
+              <option value="popular">Popularity</option>
+              <option value="capacity_desc">Capacity · largest first</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-xs font-bold text-zinc-300">
+            <input
+              type="checkbox"
+              name="engineer"
+              value="1"
+              defaultChecked={engineerIncluded}
+              className="accent-[#d9ff43]"
+            />
+            Engineer included
+          </label>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-900 px-4 py-3">
+          <span className="text-[10px] leading-5 text-zinc-700">
+            Advanced filters apply to verified, bookable studio inventory only.
+          </span>
+          <a
+            href="/studios"
+            className="text-[10px] font-black text-zinc-500 hover:text-white"
+          >
+            Clear all filters
+          </a>
+        </div>
+      </details>
+
       <div className="mt-3 flex flex-wrap items-center gap-3 px-3">
-        <label className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-4 py-2 text-xs text-zinc-500">
-          <span>Max price</span>
-          <input
-            className="w-20 bg-transparent font-bold text-zinc-200 outline-none placeholder:text-zinc-700"
-            type="number"
-            min="1"
-            name="maxPrice"
-            defaultValue={maxPrice || ""}
-            placeholder="Any"
-          />
-          <span>MAD/h</span>
-        </label>
         {selectedDate && (
           <button
             type="button"

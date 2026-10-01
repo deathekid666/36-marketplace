@@ -1,9 +1,11 @@
 import Link from "next/link";
-import type { StudioCategory } from "@prisma/client";
+import type { Prisma, StudioCategory } from "@prisma/client";
 
 import { AppHeader } from "@/components/AppHeader";
 import { MarketplaceSearchBar } from "@/components/MarketplaceSearchBar";
 import { StudioMap } from "@/components/StudioMap";
+import { CompareStudioButton } from "@/components/CompareStudioButton";
+import { CompareTray } from "@/components/CompareTray";
 import { toggleFavoriteAction } from "@/app/favorites/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { getRoomAvailability } from "@/lib/booking";
@@ -29,6 +31,34 @@ function parseDuration(value?: string) {
   return Number.isFinite(number) ? Math.max(1, Math.min(12, number)) : 1;
 }
 
+function parsePositiveInt(value?: string, max = 100000) {
+  const parsed = Math.round(Number(value || "0"));
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.min(max, parsed)
+    : undefined;
+}
+
+function parseRating(value?: string) {
+  const parsed = Number(value || "0");
+  return Number.isFinite(parsed) && parsed >= 1 && parsed <= 5
+    ? parsed
+    : undefined;
+}
+
+function parseSort(value?: string) {
+  const allowed = new Set([
+    "recommended",
+    "price_asc",
+    "price_desc",
+    "rating_desc",
+    "popular",
+    "capacity_desc",
+  ]);
+  return allowed.has(String(value || ""))
+    ? String(value)
+    : "recommended";
+}
+
 export default async function StudiosPage({
   searchParams,
 }: {
@@ -37,7 +67,14 @@ export default async function StudiosPage({
     city?: string;
     date?: string;
     duration?: string;
+    minPrice?: string;
     maxPrice?: string;
+    capacity?: string;
+    engineer?: string;
+    equipment?: string;
+    amenity?: string;
+    minRating?: string;
+    sort?: string;
   }>;
 }) {
   const user = await getCurrentUser();
@@ -48,8 +85,52 @@ export default async function StudiosPage({
     ? String(query.date)
     : "";
   const durationHours = parseDuration(query.duration);
-  const parsedMax = Math.round(Number(query.maxPrice || "0"));
-  const maxPrice = Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : undefined;
+  const minPrice = parsePositiveInt(query.minPrice);
+  const maxPrice = parsePositiveInt(query.maxPrice);
+  const capacity = parsePositiveInt(query.capacity, 500);
+  const engineerIncluded = query.engineer === "1";
+  const equipment = String(query.equipment || "").trim().slice(0, 100);
+  const amenity = String(query.amenity || "").trim().slice(0, 100);
+  const minRating = parseRating(query.minRating);
+  const sort = parseSort(query.sort);
+
+  const roomWhere: Prisma.RoomWhereInput = {
+    active: true,
+    ...(category ? { category } : {}),
+    ...(minPrice || maxPrice
+      ? {
+          hourlyRateMad: {
+            ...(minPrice ? { gte: minPrice } : {}),
+            ...(maxPrice ? { lte: maxPrice } : {}),
+          },
+        }
+      : {}),
+    ...(capacity ? { capacity: { gte: capacity } } : {}),
+    ...(engineerIncluded ? { engineerIncluded: true } : {}),
+    ...(equipment
+      ? {
+          equipment: {
+            some: {
+              name: {
+                contains: equipment,
+                mode: "insensitive",
+              },
+            },
+          },
+        }
+      : {}),
+  };
+
+  const advancedInventoryFilters = Boolean(
+    minPrice ||
+      maxPrice ||
+      capacity ||
+      engineerIncluded ||
+      equipment ||
+      amenity ||
+      minRating ||
+      sort !== "recommended",
+  );
 
   await trackMarketplaceEvent({
     eventType: "SEARCH",
@@ -59,7 +140,14 @@ export default async function StudiosPage({
       category: category || "ANY",
       date: date || null,
       durationHours,
+      minPrice: minPrice || null,
       maxPrice: maxPrice || null,
+      capacity: capacity || null,
+      engineerIncluded,
+      equipment: equipment || null,
+      amenity: amenity || null,
+      minRating: minRating || null,
+      sort,
     },
   });
 
@@ -79,25 +167,43 @@ export default async function StudiosPage({
               ],
             }
           : {}),
-        rooms: {
-          some: {
-            active: true,
-            ...(category ? { category } : {}),
-            ...(maxPrice ? { hourlyRateMad: { lte: maxPrice } } : {}),
-          },
-        },
+        rooms: { some: roomWhere },
+        ...(amenity
+          ? {
+              amenities: {
+                some: {
+                  name: {
+                    contains: amenity,
+                    mode: "insensitive" as const,
+                  },
+                },
+              },
+            }
+          : {}),
       },
       include: {
         photos: { orderBy: { sortOrder: "asc" }, take: 1 },
         rooms: {
-          where: {
-            active: true,
-            ...(category ? { category } : {}),
-            ...(maxPrice ? { hourlyRateMad: { lte: maxPrice } } : {}),
-          },
+          where: roomWhere,
           orderBy: { hourlyRateMad: "asc" },
+          include: {
+            equipment: {
+              orderBy: { name: "asc" },
+              take: 6,
+            },
+          },
+        },
+        amenities: {
+          orderBy: { name: "asc" },
+          take: 8,
         },
         reviews: { select: { rating: true } },
+        _count: {
+          select: {
+            bookings: true,
+            favorites: true,
+          },
+        },
       },
       orderBy: [{ verifiedAt: "desc" }, { name: "asc" }],
       take: 60,
@@ -183,17 +289,59 @@ export default async function StudiosPage({
       )
     : studios.map(() => true);
 
-  const results = studios.filter((_, index) => availability[index]);
+  const availableResults = studios.filter((_, index) => availability[index]);
+
+  const ratingFiltered = minRating
+    ? availableResults.filter((studio) => {
+        if (!studio.reviews.length) return false;
+        const average =
+          studio.reviews.reduce(
+            (sum, review) => sum + review.rating,
+            0,
+          ) / studio.reviews.length;
+        return average >= minRating;
+      })
+    : availableResults;
+
+  const results = [...ratingFiltered].sort((a, b) => {
+    const aPrice = a.rooms[0]?.hourlyRateMad ?? Number.MAX_SAFE_INTEGER;
+    const bPrice = b.rooms[0]?.hourlyRateMad ?? Number.MAX_SAFE_INTEGER;
+    const aRating = a.reviews.length
+      ? a.reviews.reduce((sum, review) => sum + review.rating, 0) /
+        a.reviews.length
+      : 0;
+    const bRating = b.reviews.length
+      ? b.reviews.reduce((sum, review) => sum + review.rating, 0) /
+        b.reviews.length
+      : 0;
+    const aCapacity = Math.max(0, ...a.rooms.map((room) => room.capacity));
+    const bCapacity = Math.max(0, ...b.rooms.map((room) => room.capacity));
+    const aPopularity = a._count.bookings * 2 + a._count.favorites;
+    const bPopularity = b._count.bookings * 2 + b._count.favorites;
+
+    if (sort === "price_asc") return aPrice - bPrice;
+    if (sort === "price_desc") return bPrice - aPrice;
+    if (sort === "rating_desc") return bRating - aRating;
+    if (sort === "popular") return bPopularity - aPopularity;
+    if (sort === "capacity_desc") return bCapacity - aCapacity;
+
+    const verifiedDifference =
+      (b.verifiedAt?.getTime() || 0) -
+      (a.verifiedAt?.getTime() || 0);
+    return verifiedDifference || a.name.localeCompare(b.name);
+  });
 
   const bookableNameKeys = new Set(
     results.map((studio) => normalizeSearchText(studio.name)),
   );
 
-  const discoveryResults = candidateRows.filter(
-    (candidate) =>
-      candidate.convertedStudio?.status !== "VERIFIED" &&
-      !bookableNameKeys.has(candidate.normalizedName),
-  );
+  const discoveryResults = advancedInventoryFilters
+    ? []
+    : candidateRows.filter(
+        (candidate) =>
+          candidate.convertedStudio?.status !== "VERIFIED" &&
+          !bookableNameKeys.has(candidate.normalizedName),
+      );
 
   await trackMarketplaceEvent({
     eventType: "DISCOVERY_SEARCH_IMPRESSION",
@@ -205,6 +353,8 @@ export default async function StudiosPage({
       bookableResults: results.length,
       dateAppliedToBookableOnly: Boolean(date),
       maxPriceAppliedToBookableOnly: Boolean(maxPrice),
+      advancedInventoryFilters,
+      sort,
     },
   });
 
@@ -265,7 +415,14 @@ export default async function StudiosPage({
   if (city) returnParams.set("city", city);
   if (date) returnParams.set("date", date);
   returnParams.set("duration", String(durationHours));
+  if (minPrice) returnParams.set("minPrice", String(minPrice));
   if (maxPrice) returnParams.set("maxPrice", String(maxPrice));
+  if (capacity) returnParams.set("capacity", String(capacity));
+  if (engineerIncluded) returnParams.set("engineer", "1");
+  if (equipment) returnParams.set("equipment", equipment);
+  if (amenity) returnParams.set("amenity", amenity);
+  if (minRating) returnParams.set("minRating", String(minRating));
+  if (sort !== "recommended") returnParams.set("sort", sort);
   const returnTo = "/studios?" + returnParams.toString();
 
   return (
@@ -298,7 +455,14 @@ export default async function StudiosPage({
           city={city}
           date={date}
           durationHours={durationHours}
+          minPrice={minPrice}
           maxPrice={maxPrice}
+          capacity={capacity}
+          engineerIncluded={engineerIncluded}
+          equipment={equipment}
+          amenity={amenity}
+          minRating={minRating}
+          sort={sort}
           categories={STUDIO_CATEGORIES}
           locationSuggestions={locationSuggestions}
         />
@@ -417,7 +581,20 @@ export default async function StudiosPage({
                       )}
                     </div>
 
-                    <Link href={"/studios/" + studio.slug + detailSuffix} className="block pt-4">
+                    <div className="flex items-center justify-between gap-3 pt-4">
+                      <CompareStudioButton
+                        studioId={studio.id}
+                        studioName={studio.name}
+                      />
+                      <span className="text-[10px] text-zinc-700">
+                        {studio.rooms[0]?.capacity || 1} people
+                        {studio.rooms.some((room) => room.engineerIncluded)
+                          ? " · Engineer included"
+                          : ""}
+                      </span>
+                    </div>
+
+                    <Link href={"/studios/" + studio.slug + detailSuffix} className="block pt-3">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <h2 className="truncate text-base font-black">{studio.name}</h2>
@@ -438,6 +615,27 @@ export default async function StudiosPage({
                         <b>{minRate ? `${minRate} MAD` : "—"}</b>
                         <span className="text-zinc-500"> / hour</span>
                       </p>
+                      {(studio.rooms[0]?.equipment.length > 0 ||
+                        studio.amenities.length > 0) && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {studio.rooms[0]?.equipment.slice(0, 2).map((item) => (
+                            <span
+                              key={"equipment-" + item.id}
+                              className="rounded-full border border-zinc-900 px-2 py-1 text-[9px] text-zinc-600"
+                            >
+                              {item.name}
+                            </span>
+                          ))}
+                          {studio.amenities.slice(0, 2).map((item) => (
+                            <span
+                              key={"amenity-" + item.id}
+                              className="rounded-full border border-zinc-900 px-2 py-1 text-[9px] text-zinc-600"
+                            >
+                              {item.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </Link>
                   </article>
                 );
@@ -463,6 +661,14 @@ export default async function StudiosPage({
                 <StudioMap points={mapPoints} />
               </div>
             )}
+          </div>
+        )}
+
+        {advancedInventoryFilters && candidateRows.length > 0 && (
+          <div className="mt-10 rounded-2xl border border-sky-950 bg-sky-950/[0.06] p-4 text-xs leading-5 text-zinc-600">
+            Contact-only discovery listings are hidden while advanced inventory
+            filters are active because they do not have verified room pricing,
+            capacity, equipment or rating data.
           </div>
         )}
 
@@ -522,6 +728,7 @@ export default async function StudiosPage({
           </section>
         )}
 
+        <CompareTray date={date} durationHours={durationHours} />
       </section>
     </main>
   );
