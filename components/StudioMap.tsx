@@ -253,7 +253,7 @@ export function StudioMap({
       }
 
       const cellSize =
-        zoom < 4 ? 58 : zoom < 7 ? 68 : zoom < 11 ? 76 : 66;
+        zoom < 4 ? 180 : zoom < 6 ? 140 : zoom < 8 ? 110 : zoom < 11 ? 88 : 72;
       const groups = new Map<
         string,
         StudioMapPoint[]
@@ -275,7 +275,8 @@ export function StudioMap({
       }
 
       for (const group of groups.values()) {
-        if (group.length < 3) {
+        const minimumClusterSize = zoom < 6 ? 2 : 3;
+        if (group.length < minimumClusterSize) {
           group.forEach((point) =>
             addPointMarker(L, point),
           );
@@ -325,50 +326,59 @@ export function StudioMap({
         const contactCount =
           group.length - bookableCount;
 
+        const worldCluster = zoom < 5;
+        const clusterLabel =
+          hasVerifiedPrices &&
+          labelModeRef.current === "price"
+            ? (() => {
+                const prices = group
+                  .map((point) => point.price)
+                  .filter(
+                    (value): value is number =>
+                      typeof value === "number" &&
+                      value > 0,
+                  );
+                if (!prices.length) return "studios";
+                const min = Math.min(...prices);
+                const max = Math.max(...prices);
+                return min === max
+                  ? min + " MAD"
+                  : min + "–" + max + " MAD";
+              })()
+            : hasVerifiedPrices &&
+                labelModeRef.current === "name"
+              ? compactMarkerName(group[0].name) +
+                (group.length > 1
+                  ? " +" + (group.length - 1)
+                  : "")
+              : "studios";
+
+        const clusterWidth = worldCluster ? 52 : 76;
+        const clusterHeight = worldCluster ? 52 : 46;
+
         const cluster = L.marker([lat, lng], {
           icon: L.divIcon({
             className: "studio-map-marker-wrap",
             html:
-              '<div class="studio-map-cluster">' +
+              '<div class="studio-map-cluster' +
+              (worldCluster
+                ? ' studio-map-cluster--world'
+                : '') +
+              '">' +
               "<strong>" +
               group.length +
               "</strong>" +
-              "<span>" +
-              (hasVerifiedPrices &&
-              labelModeRef.current === "price"
-                ? (() => {
-                    const prices = group
-                      .map((point) => point.price)
-                      .filter(
-                        (value): value is number =>
-                          typeof value === "number" &&
-                          value > 0,
-                      );
-                    if (!prices.length) return "studios";
-                    const min = Math.min(...prices);
-                    const max = Math.max(...prices);
-                    return min === max
-                      ? min + " MAD"
-                      : min + "–" + max + " MAD";
-                  })()
-                : hasVerifiedPrices &&
-                    labelModeRef.current === "name"
-                  ? compactMarkerName(group[0].name) +
-                    (group.length > 1
-                      ? " +" + (group.length - 1)
-                      : "")
-                  : bookableCount &&
-                      contactCount
-                    ? bookableCount +
-                      " bookable · " +
-                      contactCount +
-                      " contacts"
-                    : bookableCount
-                      ? "studios"
-                      : "studios") +
-              "</span></div>",
-            iconSize: [92, 52],
-            iconAnchor: [46, 26],
+              (worldCluster
+                ? ""
+                : "<span>" +
+                  escapeHtml(clusterLabel) +
+                  "</span>") +
+              "</div>",
+            iconSize: [clusterWidth, clusterHeight],
+            iconAnchor: [
+              Math.round(clusterWidth / 2),
+              Math.round(clusterHeight / 2),
+            ],
           }),
         }).addTo(markerLayer);
 
@@ -475,12 +485,12 @@ export function StudioMap({
       });
 
       L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
-          maxZoom: 20,
-          subdomains: "abcd",
+          maxZoom: 19,
+          className: "studio-map-base-tiles",
           attribution:
-            "© OpenStreetMap contributors © CARTO",
+            "© OpenStreetMap contributors",
         },
       ).addTo(map);
 

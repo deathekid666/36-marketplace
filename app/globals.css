@@ -6462,3 +6462,36 @@ label.air-search-segment:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+
+/* Map hotfix v5 — no API key + cleaner world clustering */
+.air-theme .studio-map-base-tiles {
+  filter: grayscale(.28) saturate(.72) brightness(1.08) contrast(.92);
+}
+
+.air-theme .studio-map-cluster--world {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: #222;
+  color: #fff;
+  border: 3px solid #fff;
+  box-shadow: 0 8px 22px rgba(0,0,0,.20);
+}
+
+.air-theme .studio-map-cluster--world strong {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.air-theme .studio-map-cluster--world:hover {
+  border-color: #D9FF43;
+  background: #111;
+  color: #fff;
+  transform: scale(1.06);
+}
+
+.air-theme .studio-map-marker-wrap {
+  background: transparent !important;
+  border: 0 !important;
+}
