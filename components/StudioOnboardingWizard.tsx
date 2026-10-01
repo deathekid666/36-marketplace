@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { createStudioWizardAction } from "@/app/owner/actions";
 import { StudioLocationFields } from "@/components/StudioLocationFields";
@@ -38,6 +38,8 @@ export function StudioOnboardingWizard({
 }) {
   const [step, setStep] = useState(0);
   const [category, setCategory] = useState(categories[0]?.value || "RECORDING");
+  const [roomCategory, setRoomCategory] = useState(categories[0]?.value || "RECORDING");
+  const formRef = useRef<HTMLFormElement>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [roomName, setRoomName] = useState("Main studio");
@@ -65,6 +67,23 @@ export function StudioOnboardingWizard({
 
   function next() {
     if (!canContinue) return;
+
+    const currentPanel = formRef.current?.querySelector<HTMLElement>(
+      '[data-wizard-step="' + step + '"]',
+    );
+    const controls = currentPanel?.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >("input, select, textarea");
+
+    if (controls) {
+      for (const control of Array.from(controls)) {
+        if (!control.checkValidity()) {
+          control.reportValidity();
+          return;
+        }
+      }
+    }
+
     setStep((current) => Math.min(STEPS.length - 1, current + 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -75,7 +94,7 @@ export function StudioOnboardingWizard({
   }
 
   return (
-    <form action={createStudioWizardAction}>
+    <form ref={formRef} action={createStudioWizardAction}>
       <div className="grid gap-7 lg:grid-cols-[250px_1fr]">
         <aside className="self-start lg:sticky lg:top-24">
           <div className="rounded-[28px] border border-[#e6e6e6] bg-white p-5 shadow-[0_12px_40px_rgba(0,0,0,.05)]">
@@ -144,7 +163,7 @@ export function StudioOnboardingWizard({
         </aside>
 
         <div className="min-w-0">
-          <section className={step === 0 ? "block" : "hidden"}>
+          <section data-wizard-step="0" className={step === 0 ? "block" : "hidden"}>
             <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">01 · Basics</span>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Tell creators what this place is.</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
@@ -184,7 +203,10 @@ export function StudioOnboardingWizard({
                         name="primaryCategory"
                         value={item.value}
                         checked={category === item.value}
-                        onChange={() => setCategory(item.value)}
+                        onChange={() => {
+                          setCategory(item.value);
+                          setRoomCategory(item.value);
+                        }}
                         className="sr-only"
                       />
                       <b className="text-sm">{item.label}</b>
@@ -222,7 +244,7 @@ export function StudioOnboardingWizard({
             </div>
           </section>
 
-          <section className={step === 1 ? "block" : "hidden"}>
+          <section data-wizard-step="1" className={step === 1 ? "block" : "hidden"}>
             <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">02 · Location</span>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Where should creators arrive?</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
@@ -258,7 +280,7 @@ export function StudioOnboardingWizard({
             </div>
           </section>
 
-          <section className={step === 2 ? "block" : "hidden"}>
+          <section data-wizard-step="2" className={step === 2 ? "block" : "hidden"}>
             <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">03 · First room</span>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Create the first bookable space.</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
@@ -282,7 +304,12 @@ export function StudioOnboardingWizard({
                 </label>
                 <label>
                   <span className="label">Room category</span>
-                  <select className="field" name="roomCategory" defaultValue={category}>
+                  <select
+                    className="field"
+                    name="roomCategory"
+                    value={roomCategory}
+                    onChange={(event) => setRoomCategory(event.target.value)}
+                  >
                     {categories.map((item) => (
                       <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
@@ -367,7 +394,7 @@ export function StudioOnboardingWizard({
             </div>
           </section>
 
-          <section className={step === 3 ? "block" : "hidden"}>
+          <section data-wizard-step="3" className={step === 3 ? "block" : "hidden"}>
             <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">04 · Amenities</span>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">What comes with the studio?</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
@@ -387,7 +414,7 @@ export function StudioOnboardingWizard({
             </div>
           </section>
 
-          <section className={step === 4 ? "block" : "hidden"}>
+          <section data-wizard-step="4" className={step === 4 ? "block" : "hidden"}>
             <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">05 · Availability</span>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Choose a starting weekly schedule.</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
@@ -428,7 +455,7 @@ export function StudioOnboardingWizard({
             </div>
           </section>
 
-          <section className={step === 5 ? "block" : "hidden"}>
+          <section data-wizard-step="5" className={step === 5 ? "block" : "hidden"}>
             <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">06 · Policies</span>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.04em]">Set the initial booking rules.</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
