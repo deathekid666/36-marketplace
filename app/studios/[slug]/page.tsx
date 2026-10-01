@@ -817,9 +817,9 @@ export default async function StudioDetailPage({
             </section>
           </div>
 
-          <aside className="self-start lg:sticky lg:top-6">
-            <section className="rounded-[1.75rem] border border-[#dddddd] bg-white p-5 shadow-[0_24px_80px_rgba(0,0,0,.42)] sm:p-6">
-              <div className="mb-5 flex items-end justify-between gap-3">
+          <aside id="booking" className="order-first self-start lg:order-none lg:sticky lg:top-24">
+            <section className="rounded-[1.5rem] border border-[#dddddd] bg-white p-5 shadow-[0_14px_40px_rgba(0,0,0,.09)] sm:p-6">
+              <div className="mb-5 flex items-end justify-between gap-3 border-b border-[#ebebeb] pb-4">
                 <div>
                   <div className="flex items-baseline gap-1">
                     <b className="text-xl">
@@ -833,8 +833,8 @@ export default async function StudioDetailPage({
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-acid">
-                    36 verified
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#717171]">
+                    36 verified · instant availability check
                   </p>
                 </div>
 
@@ -892,6 +892,18 @@ export default async function StudioDetailPage({
               </div>
             </section>
           </aside>
+        </div>
+
+        <div className="fixed inset-x-0 bottom-[68px] z-[80] border-t border-[#ebebeb] bg-white/95 px-4 py-3 shadow-[0_-8px_28px_rgba(0,0,0,.08)] backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+            <div>
+              <b className="block text-sm">{minPrice ? minPrice + " MAD" : "Choose a room"}</b>
+              <span className="text-[9px] text-[#717171]">{average ? "★ " + average.toFixed(1) + " · " : ""}Verified studio</span>
+            </div>
+            <a href="#booking" className="rounded-xl bg-acid px-5 py-3 text-xs font-black text-[#111]">
+              Reserve
+            </a>
+          </div>
         </div>
 
         <StudioRecommendations

@@ -5543,3 +5543,96 @@ label.air-search-segment:hover {
     width: 100%;
   }
 }
+
+
+/* Booking flow polish */
+.air-booking-flow {
+  display: grid;
+  gap: 12px;
+}
+
+.air-booking-flow-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.air-booking-flow-head span {
+  display: block;
+  color: #8a8a8a;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.air-booking-flow-head b {
+  display: block;
+  margin-top: 4px;
+  color: #222;
+  font-size: 13px;
+}
+
+.air-booking-flow-head small {
+  color: #8a8a8a;
+  font-size: 8px;
+  font-weight: 750;
+}
+
+.air-booking-room-list {
+  display: grid;
+  gap: 8px;
+}
+
+.air-booking-room-list > button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 14px;
+  padding: 12px 13px;
+  background: #fff;
+  color: #222;
+  text-align: left;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.air-booking-room-list > button:hover {
+  border-color: #cfcfcf;
+  background: #fafafa;
+}
+
+.air-booking-room-list > button.active {
+  border-color: #222;
+  box-shadow: 0 0 0 1px #222;
+}
+
+.air-booking-room-list > button span,
+.air-booking-room-list > button b,
+.air-booking-room-list > button small {
+  display: block;
+}
+
+.air-booking-room-list > button b {
+  font-size: 10px;
+}
+
+.air-booking-room-list > button small {
+  margin-top: 3px;
+  color: #8a8a8a;
+  font-size: 8px;
+}
+
+.air-booking-room-list > button strong {
+  flex: 0 0 auto;
+  font-size: 10px;
+}
+
+@media (max-width: 1023px) {
+  #booking {
+    scroll-margin-top: 76px;
+  }
+}

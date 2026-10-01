@@ -401,33 +401,39 @@ export function BookingWidget({
 
   return (
     <div>
-      <div className="mb-5 flex items-end justify-between gap-3">
-        <div>
-          <span className="text-2xl font-black">{room.hourlyRateMad} MAD</span>
-          <span className="ml-1 text-sm text-[#717171]">/ hour</span>
+      <div className="air-booking-flow">
+        <div className="air-booking-flow-head">
+          <div>
+            <span>1 · Choose a room</span>
+            <b>{room.name}</b>
+          </div>
+          <small>Live availability</small>
         </div>
-        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8a8a8a]">
-          Live availability
-        </span>
-      </div>
 
-      <div className="rounded-2xl border border-[#cfcfcf] bg-white">
-        <label className="block border-b border-[#dddddd] px-4 py-3">
-          <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#717171]">
-            Studio room
-          </span>
-          <select
-            className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-[#222222] outline-none"
-            value={roomId}
-            onChange={(event) => setRoomId(event.target.value)}
-          >
-            {rooms.map((item) => (
-              <option key={item.id} value={item.id} className="bg-white">
-                {item.name} · {item.hourlyRateMad} MAD/h
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="air-booking-room-list">
+          {rooms.map((item) => {
+            const active = item.id === roomId;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setRoomId(item.id)}
+                className={active ? "active" : ""}
+              >
+                <span>
+                  <b>{item.name}</b>
+                  <small>
+                    Minimum {item.minimumHours}h
+                    {item.engineerIncluded ? " · Engineer included" : ""}
+                  </small>
+                </span>
+                <strong>{item.hourlyRateMad} MAD/h</strong>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="rounded-2xl border border-[#cfcfcf] bg-white overflow-hidden">
 
         {locationLabel && (
           <div className="border-b border-[#dddddd] px-4 py-3">
@@ -448,7 +454,7 @@ export function BookingWidget({
             className="px-4 py-3 text-left transition hover:bg-[#f7f7f7]"
           >
             <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#717171]">
-              Date
+              2 · Date
             </span>
             <span className="mt-1 block text-sm font-semibold text-[#222222]">
               {friendlyDate(date)}
@@ -485,7 +491,7 @@ export function BookingWidget({
         >
           <span>
             <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#717171]">
-              Start time
+              3 · Start time
             </span>
             <span
               className={
@@ -588,7 +594,7 @@ export function BookingWidget({
                   type="button"
                   disabled={!selected}
                   onClick={() => setCalendarOpen(false)}
-                  className="rounded-xl bg-white px-6 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-[#8a8a8a]"
+                  className="rounded-xl bg-[#222] px-6 py-3 text-sm font-black text-white transition hover:bg-[#111] disabled:cursor-not-allowed disabled:bg-[#e6e6e6] disabled:text-[#9a9a9a]"
                 >
                   Done
                 </button>
@@ -643,7 +649,7 @@ export function BookingWidget({
                     <label className="flex cursor-pointer items-start gap-3">
                       <input
                         type="checkbox"
-                        className="mt-1 accent-[#ff385c]"
+                        className="mt-1 accent-[#D9FF43]"
                         checked={qty > 0}
                         onChange={(event) =>
                           setSelectedAddons((current) => ({
@@ -706,7 +712,7 @@ export function BookingWidget({
       {message && (
         <div
           role="alert"
-          className="mt-4 rounded-xl border border-amber-900/45 bg-amber-950/15 p-4 text-xs leading-5 text-amber-200"
+          className="mt-4 rounded-xl border border-[#f3d59b] bg-[#fff8e8] p-4 text-xs leading-5 text-[#7a5514]"
         >
           <p>{message}</p>
           {userRole === "STUDIO_OWNER" && (
@@ -725,7 +731,7 @@ export function BookingWidget({
         type="button"
         disabled={booking || quoteLoading}
         onClick={reviewCheckout}
-        className="mt-4 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-[#8a8a8a]"
+        className="mt-4 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-[#111] transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-[#e6e6e6] disabled:text-[#9a9a9a]"
       >
         {quoteLoading
           ? "Checking price…"
@@ -759,7 +765,7 @@ export function BookingWidget({
             }}
           />
 
-          <section className="relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[30px] border border-[#dddddd] bg-white p-5 shadow-[0_32px_100px_rgba(0,0,0,.65)] sm:rounded-[30px] sm:p-6">
+          <section className="relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[30px] border border-[#dddddd] bg-white p-5 shadow-[0_24px_70px_rgba(0,0,0,.22)] sm:rounded-[30px] sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-acid">
@@ -857,7 +863,7 @@ export function BookingWidget({
                       value={method.value}
                       checked={paymentMethod === method.value}
                       onChange={() => setPaymentMethod(method.value)}
-                      className="mt-1 accent-[#ff385c]"
+                      className="mt-1 accent-[#D9FF43]"
                     />
                     <span>
                       <b className="block text-sm">{method.label}</b>
@@ -898,7 +904,7 @@ export function BookingWidget({
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-emerald-900/35 bg-emerald-950/10 p-4 text-xs leading-5 text-[#717171]">
+            <div className="mt-4 rounded-xl border border-[#d8e8dc] bg-[#f4faf5] p-4 text-xs leading-5 text-[#5f6f63]">
               This booking confirms immediately with {selectedPayment.label.toLowerCase()}.
               36 records the amount as pending until the studio marks the payment received.
               No card processor or paid payment service is used.
@@ -908,7 +914,7 @@ export function BookingWidget({
               type="button"
               disabled={booking}
               onClick={book}
-              className="mt-5 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-[#8a8a8a]"
+              className="mt-5 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-[#111] transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-[#e6e6e6] disabled:text-[#9a9a9a]"
             >
               {booking
                 ? "Confirming booking…"
@@ -922,7 +928,14 @@ export function BookingWidget({
         </div>
       )}
 
-      <div className="mt-5 space-y-3 text-sm">
+      <div className="mt-5 border-t border-[#ebebeb] pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
+            Price summary
+          </span>
+          <span className="text-[10px] text-[#8a8a8a]">Before confirmation</span>
+        </div>
+        <div className="space-y-3 text-sm">
         <div className="flex justify-between">
           <span className="text-[#717171]">
             {room.hourlyRateMad} MAD × {durationHours}h
@@ -953,7 +966,8 @@ export function BookingWidget({
           <span className="text-[#717171]">
             Payment
           </span>
-          <b className="text-acid">Pay directly to studio</b>
+          <b className="text-[#222]">Pay directly to studio</b>
+        </div>
         </div>
       </div>
     </div>
