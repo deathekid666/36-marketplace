@@ -583,7 +583,7 @@ export default async function DiscoverStudiosPage({
       rating,
       photoUrl: studio.photos[0]?.url || null,
       city: studio.city,
-      countryCode: null,
+      countryCode: "MA",
     };
   });
 
