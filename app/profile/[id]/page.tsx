@@ -75,9 +75,9 @@ export default async function PublicProfilePage({
   }));
 
   return (
-    <main className="min-h-screen bg-[#0b0c0a]">
+    <main className="min-h-screen bg-[#080907]">
       <AppHeader user={currentUser} />
-      <section className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
+      <section className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <AirbnbUserProfile
           profile={{
             id: data.user.id,
