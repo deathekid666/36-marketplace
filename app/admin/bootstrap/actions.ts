@@ -95,39 +95,25 @@ export async function bootstrapAdminAction(
 
   try {
     adminId = await db.$transaction(async (tx) => {
-      const lock = await tx.rateLimitWindow.upsert({
-        where: {
-          keyHash_action_windowStart: {
+      try {
+        await tx.rateLimitWindow.create({
+          data: {
             keyHash: BOOTSTRAP_KEY_HASH,
             action: BOOTSTRAP_ACTION,
             windowStart: BOOTSTRAP_WINDOW_START,
+            count: 1,
           },
-        },
-        create: {
-          keyHash: BOOTSTRAP_KEY_HASH,
-          action: BOOTSTRAP_ACTION,
-          windowStart: BOOTSTRAP_WINDOW_START,
-          count: 0,
-        },
-        update: {},
-        select: {
-          id: true,
-          count: true,
-        },
-      });
-
-      const consumed = await tx.rateLimitWindow.updateMany({
-        where: {
-          id: lock.id,
-          count: 0,
-        },
-        data: {
-          count: 1,
-        },
-      });
-
-      if (consumed.count !== 1) {
-        throw new Error("ADMIN_BOOTSTRAP_ALREADY_USED");
+        });
+      } catch (error) {
+        if (
+          error &&
+          typeof error === "object" &&
+          "code" in error &&
+          error.code === "P2002"
+        ) {
+          throw new Error("ADMIN_BOOTSTRAP_ALREADY_USED");
+        }
+        throw error;
       }
 
       const existing = await tx.user.findUnique({
