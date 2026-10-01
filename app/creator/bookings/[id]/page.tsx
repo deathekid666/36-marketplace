@@ -4,8 +4,9 @@ import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { BookingFileUploader } from "@/components/BookingFileUploader";
 import { BookingHoldCountdown } from "@/components/BookingHoldCountdown";
+import { VerifiedReviewForm } from "@/components/VerifiedReviewForm";
 import { openDisputeAction } from "@/app/disputes/actions";
-import { cancelBookingAction, sendBookingMessageAction, submitReviewAction } from "@/app/bookings/actions";
+import { cancelBookingAction, sendBookingMessageAction } from "@/app/bookings/actions";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMarketplaceDateTime } from "@/lib/time";
@@ -227,7 +228,22 @@ export default async function CreatorBookingDetailPage({
               <form action={sendBookingMessageAction} className="mt-5 flex gap-2"><input type="hidden" name="bookingId" value={booking.id} /><input className="field" name="body" maxLength={2000} placeholder="Ask about access, setup, equipment…" required /><button className="rounded-xl bg-acid px-4 text-xs font-black text-black">Send</button></form>
             </section>
 
-            {booking.status === "COMPLETED" && !booking.review && <section className="panel"><h2 className="text-xl font-black">Review this studio</h2><form action={submitReviewAction} className="mt-5 space-y-4"><input type="hidden" name="bookingId" value={booking.id} /><div className="grid gap-3 sm:grid-cols-2">{[["rating","Overall"],["accuracy","Listing accuracy"],["equipment","Equipment"],["communication","Communication"]].map(([name,label]) => <label key={name}><span className="label">{label}</span><select className="field" name={name} defaultValue="5">{[5,4,3,2,1].map((n) => <option key={n} value={n}>{n} / 5</option>)}</select></label>)}</div><label><span className="label">Comment</span><textarea className="field min-h-28" name="comment" maxLength={2000} /></label><button className="rounded-xl bg-acid px-5 py-3 text-xs font-black text-black">Publish verified review</button></form></section>}
+            {booking.status === "COMPLETED" && !booking.review && (
+              <section className="panel">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">
+                      Verified session
+                    </span>
+                    <h2 className="mt-2 text-xl font-black">Review this studio</h2>
+                  </div>
+                  <span className="text-[10px] text-zinc-600">
+                    Only completed 36 bookings can review
+                  </span>
+                </div>
+                <VerifiedReviewForm bookingId={booking.id} />
+              </section>
+            )}
             {booking.review && <section className="panel"><span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">Your verified review</span><div className="mt-3 text-lg text-acid">{stars(booking.review.rating)}</div><p className="mt-3 text-sm leading-6 text-zinc-400">{booking.review.comment || "No written comment."}</p>{booking.review.ownerReply && <div className="mt-4 rounded-xl bg-zinc-900 p-4"><b className="text-xs">Studio reply</b><p className="mt-2 text-sm text-zinc-400">{booking.review.ownerReply}</p></div>}</section>}
           </div>
 

@@ -89,6 +89,17 @@ export function MessagingInbox({
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const active = threads.find((thread) => thread.bookingId === activeId) || null;
+  const quickReplies = role === "CREATOR"
+    ? [
+        "Hi, can you confirm the access instructions?",
+        "Can you confirm the listed equipment will be ready?",
+        "Is there anything I should bring for the session?",
+      ]
+    : [
+        "Your booking is confirmed. Looking forward to your session.",
+        "Please arrive 10 minutes early for setup.",
+        "I’ll send the access details here before the session.",
+      ];
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -465,6 +476,22 @@ export function MessagingInbox({
                   {error && (
                     <p className="mb-2 text-xs text-red-300">{error}</p>
                   )}
+
+                  {!body && (
+                    <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                      {quickReplies.map((reply) => (
+                        <button
+                          key={reply}
+                          type="button"
+                          onClick={() => setBody(reply)}
+                          className="shrink-0 rounded-full border border-[#dddddd] bg-[#f7f7f7] px-3 py-2 text-[10px] font-bold text-[#555] transition hover:border-[#bdbdbd] hover:bg-white"
+                        >
+                          {reply}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex items-end gap-2 rounded-[1.35rem] border border-[#dddddd] bg-white p-2 focus-within:border-[#bdbdbd]">
                     <textarea
                       value={body}
@@ -494,9 +521,10 @@ export function MessagingInbox({
                       ↑
                     </button>
                   </div>
-                  <p className="mt-2 px-2 text-[9px] text-[#a3a3a3]">
-                    Enter to send · Shift + Enter for a new line
-                  </p>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-2 text-[9px] text-[#a3a3a3]">
+                    <span>Enter to send · Shift + Enter for a new line</span>
+                    <span>Booking chat · visible only to both booking parties</span>
+                  </div>
                 </div>
               </footer>
             </>
