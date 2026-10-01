@@ -235,14 +235,23 @@ export default async function StudioDetailPage({
     },
   );
 
+  const publicLatitude =
+    studio.latitude != null
+      ? Math.round(Number(studio.latitude) * 100) / 100
+      : null;
+  const publicLongitude =
+    studio.longitude != null
+      ? Math.round(Number(studio.longitude) * 100) / 100
+      : null;
+
   const mapPoints =
-    studio.latitude != null && studio.longitude != null
+    publicLatitude != null && publicLongitude != null
       ? [
           {
             id: studio.id,
             name: studio.name,
-            lat: Number(studio.latitude),
-            lng: Number(studio.longitude),
+            lat: publicLatitude,
+            lng: publicLongitude,
             href: "/studios/" + studio.slug,
             price:
               studio.rooms[0]?.hourlyRateMad || null,
@@ -730,6 +739,9 @@ export default async function StudioDetailPage({
                   : ""}
                 {studio.city}
               </p>
+              <p className="mt-2 text-xs text-[#8a8a8a]">
+                Approximate area shown before booking. Confirmed creators receive the exact studio address.
+              </p>
 
               {mapPoints.length > 0 ? (
                 <div className="mt-5">
@@ -737,8 +749,7 @@ export default async function StudioDetailPage({
                 </div>
               ) : (
                 <div className="mt-5 rounded-2xl border border-[#ebebeb] p-5 text-sm text-[#8a8a8a]">
-                  {studio.address ||
-                    "Map coordinates have not been added yet."}
+                  Approximate map coordinates have not been added yet.
                 </div>
               )}
             </section>

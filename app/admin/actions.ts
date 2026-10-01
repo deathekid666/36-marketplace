@@ -18,6 +18,10 @@ export async function verifyStudioAction(form: FormData) {
   await db.studio.update({ where: { id: studio.id }, data: { status: "VERIFIED", verifiedAt: new Date(), verificationNote: "" } });
   await notifyUser({ userId: studio.ownerId, type: "STUDIO_VERIFIED", title: `${studio.name} is verified`, body: "Your studio is now visible in 36 search and can receive bookings.", href: `/owner/studios/${studio.id}`, email: true, whatsapp: true });
   revalidatePath("/admin");
+  revalidatePath("/studios");
+  revalidatePath("/discover");
+  revalidatePath("/api/map/creative-spaces");
+  revalidatePath(`/studios/${studio.slug}`);
   revalidatePath(`/admin/studios/${studioId}`);
   redirect(`/admin/studios/${studioId}?review=verified`);
 }
@@ -32,6 +36,10 @@ export async function rejectStudioAction(form: FormData) {
   await db.studio.update({ where: { id: studio.id }, data: { status: "REJECTED", verifiedAt: null, verificationNote } });
   await notifyUser({ userId: studio.ownerId, type: "STUDIO_CHANGES_REQUIRED", title: `Changes required for ${studio.name}`, body: verificationNote, href: `/owner/studios/${studio.id}`, email: true });
   revalidatePath("/admin");
+  revalidatePath("/studios");
+  revalidatePath("/discover");
+  revalidatePath("/api/map/creative-spaces");
+  revalidatePath(`/studios/${studio.slug}`);
   revalidatePath(`/admin/studios/${studioId}`);
   redirect(`/admin/studios/${studioId}?review=rejected`);
 }
