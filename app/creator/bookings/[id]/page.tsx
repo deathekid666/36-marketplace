@@ -9,6 +9,7 @@ import { cancelBookingAction, sendBookingMessageAction, submitReviewAction } fro
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMarketplaceDateTime } from "@/lib/time";
+import { offlinePaymentLabel } from "@/lib/offline-payment";
 
 function stars(value: number) {
   return "★".repeat(value) + "☆".repeat(5 - value);
@@ -25,6 +26,7 @@ export default async function CreatorBookingDetailPage({
     error?: string;
     from?: string;
     checkout?: string;
+    booked?: string;
   }>;
 }) {
   const user = await requireRole("CREATOR");
@@ -51,6 +53,12 @@ export default async function CreatorBookingDetailPage({
   const refund = booking.payments.find((p) => p.kind === "REFUND");
   const canCancel = ["PENDING_DEPOSIT", "CONFIRMED"].includes(booking.status) && booking.startAt > new Date();
   const pendingDeposit = booking.status === "PENDING_DEPOSIT" && (!booking.expiresAt || booking.expiresAt > new Date());
+  const offlinePayment = booking.payments.find((payment) =>
+    offlinePaymentLabel(payment.provider),
+  );
+  const offlinePaymentMethod = offlinePaymentLabel(
+    offlinePayment?.provider,
+  );
 
   return (
     <main className="min-h-screen">
@@ -62,6 +70,14 @@ export default async function CreatorBookingDetailPage({
           <div className="text-right"><b className="text-3xl">{booking.totalAmountMad} MAD</b>{booking.baseAmountMad > booking.totalAmountMad && <span className="ml-2 text-sm text-zinc-600 line-through">{booking.baseAmountMad} MAD</span>}<span className="block text-xs text-zinc-600">total</span></div>
         </div>
 
+        {query.booked === "1" && offlinePaymentMethod && (
+          <div className="mt-6 rounded-2xl border border-emerald-800/40 bg-emerald-950/15 p-5">
+            <b className="text-sm text-emerald-300">Booking confirmed — no online payment required</b>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">
+              Payment method: {offlinePaymentMethod}. Pay the studio directly. The studio will mark the payment received in 36.
+            </p>
+          </div>
+        )}
         {query.checkout === "1" && pendingDeposit && (
           <div className="mt-6 rounded-2xl border border-amber-800/45 bg-amber-950/15 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -87,11 +103,24 @@ export default async function CreatorBookingDetailPage({
             <section className="panel">
               <h2 className="text-xl font-black">Booking & payment</h2>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl bg-black/30 p-4"><span className="label">Deposit</span><b>{booking.depositAmountMad} MAD · {deposit?.status || (booking.depositAmountMad === 0 ? "NOT REQUIRED" : booking.paymentStatus)}</b></div>
+                <div className="rounded-xl bg-black/30 p-4"><span className="label">{offlinePaymentMethod ? "Payment method" : "Deposit"}</span><b>{offlinePaymentMethod ? offlinePaymentMethod : booking.depositAmountMad + " MAD · " + (deposit?.status || (booking.depositAmountMad === 0 ? "NOT REQUIRED" : booking.paymentStatus))}</b></div>
                 <div className="rounded-xl bg-black/30 p-4"><span className="label">Balance</span><b>{balance ? `${balance.amountMad} MAD · ${balance.status}` : "0 MAD"}</b></div>
                 <div className="rounded-xl bg-black/30 p-4"><span className="label">Payment status</span><b>{booking.paymentStatus}</b></div>
                 <div className="rounded-xl bg-black/30 p-4"><span className="label">Cancellation</span><b>{booking.studio.freeCancellationHours}h free-cancellation window</b></div>
               </div>
+              {offlinePaymentMethod && booking.paymentStatus !== "PAID" && (
+                <div className="mt-4 rounded-xl border border-emerald-900/35 bg-emerald-950/10 p-4">
+                  <b className="text-sm text-emerald-300">Pay directly to the studio</b>
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    {booking.totalAmountMad} MAD · {offlinePaymentMethod}. No card processor or paid gateway is used.
+                  </p>
+                </div>
+              )}
+              {offlinePaymentMethod && booking.paymentStatus === "PAID" && (
+                <div className="mt-4 rounded-xl border border-emerald-900/35 bg-emerald-950/10 p-4 text-xs font-black text-emerald-300">
+                  Studio marked payment received ✓
+                </div>
+              )}
               {pendingDeposit && (
                 <div className="mt-4 rounded-xl border border-amber-800/40 bg-amber-950/15 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">

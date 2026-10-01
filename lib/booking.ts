@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { bookingFinancials } from "@/lib/finance";
+import { parseOfflinePaymentMethod } from "@/lib/offline-payment";
 import {
   formatMarketplaceTime,
   localDateKey,
@@ -265,6 +266,7 @@ export type CreateBookingInput = {
   notes?: string;
   totalOverrideMad?: number;
   expectedTotalMad?: number;
+  paymentMethod?: string;
   flashSlotId?: string;
   addons?: Array<{ addonId: string; quantity: number }>;
   promoCode?: string;
@@ -537,19 +539,40 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
   const finance = bookingFinancials(discountedSubtotalMad, valid.room.studio.commissionBps);
   const commissionAmountMad = finance.commissionAmountMad;
   const studioNetAmountMad = Math.max(0, totalAmountMad - commissionAmountMad);
-  const depositPercent = valid.room.studio.depositPercent;
-  const depositAmountMad = Math.round((totalAmountMad * depositPercent) / 100);
-  const balanceAmountMad = Math.max(0, totalAmountMad - depositAmountMad);
+  const offlinePaymentMethod = parseOfflinePaymentMethod(
+    input.paymentMethod,
+  );
+  const configuredDepositPercent = valid.room.studio.depositPercent;
+  const depositPercent = offlinePaymentMethod
+    ? 0
+    : configuredDepositPercent;
+  const depositAmountMad = offlinePaymentMethod
+    ? 0
+    : Math.round((totalAmountMad * depositPercent) / 100);
+  const balanceAmountMad = Math.max(
+    0,
+    totalAmountMad - depositAmountMad,
+  );
   const noDeposit = depositAmountMad === 0;
   const fullyPaidAtCreation = totalAmountMad === 0;
-  const expiresAt = noDeposit ? null : new Date(Date.now() + BOOKING_HOLD_MINUTES * 60000);
+  const expiresAt =
+    offlinePaymentMethod || noDeposit
+      ? null
+      : new Date(Date.now() + BOOKING_HOLD_MINUTES * 60000);
+  const paymentProvider =
+    offlinePaymentMethod ||
+    process.env.PAYMENT_PROVIDER ||
+    "MANUAL";
 
   return tx.booking.create({
     data: {
       creatorId: input.creatorId,
       studioId: valid.room.studioId,
       roomId: valid.room.id,
-      status: noDeposit ? "CONFIRMED" : "PENDING_DEPOSIT",
+      status:
+        offlinePaymentMethod || noDeposit
+          ? "CONFIRMED"
+          : "PENDING_DEPOSIT",
       paymentStatus: fullyPaidAtCreation ? "PAID" : "PENDING",
       startAt: input.startAt,
       endAt,
@@ -585,13 +608,13 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
             kind: "DEPOSIT" as const,
             amountMad: depositAmountMad,
             status: "PENDING" as const,
-            provider: process.env.PAYMENT_PROVIDER || "MANUAL",
+            provider: paymentProvider,
           }] : []),
           ...(balanceAmountMad > 0 ? [{
             kind: "BALANCE" as const,
             amountMad: balanceAmountMad,
             status: "PENDING" as const,
-            provider: process.env.PAYMENT_PROVIDER || "MANUAL",
+            provider: paymentProvider,
           }] : []),
         ],
       },

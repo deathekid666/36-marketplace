@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <rect width="1600" height="1000" fill="#0b0c0a"/>
+  <rect x="120" y="120" width="1360" height="760" rx="48" fill="#151713" stroke="#30332b" stroke-width="4"/>
+  <rect x="220" y="230" width="760" height="420" rx="28" fill="#090a08" stroke="#3b3f35" stroke-width="3"/>
+  <circle cx="430" cy="440" r="118" fill="#171a15" stroke="#d9ff43" stroke-width="10"/>
+  <circle cx="430" cy="440" r="46" fill="#d9ff43"/>
+  <circle cx="760" cy="440" r="118" fill="#171a15" stroke="#d9ff43" stroke-width="10"/>
+  <circle cx="760" cy="440" r="46" fill="#d9ff43"/>
+  <rect x="1080" y="250" width="250" height="360" rx="24" fill="#10120f" stroke="#30332b" stroke-width="3"/>
+  <rect x="1130" y="305" width="150" height="90" rx="12" fill="#d9ff43" opacity=".9"/>
+  <rect x="1130" y="430" width="150" height="22" rx="11" fill="#454b3e"/>
+  <rect x="1130" y="475" width="110" height="22" rx="11" fill="#454b3e"/>
+  <path d="M260 760 C520 660, 800 820, 1070 715 S1370 690, 1410 760" fill="none" stroke="#d9ff43" stroke-width="8" opacity=".7"/>
+  <text x="220" y="790" fill="#f5f5f5" font-family="Arial, sans-serif" font-weight="800" font-size="68">36 DEMO STUDIO</text>
+  <text x="224" y="845" fill="#7a8071" font-family="Arial, sans-serif" font-size="28">CONTROLLED TEST LISTING — NOT A REAL BUSINESS</text>
+</svg>

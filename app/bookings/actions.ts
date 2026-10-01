@@ -7,6 +7,10 @@ import { requireRole, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/notifications";
 import { ensureInvoice } from "@/lib/invoices";
+import {
+  isOfflinePaymentProvider,
+  offlinePaymentLabel,
+} from "@/lib/offline-payment";
 
 function text(form: FormData, name: string, max = 2000) {
   return String(form.get(name) ?? "").trim().slice(0, max);
@@ -137,6 +141,94 @@ export async function cancelBookingAction(form: FormData) {
   revalidatePath("/owner/bookings");
   revalidatePath("/now");
   redirect(`/creator/bookings/${booking.id}?cancelled=1`);
+}
+
+export async function confirmOfflinePaymentAction(form: FormData) {
+  const user = await requireRole("STUDIO_OWNER");
+  const bookingId = text(form, "bookingId", 80);
+
+  const booking = await db.booking.findFirst({
+    where: {
+      id: bookingId,
+      studio: { ownerId: user.id },
+      status: "CONFIRMED",
+    },
+    include: {
+      studio: true,
+      creator: true,
+      payments: true,
+    },
+  });
+
+  if (!booking) {
+    redirect("/owner/bookings/" + bookingId + "?error=payment");
+  }
+
+  const pendingOffline = booking.payments.filter(
+    (payment) =>
+      payment.status === "PENDING" &&
+      isOfflinePaymentProvider(payment.provider),
+  );
+
+  if (pendingOffline.length === 0) {
+    redirect("/owner/bookings/" + bookingId + "?error=payment");
+  }
+
+  const method =
+    offlinePaymentLabel(pendingOffline[0]?.provider) ||
+    "Offline payment";
+
+  await db.$transaction(async (tx) => {
+    await tx.payment.updateMany({
+      where: {
+        id: { in: pendingOffline.map((payment) => payment.id) },
+      },
+      data: {
+        status: "PAID",
+        confirmedAt: new Date(),
+        confirmedById: user.id,
+      },
+    });
+
+    const paid = await tx.payment.aggregate({
+      where: {
+        bookingId,
+        kind: { in: ["DEPOSIT", "BALANCE"] },
+        status: "PAID",
+      },
+      _sum: { amountMad: true },
+    });
+
+    await tx.booking.update({
+      where: { id: bookingId },
+      data: {
+        paymentStatus:
+          (paid._sum.amountMad || 0) >= booking.totalAmountMad
+            ? "PAID"
+            : "PARTIALLY_PAID",
+      },
+    });
+  });
+
+  await notifyUser({
+    userId: booking.creatorId,
+    type: "OFFLINE_PAYMENT_CONFIRMED",
+    title: "Studio confirmed your payment",
+    body:
+      method +
+      " received for " +
+      booking.studio.name +
+      ".",
+    href: "/creator/bookings/" + booking.id,
+    email: true,
+  });
+
+  revalidatePath("/owner/bookings");
+  revalidatePath("/owner/bookings/" + booking.id);
+  revalidatePath("/creator/bookings");
+  revalidatePath("/creator/bookings/" + booking.id);
+
+  redirect("/owner/bookings/" + booking.id + "?paid=1");
 }
 
 export async function completeBookingAction(form: FormData) {

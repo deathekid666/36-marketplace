@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { DateCalendar } from "@/components/DateCalendar";
+import {
+  OFFLINE_PAYMENT_METHODS,
+  type OfflinePaymentMethod,
+} from "@/lib/offline-payment";
 
 type RoomOption = {
   id: string;
@@ -139,6 +143,8 @@ export function BookingWidget({
   const [quote, setQuote] = useState<BookingQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] =
+    useState<OfflinePaymentMethod>("PAY_AT_STUDIO");
 
   const today = useMemo(() => toLocalDateValue(new Date()), []);
   const maxDate = useMemo(() => {
@@ -301,6 +307,7 @@ export function BookingWidget({
         addons: selectedAddonPayload(),
         promoCode: promoCode.trim(),
         expectedTotalMad: quote.totalAmountMad,
+        paymentMethod,
       }),
     });
 
@@ -331,9 +338,10 @@ export function BookingWidget({
   const subtotal = roomTotal + addonTotal;
   const estimatedTax = Math.round((subtotal * taxRateBps) / 10000);
   const estimatedTotal = subtotal + estimatedTax;
-  const estimatedDeposit = Math.round(
-    (estimatedTotal * depositPercent) / 100,
-  );
+  const selectedPayment =
+    OFFLINE_PAYMENT_METHODS.find(
+      (method) => method.value === paymentMethod,
+    ) || OFFLINE_PAYMENT_METHODS[0];
 
   return (
     <div>
@@ -655,7 +663,7 @@ export function BookingWidget({
       </button>
 
       <p className="mt-3 text-center text-[10px] text-zinc-600">
-        Exact price and deposit are verified by 36 before your slot is held.
+        Exact price and availability are verified by 36 before confirmation. No online payment is required.
       </p>
 
       {message && (
@@ -750,36 +758,72 @@ export function BookingWidget({
               </div>
             </div>
 
+            <div className="mt-5">
+              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+                Payment method
+              </span>
+              <div className="mt-3 space-y-2">
+                {OFFLINE_PAYMENT_METHODS.map((method) => (
+                  <label
+                    key={method.value}
+                    className={
+                      "flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition " +
+                      (paymentMethod === method.value
+                        ? "border-acid/40 bg-acid/[0.035]"
+                        : "border-zinc-900 bg-black/20 hover:border-zinc-700")
+                    }
+                  >
+                    <input
+                      type="radio"
+                      name="offlinePaymentMethod"
+                      value={method.value}
+                      checked={paymentMethod === method.value}
+                      onChange={() => setPaymentMethod(method.value)}
+                      className="mt-1 accent-[#d9ff43]"
+                    />
+                    <span>
+                      <b className="block text-sm">{method.label}</b>
+                      <span className="mt-1 block text-xs leading-5 text-zinc-600">
+                        {method.description}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+
+                <div className="rounded-2xl border border-dashed border-zinc-800 p-4 opacity-50">
+                  <b className="text-sm text-zinc-500">Online payment</b>
+                  <p className="mt-1 text-xs leading-5 text-zinc-700">
+                    Coming later. No paid gateway is required to operate 36 now.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-4 rounded-2xl border border-acid/25 bg-acid/[0.035] p-4">
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
-                    Due after confirmation
+                    Online payment due now
                   </span>
                   <b className="mt-1 block text-2xl text-acid">
-                    {quote.depositAmountMad} MAD
+                    0 MAD
                   </b>
-                  <span className="text-[10px] text-zinc-600">
-                    {quote.depositPercent}% deposit
-                  </span>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
-                    Remaining balance
+                    Pay directly to studio
                   </span>
                   <b className="mt-1 block text-sm">
-                    {quote.balanceAmountMad} MAD
+                    {quote.totalAmountMad} MAD
                   </b>
                 </div>
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-amber-900/35 bg-amber-950/10 p-4 text-xs leading-5 text-zinc-500">
-              Confirming creates a {quote.holdMinutes}-minute reservation hold.
-              {quote.depositAmountMad > 0
-                ? " The deposit must be completed before the hold expires."
-                : " No deposit is required, so the booking confirms immediately."}
-              {" "}No payment is taken by this confirmation button itself.
+            <div className="mt-4 rounded-xl border border-emerald-900/35 bg-emerald-950/10 p-4 text-xs leading-5 text-zinc-500">
+              This booking confirms immediately with {selectedPayment.label.toLowerCase()}.
+              36 records the amount as pending until the studio marks the payment received.
+              No card processor or paid payment service is used.
             </div>
 
             <button
@@ -789,10 +833,8 @@ export function BookingWidget({
               className="mt-5 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
             >
               {booking
-                ? "Holding your slot…"
-                : quote.depositAmountMad > 0
-                  ? "Confirm & continue to payment"
-                  : "Confirm booking"}
+                ? "Confirming booking…"
+                : "Confirm booking · " + selectedPayment.label}
             </button>
 
             <p className="mt-3 text-center text-[10px] text-zinc-600">
@@ -831,9 +873,9 @@ export function BookingWidget({
 
         <div className="flex justify-between text-xs">
           <span className="text-zinc-500">
-            Deposit due ({depositPercent}%)
+            Payment
           </span>
-          <b className="text-acid">{estimatedDeposit} MAD</b>
+          <b className="text-acid">Pay directly to studio</b>
         </div>
       </div>
     </div>
