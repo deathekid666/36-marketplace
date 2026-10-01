@@ -181,19 +181,21 @@ function markerSpec(L: any, node: MapNode) {
     });
   }
 
-  if (node.kind === "BOOKABLE" && node.price) {
+  const place = node as PlaceNode;
+
+  if (place.kind === "BOOKABLE" && place.price) {
     return L.divIcon({
       className: "air-map-leaflet-icon",
       html:
         '<div class="air-map-price-pin"><b>' +
-        node.price.toLocaleString("en") +
+        place.price.toLocaleString("en") +
         " MAD</b></div>",
       iconSize: [86, 34],
       iconAnchor: [43, 17],
     });
   }
 
-  const category = categoryMeta(node.categoryKey);
+  const category = categoryMeta(place.categoryKey);
   return L.divIcon({
     className: "air-map-leaflet-icon",
     html:
