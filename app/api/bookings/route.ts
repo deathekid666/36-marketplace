@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       status: booking.status,
       depositAmountMad: booking.depositAmountMad,
       expiresAt: booking.expiresAt,
-      redirectTo: `/creator/bookings/${booking.id}`,
+      redirectTo: `/creator/bookings/${booking.id}?checkout=1`,
     }, { status: 201 });
   } catch (error) {
     if (error instanceof BookingConflictError) {

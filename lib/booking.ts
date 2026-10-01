@@ -264,10 +264,197 @@ export type CreateBookingInput = {
   durationMinutes: number;
   notes?: string;
   totalOverrideMad?: number;
+  expectedTotalMad?: number;
   flashSlotId?: string;
   addons?: Array<{ addonId: string; quantity: number }>;
   promoCode?: string;
 };
+
+export type BookingQuote = {
+  roomId: string;
+  roomName: string;
+  hourlyRateMad: number;
+  startAt: string;
+  endAt: string;
+  durationMinutes: number;
+  baseAmountMad: number;
+  addons: Array<{
+    addonId: string;
+    name: string;
+    unitPriceMad: number;
+    quantity: number;
+    totalMad: number;
+  }>;
+  addonTotalMad: number;
+  promoCode: string;
+  promoDiscountMad: number;
+  discountedSubtotalMad: number;
+  taxBps: number;
+  taxAmountMad: number;
+  totalAmountMad: number;
+  depositPercent: number;
+  depositAmountMad: number;
+  balanceAmountMad: number;
+  holdMinutes: number;
+};
+
+export async function getBookingQuote(input: {
+  creatorId: string;
+  roomId: string;
+  startAt: Date;
+  durationMinutes: number;
+  addons?: Array<{ addonId: string; quantity: number }>;
+  promoCode?: string;
+}): Promise<BookingQuote> {
+  const endAt = new Date(
+    input.startAt.getTime() + input.durationMinutes * 60000,
+  );
+  const valid = await validateRoomInterval(
+    db,
+    input.roomId,
+    input.startAt,
+    endAt,
+  );
+  if (!valid.ok) throw new BookingConflictError(valid.reason);
+
+  const baseAmountMad = Math.round(
+    (valid.room.hourlyRateMad * input.durationMinutes) / 60,
+  );
+
+  const requestedAddons = (input.addons || [])
+    .map((item) => ({
+      addonId: item.addonId,
+      quantity: Math.max(
+        1,
+        Math.min(10, Math.round(item.quantity || 1)),
+      ),
+    }))
+    .filter(
+      (item, index, all) =>
+        item.addonId &&
+        all.findIndex((row) => row.addonId === item.addonId) === index,
+    );
+
+  const addons = requestedAddons.length
+    ? await db.studioAddon.findMany({
+        where: {
+          id: { in: requestedAddons.map((item) => item.addonId) },
+          studioId: valid.room.studioId,
+          active: true,
+          OR: [{ roomId: null }, { roomId: valid.room.id }],
+        },
+      })
+    : [];
+
+  const addonLines = addons.map((addon) => {
+    const requested = requestedAddons.find(
+      (item) => item.addonId === addon.id,
+    )!;
+    return {
+      addonId: addon.id,
+      name: addon.name,
+      unitPriceMad: addon.unitPriceMad,
+      quantity: requested.quantity,
+      totalMad: addon.unitPriceMad * requested.quantity,
+    };
+  });
+
+  const addonTotalMad = addonLines.reduce(
+    (sum, line) => sum + line.totalMad,
+    0,
+  );
+  const subtotalBeforeDiscount = baseAmountMad + addonTotalMad;
+
+  let promoDiscountMad = 0;
+  const promoCode = String(input.promoCode || "").trim().toUpperCase();
+
+  if (promoCode) {
+    const now = new Date();
+    const candidate = await db.promoCode.findFirst({
+      where: {
+        code: promoCode,
+        active: true,
+        OR: [{ studioId: null }, { studioId: valid.room.studioId }],
+        AND: [
+          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+          { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+        ],
+      },
+      include: { _count: { select: { redemptions: true } } },
+    });
+
+    if (
+      !candidate ||
+      subtotalBeforeDiscount < candidate.minBookingMad ||
+      (candidate.maxUses != null &&
+        candidate._count.redemptions >= candidate.maxUses)
+    ) {
+      throw new BookingConflictError(
+        "Promo code is invalid or unavailable.",
+      );
+    }
+
+    const userUses = await db.promoRedemption.count({
+      where: {
+        promoId: candidate.id,
+        userId: input.creatorId,
+      },
+    });
+
+    if (userUses >= candidate.perUserLimit) {
+      throw new BookingConflictError("Promo code usage limit reached.");
+    }
+
+    promoDiscountMad =
+      candidate.discountType === "PERCENT"
+        ? Math.round(
+            (subtotalBeforeDiscount *
+              Math.min(100, candidate.amount)) /
+              100,
+          )
+        : Math.min(subtotalBeforeDiscount, candidate.amount);
+  }
+
+  const discountedSubtotalMad = Math.max(
+    0,
+    subtotalBeforeDiscount - promoDiscountMad,
+  );
+  const taxBps = valid.room.studio.taxRateBps || 0;
+  const taxAmountMad = Math.round(
+    (discountedSubtotalMad * taxBps) / 10000,
+  );
+  const totalAmountMad = discountedSubtotalMad + taxAmountMad;
+  const depositPercent = valid.room.studio.depositPercent;
+  const depositAmountMad = Math.round(
+    (totalAmountMad * depositPercent) / 100,
+  );
+  const balanceAmountMad = Math.max(
+    0,
+    totalAmountMad - depositAmountMad,
+  );
+
+  return {
+    roomId: valid.room.id,
+    roomName: valid.room.name,
+    hourlyRateMad: valid.room.hourlyRateMad,
+    startAt: input.startAt.toISOString(),
+    endAt: endAt.toISOString(),
+    durationMinutes: input.durationMinutes,
+    baseAmountMad,
+    addons: addonLines,
+    addonTotalMad,
+    promoCode,
+    promoDiscountMad,
+    discountedSubtotalMad,
+    taxBps,
+    taxAmountMad,
+    totalAmountMad,
+    depositPercent,
+    depositAmountMad,
+    balanceAmountMad,
+    holdMinutes: BOOKING_HOLD_MINUTES,
+  };
+}
 
 export async function createBookingHoldInTransaction(tx: Prisma.TransactionClient, input: CreateBookingInput) {
   const endAt = new Date(input.startAt.getTime() + input.durationMinutes * 60000);
@@ -336,6 +523,17 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
   const taxBps = valid.room.studio.taxRateBps || 0;
   const taxAmountMad = Math.round(discountedSubtotalMad * taxBps / 10000);
   const totalAmountMad = discountedSubtotalMad + taxAmountMad;
+
+  if (
+    input.expectedTotalMad != null &&
+    Number.isFinite(input.expectedTotalMad) &&
+    Math.round(input.expectedTotalMad) !== totalAmountMad
+  ) {
+    throw new BookingConflictError(
+      "The price changed before confirmation. Review the updated total and try again.",
+    );
+  }
+
   const finance = bookingFinancials(discountedSubtotalMad, valid.room.studio.commissionBps);
   const commissionAmountMad = finance.commissionAmountMad;
   const studioNetAmountMad = Math.max(0, totalAmountMad - commissionAmountMad);

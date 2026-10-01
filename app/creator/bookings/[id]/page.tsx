@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AppHeader } from "@/components/AppHeader";
 import { BookingFileUploader } from "@/components/BookingFileUploader";
+import { BookingHoldCountdown } from "@/components/BookingHoldCountdown";
 import { openDisputeAction } from "@/app/disputes/actions";
 import { cancelBookingAction, sendBookingMessageAction, submitReviewAction } from "@/app/bookings/actions";
 import { requireRole } from "@/lib/auth";
@@ -18,7 +19,13 @@ export default async function CreatorBookingDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ cancelled?: string; reviewed?: string; error?: string; from?: string }>;
+  searchParams: Promise<{
+    cancelled?: string;
+    reviewed?: string;
+    error?: string;
+    from?: string;
+    checkout?: string;
+  }>;
 }) {
   const user = await requireRole("CREATOR");
   const { id } = await params;
@@ -55,6 +62,23 @@ export default async function CreatorBookingDetailPage({
           <div className="text-right"><b className="text-3xl">{booking.totalAmountMad} MAD</b>{booking.baseAmountMad > booking.totalAmountMad && <span className="ml-2 text-sm text-zinc-600 line-through">{booking.baseAmountMad} MAD</span>}<span className="block text-xs text-zinc-600">total</span></div>
         </div>
 
+        {query.checkout === "1" && pendingDeposit && (
+          <div className="mt-6 rounded-2xl border border-amber-800/45 bg-amber-950/15 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <b className="text-sm text-amber-200">Your studio slot is temporarily held</b>
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  Complete the deposit before the timer reaches zero to confirm the booking.
+                </p>
+              </div>
+              {booking.expiresAt && (
+                <div className="rounded-full border border-amber-800/40 bg-black/20 px-4 py-2 text-sm">
+                  <BookingHoldCountdown expiresAt={booking.expiresAt.toISOString()} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {(query.cancelled || query.reviewed) && <div className="mt-6 rounded-xl border border-acid/30 bg-acid/[0.04] p-4 text-sm text-acid">{query.cancelled ? "Booking cancelled. Refund status is shown below." : "Review submitted. Thank you."}</div>}
         {query.error && <div className="mt-6 rounded-xl border border-red-900/50 bg-red-950/20 p-4 text-sm text-red-300">That action could not be completed.</div>}
 
@@ -68,7 +92,71 @@ export default async function CreatorBookingDetailPage({
                 <div className="rounded-xl bg-black/30 p-4"><span className="label">Payment status</span><b>{booking.paymentStatus}</b></div>
                 <div className="rounded-xl bg-black/30 p-4"><span className="label">Cancellation</span><b>{booking.studio.freeCancellationHours}h free-cancellation window</b></div>
               </div>
-              {pendingDeposit && <div className="mt-4 rounded-xl border border-amber-800/40 bg-amber-950/15 p-4"><b className="text-sm text-amber-200">Deposit required</b><p className="mt-1 text-xs leading-5 text-amber-100/70">Hold expires {booking.expiresAt ? formatMarketplaceDateTime(booking.expiresAt) : "soon"}.</p>{deposit?.checkoutUrl ? <a href={deposit.checkoutUrl} rel="noreferrer" className="mt-3 inline-flex rounded-lg bg-acid px-4 py-2 text-xs font-black text-black">Pay deposit securely</a> : <p className="mt-3 text-xs text-zinc-500">Online gateway link not assigned yet. 36 Admin can attach a Payzone/NAPS/CMI checkout link while the direct merchant API adapter is being connected.</p>}</div>}
+              {pendingDeposit && (
+                <div className="mt-4 rounded-xl border border-amber-800/40 bg-amber-950/15 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <b className="text-sm text-amber-200">Deposit required</b>
+                      <p className="mt-1 text-xs leading-5 text-amber-100/70">
+                        Your slot is reserved only while this hold remains active.
+                      </p>
+                    </div>
+                    {booking.expiresAt && (
+                      <BookingHoldCountdown expiresAt={booking.expiresAt.toISOString()} />
+                    )}
+                  </div>
+
+                  <div className="mt-4 space-y-2 border-t border-amber-900/25 pt-4 text-xs">
+                    <div className="flex justify-between gap-3">
+                      <span className="text-zinc-500">Room session</span>
+                      <b>{booking.baseAmountMad} MAD</b>
+                    </div>
+                    {booking.addons.length > 0 && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-zinc-500">Add-ons</span>
+                        <b>
+                          {booking.addons.reduce((sum, addon) => sum + addon.totalMad, 0)} MAD
+                        </b>
+                      </div>
+                    )}
+                    {booking.promoDiscountMad > 0 && (
+                      <div className="flex justify-between gap-3 text-emerald-300">
+                        <span>Promo discount</span>
+                        <b>-{booking.promoDiscountMad} MAD</b>
+                      </div>
+                    )}
+                    {booking.taxAmountMad > 0 && (
+                      <div className="flex justify-between gap-3">
+                        <span className="text-zinc-500">Tax</span>
+                        <b>{booking.taxAmountMad} MAD</b>
+                      </div>
+                    )}
+                    <div className="flex justify-between gap-3 border-t border-amber-900/25 pt-2">
+                      <span className="font-black text-zinc-300">Total</span>
+                      <b>{booking.totalAmountMad} MAD</b>
+                    </div>
+                    <div className="flex justify-between gap-3 text-amber-200">
+                      <span>Deposit due now</span>
+                      <b>{booking.depositAmountMad} MAD</b>
+                    </div>
+                  </div>
+
+                  {deposit?.checkoutUrl ? (
+                    <a
+                      href={deposit.checkoutUrl}
+                      rel="noreferrer"
+                      className="mt-4 inline-flex w-full justify-center rounded-lg bg-acid px-4 py-3 text-xs font-black text-black"
+                    >
+                      Pay deposit securely
+                    </a>
+                  ) : (
+                    <p className="mt-4 rounded-lg border border-zinc-800 bg-black/20 p-3 text-xs leading-5 text-zinc-500">
+                      Online payment is not connected to an automatic merchant gateway yet.
+                      The existing 36 payment workflow can attach a secure Payzone/NAPS/CMI checkout link to this deposit.
+                    </p>
+                  )}
+                </div>
+              )}
               {booking.status === "CONFIRMED" && balance?.status === "PENDING" && <div className="mt-4 rounded-xl border border-sky-800/40 bg-sky-950/15 p-4"><b className="text-sm text-sky-200">Balance due before the session is financially complete</b><p className="mt-1 text-xs leading-5 text-sky-100/70">Remaining balance: {balance.amountMad} MAD.</p>{balance.checkoutUrl ? <a href={balance.checkoutUrl} rel="noreferrer" className="mt-3 inline-flex rounded-lg bg-acid px-4 py-2 text-xs font-black text-black">Pay remaining balance</a> : <p className="mt-3 text-xs text-zinc-500">36 Admin can attach the secure balance checkout link.</p>}</div>}
               {refund && <div className="mt-4 rounded-xl border border-zinc-800 p-4 text-xs"><span className="text-zinc-500">Refund</span><b className="ml-3">{refund.amountMad} MAD · {refund.status}</b></div>}
               {booking.addons.length > 0 && <div className="mt-4 border-t border-zinc-900 pt-4"><span className="label">Add-ons</span><div className="space-y-2">{booking.addons.map((addon)=><div key={addon.id} className="flex justify-between text-xs"><span className="text-zinc-500">{addon.nameSnapshot} ×{addon.quantity}</span><b>{addon.totalMad} MAD</b></div>)}</div></div>}

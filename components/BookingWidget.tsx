@@ -24,6 +24,34 @@ type AddonOption = {
 
 type Slot = { startAt: string; endAt: string; label: string };
 
+type BookingQuote = {
+  roomId: string;
+  roomName: string;
+  hourlyRateMad: number;
+  startAt: string;
+  endAt: string;
+  durationMinutes: number;
+  baseAmountMad: number;
+  addons: Array<{
+    addonId: string;
+    name: string;
+    unitPriceMad: number;
+    quantity: number;
+    totalMad: number;
+  }>;
+  addonTotalMad: number;
+  promoCode: string;
+  promoDiscountMad: number;
+  discountedSubtotalMad: number;
+  taxBps: number;
+  taxAmountMad: number;
+  totalAmountMad: number;
+  depositPercent: number;
+  depositAmountMad: number;
+  balanceAmountMad: number;
+  holdMinutes: number;
+};
+
 function toLocalDateValue(date: Date) {
   return [
     String(date.getFullYear()).padStart(4, "0"),
@@ -108,6 +136,9 @@ export function BookingWidget({
   const [booking, setBooking] = useState(false);
   const [message, setMessage] = useState("");
   const [promoCode, setPromoCode] = useState("");
+  const [quote, setQuote] = useState<BookingQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const today = useMemo(() => toLocalDateValue(new Date()), []);
   const maxDate = useMemo(() => {
@@ -196,7 +227,16 @@ export function BookingWidget({
     return () => controller.abort();
   }, [roomId, date, durationHours, initialStartAt]);
 
-  async function book() {
+  function selectedAddonPayload() {
+    return Object.entries(selectedAddons)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([addonId, quantity]) => ({
+        addonId,
+        quantity,
+      }));
+  }
+
+  async function reviewCheckout() {
     if (!selected) {
       setCalendarOpen(true);
       return;
@@ -214,6 +254,40 @@ export function BookingWidget({
       return;
     }
 
+    setQuoteLoading(true);
+    setMessage("");
+
+    const response = await fetch("/api/bookings/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomId,
+        startAt: selected,
+        durationMinutes: durationHours * 60,
+        addons: selectedAddonPayload(),
+        promoCode: promoCode.trim(),
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    setQuoteLoading(false);
+
+    if (!response.ok || !data.quote) {
+      setQuote(null);
+      setMessage(data.error || "Unable to review this booking.");
+      return;
+    }
+
+    setQuote(data.quote as BookingQuote);
+    setCheckoutOpen(true);
+  }
+
+  async function book() {
+    if (!quote) {
+      await reviewCheckout();
+      return;
+    }
+
     setBooking(true);
     setMessage("");
 
@@ -224,11 +298,9 @@ export function BookingWidget({
         roomId,
         startAt: selected,
         durationMinutes: durationHours * 60,
-        addons: Object.entries(selectedAddons).map(([addonId, quantity]) => ({
-          addonId,
-          quantity,
-        })),
+        addons: selectedAddonPayload(),
         promoCode: promoCode.trim(),
+        expectedTotalMad: quote.totalAmountMad,
       }),
     });
 
@@ -236,6 +308,8 @@ export function BookingWidget({
     setBooking(false);
 
     if (!response.ok) {
+      setCheckoutOpen(false);
+      setQuote(null);
       setMessage(data.error || "Booking failed.");
       return;
     }
@@ -567,25 +641,165 @@ export function BookingWidget({
 
       <button
         type="button"
-        disabled={booking}
-        onClick={book}
+        disabled={booking || quoteLoading}
+        onClick={reviewCheckout}
         className="mt-4 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
       >
-        {booking
-          ? "Reserving…"
+        {quoteLoading
+          ? "Checking price…"
           : !selected
             ? "Choose date & time"
             : !userRole
               ? "Log in to reserve"
-              : "Reserve"}
+              : "Review & reserve"}
       </button>
 
       <p className="mt-3 text-center text-[10px] text-zinc-600">
-        You won&apos;t be charged until the payment step.
+        Exact price and deposit are verified by 36 before your slot is held.
       </p>
 
       {message && (
         <p className="mt-3 text-xs leading-5 text-amber-300">{message}</p>
+      )}
+
+      {checkoutOpen && quote && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+          <button
+            type="button"
+            aria-label="Close checkout"
+            className="absolute inset-0"
+            onClick={() => {
+              if (!booking) setCheckoutOpen(false);
+            }}
+          />
+
+          <section className="relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[30px] border border-zinc-800 bg-[#11120f] p-5 shadow-[0_32px_100px_rgba(0,0,0,.65)] sm:rounded-[30px] sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-acid">
+                  Review booking
+                </span>
+                <h3 className="mt-2 text-2xl font-black">
+                  Confirm your studio session
+                </h3>
+              </div>
+              <button
+                type="button"
+                disabled={booking}
+                onClick={() => setCheckoutOpen(false)}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-white disabled:opacity-30"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-zinc-900 bg-black/20 p-4">
+                <span className="label">Room</span>
+                <b className="text-sm">{quote.roomName}</b>
+              </div>
+              <div className="rounded-2xl border border-zinc-900 bg-black/20 p-4">
+                <span className="label">Session</span>
+                <b className="text-sm">
+                  {friendlyDate(date)} · {friendlyStartTime(quote.startAt)}
+                </b>
+                <span className="mt-1 block text-[10px] text-zinc-600">
+                  {quote.durationMinutes / 60}h · Casablanca time
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4 text-sm">
+              <div className="flex justify-between gap-4">
+                <span className="text-zinc-500">
+                  {quote.hourlyRateMad} MAD × {quote.durationMinutes / 60}h
+                </span>
+                <b>{quote.baseAmountMad} MAD</b>
+              </div>
+
+              {quote.addons.map((addon) => (
+                <div
+                  key={addon.addonId}
+                  className="flex justify-between gap-4"
+                >
+                  <span className="text-zinc-500">
+                    {addon.name} × {addon.quantity}
+                  </span>
+                  <b>{addon.totalMad} MAD</b>
+                </div>
+              ))}
+
+              {quote.promoDiscountMad > 0 && (
+                <div className="flex justify-between gap-4 text-emerald-300">
+                  <span>Promo {quote.promoCode}</span>
+                  <b>-{quote.promoDiscountMad} MAD</b>
+                </div>
+              )}
+
+              {quote.taxAmountMad > 0 && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-zinc-500">Tax</span>
+                  <b>{quote.taxAmountMad} MAD</b>
+                </div>
+              )}
+
+              <div className="flex justify-between gap-4 border-t border-zinc-800 pt-3 text-base font-black">
+                <span>Total</span>
+                <span>{quote.totalAmountMad} MAD</span>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-acid/25 bg-acid/[0.035] p-4">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+                    Due after confirmation
+                  </span>
+                  <b className="mt-1 block text-2xl text-acid">
+                    {quote.depositAmountMad} MAD
+                  </b>
+                  <span className="text-[10px] text-zinc-600">
+                    {quote.depositPercent}% deposit
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+                    Remaining balance
+                  </span>
+                  <b className="mt-1 block text-sm">
+                    {quote.balanceAmountMad} MAD
+                  </b>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-amber-900/35 bg-amber-950/10 p-4 text-xs leading-5 text-zinc-500">
+              Confirming creates a {quote.holdMinutes}-minute reservation hold.
+              {quote.depositAmountMad > 0
+                ? " The deposit must be completed before the hold expires."
+                : " No deposit is required, so the booking confirms immediately."}
+              {" "}No payment is taken by this confirmation button itself.
+            </div>
+
+            <button
+              type="button"
+              disabled={booking}
+              onClick={book}
+              className="mt-5 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
+            >
+              {booking
+                ? "Holding your slot…"
+                : quote.depositAmountMad > 0
+                  ? "Confirm & continue to payment"
+                  : "Confirm booking"}
+            </button>
+
+            <p className="mt-3 text-center text-[10px] text-zinc-600">
+              36 rechecks availability and the quoted total at confirmation.
+            </p>
+          </section>
+        </div>
       )}
 
       <div className="mt-5 space-y-3 text-sm">
