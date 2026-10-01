@@ -452,18 +452,18 @@ export default async function DiscoverStudiosPage({
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
 
       <section className="mx-auto max-w-[1500px] px-5 py-10">
         <div className="max-w-4xl">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-sky-300">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-sky-600">
             36 Global Directory
           </span>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
             Studio contacts around the world
           </h1>
-          <p className="mt-4 text-sm leading-7 text-zinc-500">
+          <p className="mt-4 text-sm leading-7 text-[#717171]">
             Public business phone numbers from external place data. These listings
             are contact-only and are not bookable on 36 unless the real studio
             later joins and passes verification.
@@ -473,17 +473,17 @@ export default async function DiscoverStudiosPage({
         <form
           action="/discover"
           method="GET"
-          className="mt-8 grid gap-3 rounded-3xl border border-zinc-800 bg-[#11120f] p-3 lg:grid-cols-[minmax(220px,1fr)_minmax(250px,1fr)_190px_auto]"
+          className="mt-8 grid gap-3 rounded-3xl border border-[#dddddd] bg-white p-3 lg:grid-cols-[minmax(220px,1fr)_minmax(250px,1fr)_190px_auto]"
         >
           <label className="rounded-2xl px-4 py-2">
-            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
               Search
             </span>
             <input
               name="q"
               defaultValue={q}
               placeholder="Studio, city, area or phone"
-              className="mt-1 w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-zinc-700"
+              className="mt-1 w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-[#a3a3a3]"
             />
           </label>
 
@@ -497,8 +497,8 @@ export default async function DiscoverStudiosPage({
             mapAreaActive={mapBoundsActive}
           />
 
-          <label className="rounded-2xl border-t border-zinc-900 px-4 py-2 lg:border-l lg:border-t-0">
-            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+          <label className="rounded-2xl border-t border-[#ebebeb] px-4 py-2 lg:border-l lg:border-t-0">
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
               Studio type
             </span>
             <select
@@ -506,11 +506,11 @@ export default async function DiscoverStudiosPage({
               defaultValue={category}
               className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
             >
-              <option value="" className="bg-zinc-950">
+              <option value="" className="bg-white">
                 All types
               </option>
               {Object.values(DiscoveryStudioCategory).map((value) => (
-                <option key={value} value={value} className="bg-zinc-950">
+                <option key={value} value={value} className="bg-white">
                   {labelCategory(value)}
                 </option>
               ))}
@@ -521,7 +521,7 @@ export default async function DiscoverStudiosPage({
             Search
           </button>
 
-          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-zinc-900 px-4 py-3 text-xs font-bold text-zinc-400">
+          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-[#ebebeb] px-4 py-3 text-xs font-bold text-[#555555]">
             <input
               type="checkbox"
               name="verified"
@@ -531,7 +531,7 @@ export default async function DiscoverStudiosPage({
             />
             Owner verified
           </label>
-          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-zinc-900 px-4 py-3 text-xs font-bold text-zinc-400">
+          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-[#ebebeb] px-4 py-3 text-xs font-bold text-[#555555]">
             <input
               type="checkbox"
               name="website"
@@ -541,7 +541,7 @@ export default async function DiscoverStudiosPage({
             />
             Has website
           </label>
-          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-zinc-900 px-4 py-3 text-xs font-bold text-zinc-400">
+          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-[#ebebeb] px-4 py-3 text-xs font-bold text-[#555555]">
             <input
               type="checkbox"
               name="email"
@@ -554,8 +554,8 @@ export default async function DiscoverStudiosPage({
         </form>
 
         <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm text-zinc-500">
-            <b className="text-zinc-200">{total}</b> contact listing
+          <p className="text-sm text-[#717171]">
+            <b className="text-[#222222]">{total}</b> contact listing
             {total === 1 ? "" : "s"}
             {mapBoundsActive
               ? " · Map area"
@@ -572,7 +572,7 @@ export default async function DiscoverStudiosPage({
           <div className="flex flex-wrap items-center gap-4">
             <Link
               href={user ? "/discover/add" : "/auth/login?next=%2Fdiscover%2Fadd"}
-              className="text-xs font-black text-sky-300 hover:text-white"
+              className="text-xs font-black text-sky-600 hover:text-[#222222]"
             >
               + Suggest a missing studio
             </Link>
@@ -583,9 +583,9 @@ export default async function DiscoverStudiosPage({
         </div>
 
         {visibleCandidates.length === 0 ? (
-          <div className="mt-8 rounded-3xl border border-dashed border-zinc-800 p-14 text-center">
+          <div className="mt-8 rounded-3xl border border-dashed border-[#dddddd] p-14 text-center">
             <h2 className="text-xl font-black">No contact listings match this search</h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-zinc-600">
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#8a8a8a]">
               Try another country, city or studio name.
             </p>
           </div>
@@ -602,7 +602,7 @@ export default async function DiscoverStudiosPage({
                 <div className="sticky top-5">
                   <div className="mb-3 flex items-center justify-between">
                     <b className="text-sm">Map</b>
-                    <span className="text-xs text-zinc-600">
+                    <span className="text-xs text-[#8a8a8a]">
                       {mapPoints.length} locations on this page
                     </span>
                   </div>
@@ -636,12 +636,12 @@ export default async function DiscoverStudiosPage({
                     data-directory-card
                     data-studio-id={candidate.id}
                     data-map-active="false"
-                    className="rounded-3xl border border-zinc-900 bg-zinc-950/60 p-5 transition"
+                    className="rounded-3xl border border-[#ebebeb] bg-white p-5 transition"
                   >
                     {heroPhoto && (
                       <a
                         href={"/discover/" + candidate.slug}
-                        className="-mx-5 -mt-5 mb-5 block overflow-hidden rounded-t-3xl border-b border-zinc-900"
+                        className="-mx-5 -mt-5 mb-5 block overflow-hidden rounded-t-3xl border-b border-[#ebebeb]"
                       >
                         <img
                           src={heroPhoto}
@@ -658,12 +658,12 @@ export default async function DiscoverStudiosPage({
                         className={
                           "rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] " +
                           (ownershipVerified
-                            ? "border-emerald-900/50 bg-emerald-950/20 text-emerald-300"
+                            ? "border-emerald-900/50 bg-emerald-950/20 text-emerald-600"
                             : candidate.status === "CONVERTED"
-                              ? "border-amber-900/50 bg-amber-950/20 text-amber-300"
+                              ? "border-amber-900/50 bg-amber-950/20 text-amber-600"
                               : reviewed
-                                ? "border-sky-900/50 bg-sky-950/20 text-sky-300"
-                                : "border-zinc-800 text-zinc-400")
+                                ? "border-sky-200/50 bg-sky-950/20 text-sky-600"
+                                : "border-[#dddddd] text-[#555555]")
                         }
                       >
                         {ownershipVerified
@@ -674,13 +674,13 @@ export default async function DiscoverStudiosPage({
                               ? "Reviewed contact"
                               : "Public contact"}
                       </span>
-                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-700">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#a3a3a3]">
                         {labelCategory(candidate.category)}
                       </span>
                     </div>
 
                     <h2 className="mt-5 text-xl font-black">{candidate.name}</h2>
-                    <p className="mt-2 text-sm text-zinc-500">
+                    <p className="mt-2 text-sm text-[#717171]">
                       {[
                         candidate.district,
                         candidate.city,
@@ -691,7 +691,7 @@ export default async function DiscoverStudiosPage({
                     </p>
 
                     {profileV2.description && (
-                      <p className="mt-3 line-clamp-2 text-xs leading-5 text-zinc-500">
+                      <p className="mt-3 line-clamp-2 text-xs leading-5 text-[#717171]">
                         {profileV2.description}
                       </p>
                     )}
@@ -701,13 +701,13 @@ export default async function DiscoverStudiosPage({
                         {profileV2.services.slice(0, 3).map((service) => (
                           <span
                             key={service}
-                            className="rounded-full border border-sky-900/30 bg-sky-950/10 px-2 py-1 text-[9px] font-bold text-sky-300"
+                            className="rounded-full border border-sky-200/30 bg-sky-950/10 px-2 py-1 text-[9px] font-bold text-sky-600"
                           >
                             {service}
                           </span>
                         ))}
                         {profileV2.services.length > 3 && (
-                          <span className="rounded-full border border-zinc-900 px-2 py-1 text-[9px] text-zinc-600">
+                          <span className="rounded-full border border-[#ebebeb] px-2 py-1 text-[9px] text-[#8a8a8a]">
                             +{profileV2.services.length - 3}
                           </span>
                         )}
@@ -717,15 +717,15 @@ export default async function DiscoverStudiosPage({
                     {candidate.phone && (
                       <a
                         href={cleanPhoneHref(candidate.phone)}
-                        className="mt-4 flex items-center justify-between rounded-xl border border-zinc-800 bg-black/20 px-4 py-3 text-sm transition hover:border-sky-800"
+                        className="mt-4 flex items-center justify-between rounded-xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-sm transition hover:border-sky-800"
                       >
-                        <span className="text-zinc-500">☎ Public phone</span>
-                        <b className="text-sky-300">{candidate.phone}</b>
+                        <span className="text-[#717171]">☎ Public phone</span>
+                        <b className="text-sky-600">{candidate.phone}</b>
                       </a>
                     )}
 
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="rounded-full border border-zinc-800 px-2.5 py-1 text-[10px] font-bold text-zinc-500">
+                      <span className="rounded-full border border-[#dddddd] px-2.5 py-1 text-[10px] font-bold text-[#717171]">
                         Phone ✓
                       </span>
                       {website && (
@@ -733,7 +733,7 @@ export default async function DiscoverStudiosPage({
                           href={website}
                           target="_blank"
                           rel="noreferrer noopener"
-                          className="rounded-full border border-zinc-800 px-2.5 py-1 text-[10px] font-bold text-zinc-400 hover:border-sky-800 hover:text-sky-300"
+                          className="rounded-full border border-[#dddddd] px-2.5 py-1 text-[10px] font-bold text-[#555555] hover:border-sky-800 hover:text-sky-600"
                         >
                           Website ↗
                         </a>
@@ -741,14 +741,14 @@ export default async function DiscoverStudiosPage({
                       {candidate.email && (
                         <a
                           href={"mailto:" + candidate.email}
-                          className="rounded-full border border-zinc-800 px-2.5 py-1 text-[10px] font-bold text-zinc-400 hover:border-sky-800 hover:text-sky-300"
+                          className="rounded-full border border-[#dddddd] px-2.5 py-1 text-[10px] font-bold text-[#555555] hover:border-sky-800 hover:text-sky-600"
                         >
                           Email
                         </a>
                       )}
                     </div>
 
-                    <p className="mt-4 text-xs leading-5 text-zinc-600">
+                    <p className="mt-4 text-xs leading-5 text-[#8a8a8a]">
                       Contact-only listing · not bookable on 36.
                     </p>
 
@@ -756,7 +756,7 @@ export default async function DiscoverStudiosPage({
                       {candidate.sources.map((source) => (
                         <span
                           key={source.id}
-                          className="rounded-full border border-zinc-800 px-2.5 py-1 text-[10px] text-zinc-500"
+                          className="rounded-full border border-[#dddddd] px-2.5 py-1 text-[10px] text-[#717171]"
                         >
                           {source.provider}
                         </span>
@@ -766,7 +766,7 @@ export default async function DiscoverStudiosPage({
                     <div className="mt-5 flex items-center justify-between gap-3">
                       <Link
                         href={"/discover/" + candidate.slug}
-                        className="inline-flex text-xs font-black text-sky-300 hover:text-white"
+                        className="inline-flex text-xs font-black text-sky-600 hover:text-[#222222]"
                       >
                         View contact listing →
                       </Link>
@@ -797,7 +797,7 @@ export default async function DiscoverStudiosPage({
             >
               ← Previous
             </Link>
-            <span className="text-xs text-zinc-600">
+            <span className="text-xs text-[#8a8a8a]">
               Page {page} of {pageCount}
             </span>
             <Link

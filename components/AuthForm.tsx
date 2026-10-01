@@ -14,7 +14,6 @@ export function AuthForm({ mode, nextTo }: { mode: Mode; nextTo?: string }) {
     event.preventDefault();
     setError("");
     setBusy(true);
-
     const form = new FormData(event.currentTarget);
     const payload = Object.fromEntries(form.entries());
     if (nextTo) payload.nextTo = nextTo;
@@ -24,7 +23,6 @@ export function AuthForm({ mode, nextTo }: { mode: Mode; nextTo?: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
     const data = await response.json().catch(() => ({}));
     setBusy(false);
 
@@ -38,121 +36,56 @@ export function AuthForm({ mode, nextTo }: { mode: Mode; nextTo?: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5">
+    <form onSubmit={submit} className="air-auth-form">
       {mode === "signup" && (
         <>
-          <label className="block">
-            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Full name
-            </span>
-            <input
-              name="name"
-              required
-              maxLength={100}
-              autoComplete="name"
-              className="field"
-              placeholder="Your name"
-            />
+          <label>
+            <span>Full name</span>
+            <input name="name" required maxLength={100} autoComplete="name" className="field" placeholder="Your name" />
           </label>
 
           <fieldset>
-            <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              I am joining as
-            </legend>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <legend>I am joining as</legend>
+            <div className="air-role-grid">
               <label className="role-card">
-                <input
-                  className="peer sr-only"
-                  type="radio"
-                  name="role"
-                  value="CREATOR"
-                  defaultChecked
-                />
-                <span className="block text-sm font-black peer-checked:text-acid">
-                  Creator
-                </span>
-                <span className="mt-1 block text-xs leading-5 text-zinc-500">
-                  Find and book creative spaces.
-                </span>
+                <input className="peer sr-only" type="radio" name="role" value="CREATOR" defaultChecked />
+                <b>Creator</b>
+                <small>Find and book creative spaces.</small>
               </label>
               <label className="role-card">
-                <input
-                  className="peer sr-only"
-                  type="radio"
-                  name="role"
-                  value="STUDIO_OWNER"
-                />
-                <span className="block text-sm font-black peer-checked:text-acid">
-                  Studio owner
-                </span>
-                <span className="mt-1 block text-xs leading-5 text-zinc-500">
-                  List and manage spaces.
-                </span>
+                <input className="peer sr-only" type="radio" name="role" value="STUDIO_OWNER" />
+                <b>Studio owner</b>
+                <small>List and manage spaces.</small>
               </label>
             </div>
           </fieldset>
 
-          <label className="block">
-            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Referral code <span className="normal-case tracking-normal text-zinc-700">(optional)</span></span>
+          <label>
+            <span>Referral code <small>(optional)</small></span>
             <input name="referralCode" maxLength={32} className="field" placeholder="e.g. 36-AB12CD34" />
           </label>
         </>
       )}
 
-      <label className="block">
-        <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
-          Email
-        </span>
-        <input
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          className="field"
-          placeholder="you@example.com"
-        />
+      <label>
+        <span>Email</span>
+        <input name="email" type="email" required autoComplete="email" className="field" placeholder="you@example.com" />
       </label>
 
-      <label className="block">
-        <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
-          Password
-        </span>
-        <input
-          name="password"
-          type="password"
-          required
-          minLength={10}
-          autoComplete={mode === "signup" ? "new-password" : "current-password"}
-          className="field"
-          placeholder="10+ characters"
-        />
+      <label>
+        <span>Password</span>
+        <input name="password" type="password" required minLength={10} autoComplete={mode === "signup" ? "new-password" : "current-password"} className="field" placeholder="10+ characters" />
       </label>
 
-      {mode === "login" && <div className="-mt-2 text-right"><a className="text-xs text-zinc-500 hover:text-acid" href="/auth/forgot-password">Forgot password?</a></div>}
-
-      {error && (
-        <div role="alert" className="rounded-xl border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-300">
-          {error}
-        </div>
+      {mode === "login" && (
+        <div className="air-forgot"><a href="/auth/forgot-password">Forgot password?</a></div>
       )}
 
-      <button
-        type="submit"
-        disabled={busy}
-        className="w-full rounded-xl bg-acid px-5 py-3.5 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {busy
-          ? "Please wait…"
-          : mode === "signup"
-            ? "Create account"
-            : "Log in"}
+      {error && <div role="alert" className="air-auth-error">{error}</div>}
+
+      <button type="submit" disabled={busy} className="air-auth-submit">
+        {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
       </button>
-
-      {mode === "signup" && (
-        <p className="text-xs leading-5 text-zinc-600">
-          Admin accounts cannot be created publicly. They are bootstrapped securely from the server.
-        </p>
-      )}
     </form>
   );
 }

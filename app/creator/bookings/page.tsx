@@ -114,7 +114,7 @@ export default async function CreatorBookingsPage({
   ];
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
       <section className="mx-auto max-w-7xl px-5 py-10 sm:py-12">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -125,14 +125,14 @@ export default async function CreatorBookingsPage({
             <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
               Your sessions
             </h1>
-            <p className="mt-3 text-sm text-zinc-500">
+            <p className="mt-3 text-sm text-[#717171]">
               Upcoming studio time, past sessions, payment status and booking
               details.
             </p>
           </div>
           <Link
             href="/studios"
-            className="rounded-full bg-acid px-5 py-3 text-sm font-black text-black"
+            className="rounded-full bg-acid px-5 py-3 text-sm font-black text-white"
           >
             Find another studio
           </Link>
@@ -144,7 +144,7 @@ export default async function CreatorBookingsPage({
           </div>
         )}
         {query.released && (
-          <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
+          <div className="mt-6 rounded-xl border border-[#dddddd] bg-white p-4 text-sm text-[#333333]">
             Booking hold released. The room is available again.
           </div>
         )}
@@ -153,7 +153,7 @@ export default async function CreatorBookingsPage({
           <div className="panel">
             <span className="label">Upcoming</span>
             <b className="mt-2 block text-3xl">{upcoming.length}</b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               confirmed or active holds
             </span>
           </div>
@@ -164,18 +164,18 @@ export default async function CreatorBookingsPage({
                 <b className="mt-2 block truncate text-lg">
                   {nextSession.studio.name}
                 </b>
-                <span className="mt-1 block text-xs text-zinc-600">
+                <span className="mt-1 block text-xs text-[#8a8a8a]">
                   {formatMarketplaceDateTime(nextSession.startAt)}
                 </span>
               </>
             ) : (
-              <b className="mt-2 block text-lg text-zinc-700">Nothing booked</b>
+              <b className="mt-2 block text-lg text-[#a3a3a3]">Nothing booked</b>
             )}
           </div>
           <div className="panel">
             <span className="label">Direct payments</span>
             <b className="mt-2 block text-3xl">{unpaidOffline}</b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               still waiting for studio receipt confirmation
             </span>
           </div>
@@ -194,7 +194,7 @@ export default async function CreatorBookingsPage({
                 "shrink-0 rounded-full border px-4 py-2 text-xs font-black " +
                 (view === tab.value
                   ? "border-acid/40 bg-acid/[0.06] text-acid"
-                  : "border-zinc-800 text-zinc-500 hover:text-white")
+                  : "border-[#dddddd] text-[#717171] hover:text-[#222222]")
               }
             >
               {tab.label} · {tab.count}
@@ -206,7 +206,7 @@ export default async function CreatorBookingsPage({
           {visible.length === 0 ? (
             <div className="panel py-14 text-center">
               <h2 className="font-black">No {view} sessions</h2>
-              <p className="mt-2 text-sm text-zinc-600">
+              <p className="mt-2 text-sm text-[#8a8a8a]">
                 Book a verified studio and it will appear here.
               </p>
             </div>
@@ -233,14 +233,14 @@ export default async function CreatorBookingsPage({
                 <article
                   key={booking.id}
                   className={
-                    "overflow-hidden rounded-3xl border bg-zinc-950/70 " +
+                    "overflow-hidden rounded-3xl border bg-white " +
                     (booking.id === query.booking
                       ? "border-acid/40"
-                      : "border-zinc-900")
+                      : "border-[#ebebeb]")
                   }
                 >
                   <div className="grid md:grid-cols-[220px_1fr]">
-                    <div className="relative min-h-44 bg-zinc-900">
+                    <div className="relative min-h-44 bg-[#f3f3f3]">
                       {cover ? (
                         <img
                           src={cover}
@@ -249,7 +249,7 @@ export default async function CreatorBookingsPage({
                           referrerPolicy="no-referrer"
                         />
                       ) : (
-                        <div className="absolute inset-0 grid place-items-center text-4xl font-black text-zinc-800">
+                        <div className="absolute inset-0 grid place-items-center text-4xl font-black text-[#b8b8b8]">
                           36
                         </div>
                       )}
@@ -261,19 +261,19 @@ export default async function CreatorBookingsPage({
                     <div className="p-5 sm:p-6">
                       <div className="flex flex-wrap items-start justify-between gap-5">
                         <div className="min-w-0">
-                          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+                          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8a8a8a]">
                             {reference(booking.id)}
                           </span>
                           <h2 className="mt-2 text-2xl font-black">
                             {booking.studio.name}
                           </h2>
-                          <p className="mt-1 text-sm text-zinc-500">
+                          <p className="mt-1 text-sm text-[#717171]">
                             {booking.room.name} ·{" "}
                             {formatMarketplaceDateTime(booking.startAt)} →{" "}
                             {formatMarketplaceDateTime(booking.endAt)}
                           </p>
                           {location && (
-                            <p className="mt-2 text-xs text-zinc-600">
+                            <p className="mt-2 text-xs text-[#8a8a8a]">
                               ⌖ {location}
                             </p>
                           )}
@@ -283,7 +283,7 @@ export default async function CreatorBookingsPage({
                           <b className="text-xl">
                             {booking.totalAmountMad} MAD
                           </b>
-                          <span className="block text-[10px] uppercase tracking-[0.08em] text-zinc-600">
+                          <span className="block text-[10px] uppercase tracking-[0.08em] text-[#8a8a8a]">
                             {booking.paymentStatus.replaceAll("_", " ")}
                           </span>
                         </div>
@@ -295,8 +295,8 @@ export default async function CreatorBookingsPage({
                             className={
                               "rounded-full border px-3 py-1.5 text-[10px] font-black " +
                               (booking.paymentStatus === "PAID"
-                                ? "border-emerald-900/40 text-emerald-300"
-                                : "border-amber-900/40 text-amber-300")
+                                ? "border-emerald-900/40 text-emerald-600"
+                                : "border-amber-900/40 text-amber-600")
                             }
                           >
                             {offlineMethod} ·{" "}
@@ -306,7 +306,7 @@ export default async function CreatorBookingsPage({
                           </span>
                         )}
                         {!offlineMethod && deposit && (
-                          <span className="rounded-full border border-zinc-800 px-3 py-1.5 text-[10px] font-black text-zinc-500">
+                          <span className="rounded-full border border-[#dddddd] px-3 py-1.5 text-[10px] font-black text-[#717171]">
                             Deposit {deposit.status}
                           </span>
                         )}
@@ -315,7 +315,7 @@ export default async function CreatorBookingsPage({
                       <div className="mt-5 flex flex-wrap items-center gap-3">
                         <Link
                           href={"/creator/bookings/" + booking.id}
-                          className="rounded-xl bg-acid px-4 py-2.5 text-xs font-black text-black"
+                          className="rounded-xl bg-acid px-4 py-2.5 text-xs font-black text-white"
                         >
                           Open session
                         </Link>
@@ -342,7 +342,7 @@ export default async function CreatorBookingsPage({
                               name="bookingId"
                               value={booking.id}
                             />
-                            <button className="text-xs font-bold text-zinc-600 hover:text-red-300">
+                            <button className="text-xs font-bold text-[#8a8a8a] hover:text-red-300">
                               Release hold
                             </button>
                           </form>

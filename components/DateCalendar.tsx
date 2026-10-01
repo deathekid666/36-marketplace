@@ -2,37 +2,33 @@
 
 import { useMemo, useState } from "react";
 
-function toDateValue(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+function parseDateValue(value?: string) {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
 }
 
-function parseDateValue(value: string | undefined) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const [y, m, d] = value.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  return Number.isNaN(date.getTime()) ? null : date;
+function toDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function monthCells(month: Date) {
-  const first = new Date(month.getFullYear(), month.getMonth(), 1);
-  const last = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-  const cells: Array<Date | null> = [];
-  for (let i = 0; i < first.getDay(); i += 1) cells.push(null);
-  for (let day = 1; day <= last.getDate(); day += 1) {
-    cells.push(new Date(month.getFullYear(), month.getMonth(), day));
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstWeekday = new Date(year, monthIndex, 1).getDay();
+  const days = new Date(year, monthIndex + 1, 0).getDate();
+  const cells: Array<Date | null> = Array.from({ length: firstWeekday }, () => null);
+  for (let day = 1; day <= days; day += 1) cells.push(new Date(year, monthIndex, day));
+  while (cells.length % 7) cells.push(null);
   return cells;
 }
 
 function monthTitle(month: Date) {
-  return new Intl.DateTimeFormat("en", {
-    month: "long",
-    year: "numeric",
-  }).format(month);
+  return new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(month);
 }
 
 function CalendarMonth({
@@ -58,20 +54,13 @@ function CalendarMonth({
 
   return (
     <div className={second ? "hidden min-w-0 flex-1 sm:block" : "min-w-0 flex-1"}>
-      <div className="h-9 text-center text-sm font-black">{monthTitle(month)}</div>
-
-      <div className="mt-2 grid grid-cols-7 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-600">
-        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-          <span key={day} className="py-2">
-            {day}
-          </span>
-        ))}
+      <div className="air-calendar-month-title">{monthTitle(month)}</div>
+      <div className="air-calendar-weekdays">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => <span key={day}>{day}</span>)}
       </div>
-
-      <div className="grid grid-cols-7 gap-y-1">
+      <div className="air-calendar-days">
         {days.map((day, index) => {
-          if (!day) return <span key={`empty-${index}`} className="h-11" />;
-
+          if (!day) return <span key={`empty-${index}`} className="air-calendar-empty" />;
           const dateValue = toDateValue(day);
           const isSelected = dateValue === value;
           const isBeforeMin = Boolean(minimum && day.getTime() < minimum.getTime());
@@ -88,26 +77,16 @@ function CalendarMonth({
               type="button"
               disabled={isDisabled}
               onClick={() => onChange(dateValue)}
-              aria-label={
-                availabilityKnown
-                  ? `${dateValue}, ${slotCount} available start ${slotCount === 1 ? "time" : "times"}`
-                  : dateValue
-              }
+              aria-label={availabilityKnown ? `${dateValue}, ${slotCount} available start ${slotCount === 1 ? "time" : "times"}` : dateValue}
               className={[
-                "group relative mx-auto grid h-11 w-11 place-items-center rounded-full text-sm font-semibold transition",
-                isSelected
-                  ? "bg-white text-black"
-                  : "text-zinc-200 hover:bg-zinc-800",
-                isToday && !isSelected ? "ring-1 ring-zinc-600" : "",
-                isDisabled
-                  ? "cursor-not-allowed text-zinc-800 line-through decoration-zinc-700 hover:bg-transparent"
-                  : "",
+                "air-calendar-day",
+                isSelected ? "air-calendar-day-selected" : "",
+                isToday && !isSelected ? "air-calendar-day-today" : "",
+                isDisabled ? "air-calendar-day-disabled" : "",
               ].join(" ")}
             >
               <span>{day.getDate()}</span>
-              {availabilityKnown && slotCount! > 0 && !isSelected && (
-                <span className="absolute bottom-1 h-1 w-1 rounded-full bg-acid" />
-              )}
+              {availabilityKnown && slotCount! > 0 && !isSelected && <i />}
             </button>
           );
         })}
@@ -139,93 +118,40 @@ export function DateCalendar({
   const minimum = parseDateValue(min);
   const maximum = parseDateValue(max);
   const initial = selected || minimum || new Date();
-  const [month, setMonth] = useState(
-    () => new Date(initial.getFullYear(), initial.getMonth(), 1),
-  );
+  const [month, setMonth] = useState(() => new Date(initial.getFullYear(), initial.getMonth(), 1));
+  const nextMonth = useMemo(() => new Date(month.getFullYear(), month.getMonth() + 1, 1), [month]);
 
-  const nextMonth = useMemo(
-    () => new Date(month.getFullYear(), month.getMonth() + 1, 1),
-    [month],
-  );
-
-  const minMonth = minimum
-    ? new Date(minimum.getFullYear(), minimum.getMonth(), 1)
-    : null;
-  const maxMonth = maximum
-    ? new Date(maximum.getFullYear(), maximum.getMonth(), 1)
-    : null;
-
+  const minMonth = minimum ? new Date(minimum.getFullYear(), minimum.getMonth(), 1) : null;
+  const maxMonth = maximum ? new Date(maximum.getFullYear(), maximum.getMonth(), 1) : null;
   const canGoBack = !minMonth || month.getTime() > minMonth.getTime();
   const furthestVisibleMonth = twoMonths ? nextMonth : month;
   const canGoForward = !maxMonth || furthestVisibleMonth.getTime() < maxMonth.getTime();
 
   function shiftMonth(delta: number) {
-    setMonth(
-      (current) =>
-        new Date(current.getFullYear(), current.getMonth() + delta, 1),
-    );
+    setMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
   }
 
   return (
-    <div className="rounded-[28px] border border-zinc-800 bg-[#11120f] p-5 shadow-[0_28px_90px_rgba(0,0,0,.55)] sm:p-6">
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => shiftMonth(-1)}
-          disabled={!canGoBack}
-          className="absolute left-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full text-zinc-300 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-20"
-          aria-label="Previous month"
-        >
-          ←
-        </button>
-        <button
-          type="button"
-          onClick={() => shiftMonth(1)}
-          disabled={!canGoForward}
-          className="absolute right-0 top-0 z-10 grid h-9 w-9 place-items-center rounded-full text-zinc-300 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-20"
-          aria-label="Next month"
-        >
-          →
-        </button>
+    <div className="air-calendar">
+      <div className="air-calendar-inner">
+        <button type="button" onClick={() => shiftMonth(-1)} disabled={!canGoBack} className="air-calendar-nav air-calendar-prev" aria-label="Previous month">←</button>
+        <button type="button" onClick={() => shiftMonth(1)} disabled={!canGoForward} className="air-calendar-nav air-calendar-next" aria-label="Next month">→</button>
 
         <div className={twoMonths ? "flex gap-8 sm:gap-10" : "flex"}>
-          <CalendarMonth
-            month={month}
-            value={value}
-            minimum={minimum}
-            maximum={maximum}
-            availability={availability}
-            loadingAvailability={loadingAvailability}
-            onChange={onChange}
-          />
+          <CalendarMonth month={month} value={value} minimum={minimum} maximum={maximum} availability={availability} loadingAvailability={loadingAvailability} onChange={onChange} />
           {twoMonths && (
-            <CalendarMonth
-              second
-              month={nextMonth}
-              value={value}
-              minimum={minimum}
-              maximum={maximum}
-              availability={availability}
-              loadingAvailability={loadingAvailability}
-              onChange={onChange}
-            />
+            <CalendarMonth second month={nextMonth} value={value} minimum={minimum} maximum={maximum} availability={availability} loadingAvailability={loadingAvailability} onChange={onChange} />
           )}
         </div>
       </div>
 
       {(footer || availability) && (
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-900 pt-4">
-          <div className="flex items-center gap-4 text-[10px] text-zinc-600">
+        <div className="air-calendar-footer">
+          <div>
             {availability && (
               <>
-                <span className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-acid" />
-                  Available
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="h-px w-3 bg-zinc-700" />
-                  Unavailable dates are disabled
-                </span>
+                <span><i className="air-calendar-dot" />Available</span>
+                <span>Unavailable dates are disabled</span>
               </>
             )}
           </div>

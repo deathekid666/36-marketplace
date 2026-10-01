@@ -81,8 +81,8 @@ export function CompareStudioButton({
         (selected
           ? "border-acid/40 bg-acid/[0.05] text-acid"
           : full
-            ? "cursor-not-allowed border-zinc-900 text-zinc-800"
-            : "border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-white")
+            ? "cursor-not-allowed border-[#ebebeb] text-[#b8b8b8]"
+            : "border-[#dddddd] text-[#717171] hover:border-[#bdbdbd] hover:text-[#222222]")
       }
     >
       {selected ? "✓ Comparing" : full ? "Compare full" : "+ Compare"}

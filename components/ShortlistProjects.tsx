@@ -215,7 +215,7 @@ export function ShortlistProjects({
   }
 
   return (
-    <section className="mt-10 rounded-3xl border border-zinc-900 bg-zinc-950/60 p-5 sm:p-6">
+    <section className="mt-10 rounded-3xl border border-[#ebebeb] bg-white p-5 sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">
@@ -224,7 +224,7 @@ export function ShortlistProjects({
           <h2 className="mt-2 text-3xl font-black">
             Plan a studio project
           </h2>
-          <p className="mt-2 text-xs leading-5 text-zinc-600">
+          <p className="mt-2 text-xs leading-5 text-[#8a8a8a]">
             Organize saved studios by project, add notes, pick a
             preferred option and compare up to four at a time.
           </p>
@@ -249,7 +249,7 @@ export function ShortlistProjects({
           <button
             type="button"
             onClick={addProject}
-            className="rounded-xl bg-acid px-4 py-2 text-xs font-black text-black"
+            className="rounded-xl bg-acid px-4 py-2 text-xs font-black text-white"
           >
             + Project
           </button>
@@ -257,9 +257,9 @@ export function ShortlistProjects({
       </div>
 
       {projects.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-zinc-800 p-8 text-center">
+        <div className="mt-6 rounded-2xl border border-dashed border-[#dddddd] p-8 text-center">
           <b className="text-sm">No shortlist projects yet</b>
-          <p className="mt-2 text-xs text-zinc-600">
+          <p className="mt-2 text-xs text-[#8a8a8a]">
             Create one above, then add studios from your
             Favorites.
           </p>
@@ -280,13 +280,13 @@ export function ShortlistProjects({
                     "w-full rounded-xl border p-3 text-left transition " +
                     (project.id === activeId
                       ? "border-acid/35 bg-acid/[0.04]"
-                      : "border-zinc-900 bg-black/20 hover:border-zinc-700")
+                      : "border-[#ebebeb] bg-[#f7f7f7] hover:border-[#cfcfcf]")
                   }
                 >
                   <b className="block truncate text-xs">
                     {project.name}
                   </b>
-                  <span className="mt-1 block text-[10px] text-zinc-600">
+                  <span className="mt-1 block text-[10px] text-[#8a8a8a]">
                     {project.studioIds.length} studio
                     {project.studioIds.length === 1
                       ? ""
@@ -379,7 +379,7 @@ export function ShortlistProjects({
                         "overflow-hidden rounded-2xl border " +
                         (selected
                           ? "border-acid/35 bg-acid/[0.025]"
-                          : "border-zinc-900 bg-black/20")
+                          : "border-[#ebebeb] bg-[#f7f7f7]")
                       }
                     >
                       <button
@@ -389,7 +389,7 @@ export function ShortlistProjects({
                         }
                         className="flex w-full items-center gap-3 p-3 text-left"
                       >
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-zinc-900">
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#f3f3f3]">
                           {studio.photoUrl ? (
                             <img
                               src={studio.photoUrl}
@@ -406,7 +406,7 @@ export function ShortlistProjects({
                           <b className="block truncate text-xs">
                             {studio.name}
                           </b>
-                          <span className="mt-1 block text-[10px] text-zinc-600">
+                          <span className="mt-1 block text-[10px] text-[#8a8a8a]">
                             {studio.city}
                             {studio.priceMad
                               ? " · " +
@@ -419,8 +419,8 @@ export function ShortlistProjects({
                           className={
                             "grid h-6 w-6 place-items-center rounded-full border text-[10px] font-black " +
                             (selected
-                              ? "border-acid bg-acid text-black"
-                              : "border-zinc-800 text-zinc-700")
+                              ? "border-acid bg-acid text-white"
+                              : "border-[#dddddd] text-[#a3a3a3]")
                           }
                         >
                           {selected ? "✓" : "+"}
@@ -428,7 +428,7 @@ export function ShortlistProjects({
                       </button>
 
                       {selected && (
-                        <div className="border-t border-zinc-900 p-3">
+                        <div className="border-t border-[#ebebeb] p-3">
                           <div className="flex items-center justify-between gap-3">
                             <button
                               type="button"
@@ -444,7 +444,7 @@ export function ShortlistProjects({
                                 "text-[10px] font-black " +
                                 (preferred
                                   ? "text-acid"
-                                  : "text-zinc-600")
+                                  : "text-[#8a8a8a]")
                               }
                             >
                               {preferred
@@ -455,7 +455,7 @@ export function ShortlistProjects({
                               href={
                                 "/studios/" + studio.slug
                               }
-                              className="text-[10px] font-black text-zinc-500 hover:text-white"
+                              className="text-[10px] font-black text-[#717171] hover:text-[#222222]"
                             >
                               Open →
                             </Link>
@@ -489,7 +489,7 @@ export function ShortlistProjects({
                 })}
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-900 pt-5">
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#ebebeb] pt-5">
                 <button
                   type="button"
                   onClick={deleteActive}
@@ -500,7 +500,7 @@ export function ShortlistProjects({
 
                 <div className="flex flex-wrap items-center gap-2">
                   {message && (
-                    <span className="text-[10px] text-emerald-300">
+                    <span className="text-[10px] text-emerald-600">
                       {message}
                     </span>
                   )}
@@ -515,19 +515,19 @@ export function ShortlistProjects({
                   {compareHref ? (
                     <Link
                       href={compareHref}
-                      className="rounded-xl bg-acid px-4 py-3 text-xs font-black text-black"
+                      className="rounded-xl bg-acid px-4 py-3 text-xs font-black text-white"
                     >
                       Compare selected →
                     </Link>
                   ) : (
-                    <span className="rounded-xl border border-zinc-900 px-4 py-3 text-xs font-black text-zinc-700">
+                    <span className="rounded-xl border border-[#ebebeb] px-4 py-3 text-xs font-black text-[#a3a3a3]">
                       Select 2+ to compare
                     </span>
                   )}
                 </div>
               </div>
 
-              <p className="mt-3 text-[10px] leading-5 text-zinc-700">
+              <p className="mt-3 text-[10px] leading-5 text-[#a3a3a3]">
                 Project data is stored in this browser in v1.
                 Favorites themselves remain synced to your 36
                 account.

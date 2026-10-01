@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        acid: "#D9FF43",
+        acid: "#FF385C",
         ink: "#070806",
         panel: "#10120E",
       },

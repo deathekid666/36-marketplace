@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}<PwaRegister /></body>
+      <body className="air-theme">{children}<PwaRegister /></body>
     </html>
   );
 }

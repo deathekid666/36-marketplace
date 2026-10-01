@@ -382,7 +382,7 @@ export function BookingWidget({
   }
 
   if (!room) {
-    return <p className="text-sm text-zinc-500">No bookable room is available.</p>;
+    return <p className="text-sm text-[#717171]">No bookable room is available.</p>;
   }
 
   const roomTotal = room.hourlyRateMad * durationHours;
@@ -404,25 +404,25 @@ export function BookingWidget({
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
           <span className="text-2xl font-black">{room.hourlyRateMad} MAD</span>
-          <span className="ml-1 text-sm text-zinc-500">/ hour</span>
+          <span className="ml-1 text-sm text-[#717171]">/ hour</span>
         </div>
-        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-600">
+        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8a8a8a]">
           Live availability
         </span>
       </div>
 
-      <div className="rounded-2xl border border-zinc-700 bg-[#0c0d0b]">
-        <label className="block border-b border-zinc-800 px-4 py-3">
-          <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
+      <div className="rounded-2xl border border-[#cfcfcf] bg-white">
+        <label className="block border-b border-[#dddddd] px-4 py-3">
+          <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#717171]">
             Studio room
           </span>
           <select
-            className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
+            className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-[#222222] outline-none"
             value={roomId}
             onChange={(event) => setRoomId(event.target.value)}
           >
             {rooms.map((item) => (
-              <option key={item.id} value={item.id} className="bg-zinc-950">
+              <option key={item.id} value={item.id} className="bg-white">
                 {item.name} · {item.hourlyRateMad} MAD/h
               </option>
             ))}
@@ -430,11 +430,11 @@ export function BookingWidget({
         </label>
 
         {locationLabel && (
-          <div className="border-b border-zinc-800 px-4 py-3">
-            <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
+          <div className="border-b border-[#dddddd] px-4 py-3">
+            <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#717171]">
               Location
             </span>
-            <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
+            <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-[#222222]">
               <span className="text-acid">⌖</span>
               <span>{locationLabel}</span>
             </div>
@@ -445,22 +445,22 @@ export function BookingWidget({
           <button
             type="button"
             onClick={() => setCalendarOpen(true)}
-            className="px-4 py-3 text-left transition hover:bg-zinc-900/60"
+            className="px-4 py-3 text-left transition hover:bg-[#f7f7f7]"
           >
-            <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
+            <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#717171]">
               Date
             </span>
-            <span className="mt-1 block text-sm font-semibold text-white">
+            <span className="mt-1 block text-sm font-semibold text-[#222222]">
               {friendlyDate(date)}
             </span>
           </button>
 
-          <label className="border-l border-zinc-800 px-4 py-3">
-            <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
+          <label className="border-l border-[#dddddd] px-4 py-3">
+            <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#717171]">
               Duration
             </span>
             <select
-              className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
+              className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-[#222222] outline-none"
               value={durationHours}
               onChange={(event) => setDurationHours(Number(event.target.value))}
             >
@@ -470,7 +470,7 @@ export function BookingWidget({
               )
                 .filter((hours) => hours <= 12)
                 .map((hours) => (
-                  <option key={hours} value={hours} className="bg-zinc-950">
+                  <option key={hours} value={hours} className="bg-white">
                     {hours} hour{hours === 1 ? "" : "s"}
                   </option>
                 ))}
@@ -481,16 +481,16 @@ export function BookingWidget({
         <button
           type="button"
           onClick={() => setCalendarOpen(true)}
-          className="flex w-full items-center justify-between border-t border-zinc-800 px-4 py-3 text-left transition hover:bg-zinc-900/60"
+          className="flex w-full items-center justify-between border-t border-[#dddddd] px-4 py-3 text-left transition hover:bg-[#f7f7f7]"
         >
           <span>
-            <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
+            <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-[#717171]">
               Start time
             </span>
             <span
               className={
                 "mt-1 block text-sm font-semibold " +
-                (selected ? "text-white" : "text-zinc-600")
+                (selected ? "text-[#222222]" : "text-[#8a8a8a]")
               }
             >
               {loading
@@ -502,7 +502,7 @@ export function BookingWidget({
                     : "No times available"}
             </span>
           </span>
-          <span className="text-xs text-zinc-600">Casablanca time</span>
+          <span className="text-xs text-[#8a8a8a]">Casablanca time</span>
         </button>
       </div>
 
@@ -515,10 +515,10 @@ export function BookingWidget({
             onClick={() => setCalendarOpen(false)}
           />
 
-          <div className="relative z-10 w-full max-w-[760px] rounded-t-[30px] bg-[#11120f] sm:rounded-[30px]">
+          <div className="relative z-10 w-full max-w-[760px] rounded-t-[30px] bg-white sm:rounded-[30px]">
             <div className="flex items-center justify-between px-5 pt-5 sm:px-6">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8a8a8a]">
                   Select date
                 </span>
                 <h3 className="mt-1 text-xl font-black">
@@ -528,7 +528,7 @@ export function BookingWidget({
               <button
                 type="button"
                 onClick={() => setCalendarOpen(false)}
-                className="grid h-10 w-10 place-items-center rounded-full border border-zinc-800 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                className="grid h-10 w-10 place-items-center rounded-full border border-[#dddddd] text-sm text-[#555555] hover:bg-[#f3f3f3] hover:text-[#222222]"
                 aria-label="Close"
               >
                 ×
@@ -548,7 +548,7 @@ export function BookingWidget({
                   setSelected("");
                 }}
                 footer={
-                  <span className="text-[10px] text-zinc-600">
+                  <span className="text-[10px] text-[#8a8a8a]">
                     {calendarLoading
                       ? "Loading live dates…"
                       : "120-day booking window · Casablanca time"}
@@ -557,14 +557,14 @@ export function BookingWidget({
               />
             </div>
 
-            <div className="border-t border-zinc-900 px-5 py-4 sm:px-6">
+            <div className="border-t border-[#ebebeb] px-5 py-4 sm:px-6">
               <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                 <label>
-                  <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+                  <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
                     Available start time · {friendlyDate(date)}
                   </span>
                   <select
-                    className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-semibold text-white outline-none disabled:text-zinc-700"
+                    className="mt-2 w-full rounded-xl border border-[#dddddd] bg-white px-4 py-3 text-sm font-semibold text-[#222222] outline-none disabled:text-[#a3a3a3]"
                     value={selected}
                     disabled={loading || slots.length === 0}
                     onChange={(event) => setSelected(event.target.value)}
@@ -588,7 +588,7 @@ export function BookingWidget({
                   type="button"
                   disabled={!selected}
                   onClick={() => setCalendarOpen(false)}
-                  className="rounded-xl bg-white px-6 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
+                  className="rounded-xl bg-white px-6 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-[#8a8a8a]"
                 >
                   Done
                 </button>
@@ -598,10 +598,10 @@ export function BookingWidget({
         </div>
       )}
 
-      <div className="mt-4 rounded-xl border border-zinc-900 bg-black/20 p-4">
+      <div className="mt-4 rounded-xl border border-[#ebebeb] bg-[#f7f7f7] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
               Your session
             </span>
             <p className="mt-1 text-sm font-semibold">
@@ -613,7 +613,7 @@ export function BookingWidget({
           <button
             type="button"
             onClick={() => setCalendarOpen(true)}
-            className="text-xs font-black text-white underline decoration-zinc-600 underline-offset-4"
+            className="text-xs font-black text-[#222222] underline decoration-zinc-600 underline-offset-4"
           >
             Change
           </button>
@@ -621,8 +621,8 @@ export function BookingWidget({
       </div>
 
       {applicableAddons.length > 0 && (
-        <details className="mt-5 rounded-xl border border-zinc-900 bg-black/20 p-4">
-          <summary className="cursor-pointer text-xs font-black text-zinc-300">
+        <details className="mt-5 rounded-xl border border-[#ebebeb] bg-[#f7f7f7] p-4">
+          <summary className="cursor-pointer text-xs font-black text-[#333333]">
             Add extras
           </summary>
           <div className="mt-3 space-y-2">
@@ -636,14 +636,14 @@ export function BookingWidget({
                     "rounded-xl border p-3 " +
                     (qty
                       ? "border-acid/40 bg-acid/[0.03]"
-                      : "border-zinc-900")
+                      : "border-[#ebebeb]")
                   }
                 >
                   <div className="flex items-start justify-between gap-3">
                     <label className="flex cursor-pointer items-start gap-3">
                       <input
                         type="checkbox"
-                        className="mt-1 accent-[#d9ff43]"
+                        className="mt-1 accent-[#ff385c]"
                         checked={qty > 0}
                         onChange={(event) =>
                           setSelectedAddons((current) => ({
@@ -654,7 +654,7 @@ export function BookingWidget({
                       />
                       <span>
                         <b className="block text-xs">{addon.name}</b>
-                        <span className="mt-1 block text-[10px] leading-4 text-zinc-600">
+                        <span className="mt-1 block text-[10px] leading-4 text-[#8a8a8a]">
                           {addon.description ||
                             addon.unitPriceMad + " MAD / " + addon.unitLabel}
                         </span>
@@ -667,9 +667,9 @@ export function BookingWidget({
 
                   {qty > 0 && (
                     <div className="mt-2 flex items-center justify-end gap-2">
-                      <span className="text-[10px] text-zinc-600">Qty</span>
+                      <span className="text-[10px] text-[#8a8a8a]">Qty</span>
                       <select
-                        className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs"
+                        className="rounded-lg border border-[#dddddd] bg-white px-2 py-1 text-xs"
                         value={qty}
                         onChange={(event) =>
                           setSelectedAddons((current) => ({
@@ -713,7 +713,7 @@ export function BookingWidget({
             <button
               type="button"
               onClick={switchToCreatorAccount}
-              className="mt-3 font-black text-white underline decoration-zinc-600 underline-offset-4"
+              className="mt-3 font-black text-[#222222] underline decoration-zinc-600 underline-offset-4"
             >
               Sign out and use a Creator account →
             </button>
@@ -725,7 +725,7 @@ export function BookingWidget({
         type="button"
         disabled={booking || quoteLoading}
         onClick={reviewCheckout}
-        className="mt-4 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
+        className="mt-4 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-[#8a8a8a]"
       >
         {quoteLoading
           ? "Checking price…"
@@ -740,7 +740,7 @@ export function BookingWidget({
                   : "Review & reserve"}
       </button>
 
-      <p className="mt-3 text-center text-[10px] text-zinc-600">
+      <p className="mt-3 text-center text-[10px] text-[#8a8a8a]">
         {userRole === "ADMIN"
           ? "Admin accounts do not create marketplace bookings. Use the controlled Creator test account."
           : userRole === "STUDIO_OWNER"
@@ -759,7 +759,7 @@ export function BookingWidget({
             }}
           />
 
-          <section className="relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[30px] border border-zinc-800 bg-[#11120f] p-5 shadow-[0_32px_100px_rgba(0,0,0,.65)] sm:rounded-[30px] sm:p-6">
+          <section className="relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[30px] border border-[#dddddd] bg-white p-5 shadow-[0_32px_100px_rgba(0,0,0,.65)] sm:rounded-[30px] sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-acid">
@@ -773,7 +773,7 @@ export function BookingWidget({
                 type="button"
                 disabled={booking}
                 onClick={() => setCheckoutOpen(false)}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-white disabled:opacity-30"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#dddddd] text-[#555555] hover:bg-[#f3f3f3] hover:text-[#222222] disabled:opacity-30"
                 aria-label="Close"
               >
                 ×
@@ -781,24 +781,24 @@ export function BookingWidget({
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-zinc-900 bg-black/20 p-4">
+              <div className="rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] p-4">
                 <span className="label">Room</span>
                 <b className="text-sm">{quote.roomName}</b>
               </div>
-              <div className="rounded-2xl border border-zinc-900 bg-black/20 p-4">
+              <div className="rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] p-4">
                 <span className="label">Session</span>
                 <b className="text-sm">
                   {friendlyDate(date)} · {friendlyStartTime(quote.startAt)}
                 </b>
-                <span className="mt-1 block text-[10px] text-zinc-600">
+                <span className="mt-1 block text-[10px] text-[#8a8a8a]">
                   {quote.durationMinutes / 60}h · Casablanca time
                 </span>
               </div>
             </div>
 
-            <div className="mt-5 space-y-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4 text-sm">
+            <div className="mt-5 space-y-3 rounded-2xl border border-[#dddddd] bg-white p-4 text-sm">
               <div className="flex justify-between gap-4">
-                <span className="text-zinc-500">
+                <span className="text-[#717171]">
                   {quote.hourlyRateMad} MAD × {quote.durationMinutes / 60}h
                 </span>
                 <b>{quote.baseAmountMad} MAD</b>
@@ -809,7 +809,7 @@ export function BookingWidget({
                   key={addon.addonId}
                   className="flex justify-between gap-4"
                 >
-                  <span className="text-zinc-500">
+                  <span className="text-[#717171]">
                     {addon.name} × {addon.quantity}
                   </span>
                   <b>{addon.totalMad} MAD</b>
@@ -817,7 +817,7 @@ export function BookingWidget({
               ))}
 
               {quote.promoDiscountMad > 0 && (
-                <div className="flex justify-between gap-4 text-emerald-300">
+                <div className="flex justify-between gap-4 text-emerald-600">
                   <span>Promo {quote.promoCode}</span>
                   <b>-{quote.promoDiscountMad} MAD</b>
                 </div>
@@ -825,19 +825,19 @@ export function BookingWidget({
 
               {quote.taxAmountMad > 0 && (
                 <div className="flex justify-between gap-4">
-                  <span className="text-zinc-500">Tax</span>
+                  <span className="text-[#717171]">Tax</span>
                   <b>{quote.taxAmountMad} MAD</b>
                 </div>
               )}
 
-              <div className="flex justify-between gap-4 border-t border-zinc-800 pt-3 text-base font-black">
+              <div className="flex justify-between gap-4 border-t border-[#dddddd] pt-3 text-base font-black">
                 <span>Total</span>
                 <span>{quote.totalAmountMad} MAD</span>
               </div>
             </div>
 
             <div className="mt-5">
-              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8a8a8a]">
                 Payment method
               </span>
               <div className="mt-3 space-y-2">
@@ -848,7 +848,7 @@ export function BookingWidget({
                       "flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition " +
                       (paymentMethod === method.value
                         ? "border-acid/40 bg-acid/[0.035]"
-                        : "border-zinc-900 bg-black/20 hover:border-zinc-700")
+                        : "border-[#ebebeb] bg-[#f7f7f7] hover:border-[#cfcfcf]")
                     }
                   >
                     <input
@@ -857,20 +857,20 @@ export function BookingWidget({
                       value={method.value}
                       checked={paymentMethod === method.value}
                       onChange={() => setPaymentMethod(method.value)}
-                      className="mt-1 accent-[#d9ff43]"
+                      className="mt-1 accent-[#ff385c]"
                     />
                     <span>
                       <b className="block text-sm">{method.label}</b>
-                      <span className="mt-1 block text-xs leading-5 text-zinc-600">
+                      <span className="mt-1 block text-xs leading-5 text-[#8a8a8a]">
                         {method.description}
                       </span>
                     </span>
                   </label>
                 ))}
 
-                <div className="rounded-2xl border border-dashed border-zinc-800 p-4 opacity-50">
-                  <b className="text-sm text-zinc-500">Online payment</b>
-                  <p className="mt-1 text-xs leading-5 text-zinc-700">
+                <div className="rounded-2xl border border-dashed border-[#dddddd] p-4 opacity-50">
+                  <b className="text-sm text-[#717171]">Online payment</b>
+                  <p className="mt-1 text-xs leading-5 text-[#a3a3a3]">
                     Coming later. No paid gateway is required to operate 36 now.
                   </p>
                 </div>
@@ -880,7 +880,7 @@ export function BookingWidget({
             <div className="mt-4 rounded-2xl border border-acid/25 bg-acid/[0.035] p-4">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
                     Online payment due now
                   </span>
                   <b className="mt-1 block text-2xl text-acid">
@@ -888,7 +888,7 @@ export function BookingWidget({
                   </b>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
                     Pay directly to studio
                   </span>
                   <b className="mt-1 block text-sm">
@@ -898,7 +898,7 @@ export function BookingWidget({
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-emerald-900/35 bg-emerald-950/10 p-4 text-xs leading-5 text-zinc-500">
+            <div className="mt-4 rounded-xl border border-emerald-900/35 bg-emerald-950/10 p-4 text-xs leading-5 text-[#717171]">
               This booking confirms immediately with {selectedPayment.label.toLowerCase()}.
               36 records the amount as pending until the studio marks the payment received.
               No card processor or paid payment service is used.
@@ -908,14 +908,14 @@ export function BookingWidget({
               type="button"
               disabled={booking}
               onClick={book}
-              className="mt-5 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
+              className="mt-5 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-[#8a8a8a]"
             >
               {booking
                 ? "Confirming booking…"
                 : "Confirm booking · " + selectedPayment.label}
             </button>
 
-            <p className="mt-3 text-center text-[10px] text-zinc-600">
+            <p className="mt-3 text-center text-[10px] text-[#8a8a8a]">
               36 rechecks availability and the quoted total at confirmation.
             </p>
           </section>
@@ -924,7 +924,7 @@ export function BookingWidget({
 
       <div className="mt-5 space-y-3 text-sm">
         <div className="flex justify-between">
-          <span className="text-zinc-500">
+          <span className="text-[#717171]">
             {room.hourlyRateMad} MAD × {durationHours}h
           </span>
           <span>{roomTotal} MAD</span>
@@ -932,25 +932,25 @@ export function BookingWidget({
 
         {addonTotal > 0 && (
           <div className="flex justify-between">
-            <span className="text-zinc-500">Add-ons</span>
+            <span className="text-[#717171]">Add-ons</span>
             <span>{addonTotal} MAD</span>
           </div>
         )}
 
         {estimatedTax > 0 && (
           <div className="flex justify-between">
-            <span className="text-zinc-500">Estimated tax</span>
+            <span className="text-[#717171]">Estimated tax</span>
             <span>{estimatedTax} MAD</span>
           </div>
         )}
 
-        <div className="flex justify-between border-t border-zinc-800 pt-3 font-black">
+        <div className="flex justify-between border-t border-[#dddddd] pt-3 font-black">
           <span>Total</span>
           <span>{estimatedTotal} MAD</span>
         </div>
 
         <div className="flex justify-between text-xs">
-          <span className="text-zinc-500">
+          <span className="text-[#717171]">
             Payment
           </span>
           <b className="text-acid">Pay directly to studio</b>

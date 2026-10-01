@@ -46,7 +46,7 @@ export function FlashBookingButton({
         type="button"
         disabled={busy}
         onClick={reserve}
-        className="w-full rounded-xl bg-acid px-4 py-3 text-xs font-black text-black disabled:opacity-50"
+        className="w-full rounded-xl bg-acid px-4 py-3 text-xs font-black text-white disabled:opacity-50"
       >
         {busy ? "Reserving…" : !userRole ? "Log in to book" : "Book this NOW slot"}
       </button>

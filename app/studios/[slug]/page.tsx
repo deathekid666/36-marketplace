@@ -268,14 +268,14 @@ export default async function StudioDetailPage({
   }).format(studio.owner.createdAt);
 
   return (
-    <main className="min-h-screen bg-[#0b0c0a]">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
 
       <section className="mx-auto max-w-7xl px-5 pb-16 pt-7">
         <div className="flex items-center justify-between gap-4">
           <Link
             href="/studios"
-            className="text-xs font-bold text-zinc-500 hover:text-white"
+            className="text-xs font-bold text-[#717171] hover:text-[#222222]"
           >
             ← All studios
           </Link>
@@ -287,7 +287,7 @@ export default async function StudioDetailPage({
                   "/messages?booking=" +
                   creatorBooking.id
                 }
-                className="rounded-full border border-zinc-800 px-4 py-2 text-xs font-black text-zinc-300 hover:border-zinc-600"
+                className="rounded-full border border-[#dddddd] px-4 py-2 text-xs font-black text-[#333333] hover:border-[#bdbdbd]"
               >
                 Message
               </Link>
@@ -305,7 +305,7 @@ export default async function StudioDetailPage({
                   name="returnTo"
                   value={"/studios/" + studio.slug}
                 />
-                <button className="rounded-full border border-zinc-800 px-4 py-2 text-xs font-black text-zinc-300 hover:border-zinc-600">
+                <button className="rounded-full border border-[#dddddd] px-4 py-2 text-xs font-black text-[#333333] hover:border-[#bdbdbd]">
                   {saved ? "♥ Saved" : "♡ Save"}
                 </button>
               </form>
@@ -321,10 +321,10 @@ export default async function StudioDetailPage({
             {average ? (
               <>
                 <b>★ {average.toFixed(2)}</b>
-                <span className="text-zinc-700">·</span>
+                <span className="text-[#a3a3a3]">·</span>
                 <a
                   href="#reviews"
-                  className="font-bold underline decoration-zinc-700 underline-offset-4"
+                  className="font-bold underline decoration-[#bdbdbd] underline-offset-4"
                 >
                   {studio.reviews.length} review
                   {studio.reviews.length === 1
@@ -335,14 +335,14 @@ export default async function StudioDetailPage({
             ) : (
               <b>New on 36</b>
             )}
-            <span className="text-zinc-700">·</span>
+            <span className="text-[#a3a3a3]">·</span>
             <span className="font-bold text-acid">
               ✓ Verified
             </span>
-            <span className="text-zinc-700">·</span>
+            <span className="text-[#a3a3a3]">·</span>
             <a
               href="#location"
-              className="font-semibold underline decoration-zinc-700 underline-offset-4"
+              className="font-semibold underline decoration-[#bdbdbd] underline-offset-4"
             >
               {studio.neighborhood
                 ? studio.neighborhood + ", "
@@ -363,7 +363,7 @@ export default async function StudioDetailPage({
 
         <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1fr)_390px]">
           <div className="min-w-0">
-            <section className="flex items-center justify-between gap-5 border-b border-zinc-800 pb-7">
+            <section className="flex items-center justify-between gap-5 border-b border-[#dddddd] pb-7">
               <div>
                 <h2 className="text-2xl font-black">
                   {categoryLabel(
@@ -372,12 +372,12 @@ export default async function StudioDetailPage({
                   studio hosted by{" "}
                   <Link
                     href={"/profile/" + studio.owner.id}
-                    className="underline decoration-zinc-700 underline-offset-4 hover:text-acid"
+                    className="underline decoration-[#bdbdbd] underline-offset-4 hover:text-acid"
                   >
                     {studio.owner.name}
                   </Link>
                 </h2>
-                <p className="mt-2 text-sm text-zinc-500">
+                <p className="mt-2 text-sm text-[#717171]">
                   {studio.rooms.length} room
                   {studio.rooms.length === 1 ? "" : "s"}
                   {maxCapacity
@@ -398,14 +398,14 @@ export default async function StudioDetailPage({
               </div>
             </section>
 
-            <section className="grid gap-4 border-b border-zinc-800 py-7 sm:grid-cols-3">
+            <section className="grid gap-4 border-b border-[#dddddd] py-7 sm:grid-cols-3">
               <div className="flex gap-3">
                 <span className="text-lg">✓</span>
                 <div>
                   <b className="text-sm">
                     36 verified
                   </b>
-                  <p className="mt-1 text-xs leading-5 text-zinc-600">
+                  <p className="mt-1 text-xs leading-5 text-[#8a8a8a]">
                     Identity and listing reviewed.
                   </p>
                 </div>
@@ -420,7 +420,7 @@ export default async function StudioDetailPage({
                         " rating"
                       : "New studio"}
                   </b>
-                  <p className="mt-1 text-xs leading-5 text-zinc-600">
+                  <p className="mt-1 text-xs leading-5 text-[#8a8a8a]">
                     {trust.verifiedReviewCount
                       ? trust.verifiedReviewCount +
                         " verified review" +
@@ -442,7 +442,7 @@ export default async function StudioDetailPage({
                         "% response rate"
                       : "Responsive host"}
                   </b>
-                  <p className="mt-1 text-xs leading-5 text-zinc-600">
+                  <p className="mt-1 text-xs leading-5 text-[#8a8a8a]">
                     {responseLabel ||
                       "Response history is building."}
                   </p>
@@ -450,17 +450,17 @@ export default async function StudioDetailPage({
               </div>
             </section>
 
-            <section className="border-b border-zinc-800 py-8">
+            <section className="border-b border-[#dddddd] py-8">
               <h2 className="text-2xl font-black">
                 About this studio
               </h2>
-              <p className="mt-4 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-zinc-400">
+              <p className="mt-4 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-[#555555]">
                 {studio.description ||
                   "The studio owner has not added a full description yet."}
               </p>
             </section>
 
-            <section className="border-b border-zinc-800 py-8">
+            <section className="border-b border-[#dddddd] py-8">
               <h2 className="text-2xl font-black">
                 What this studio offers
               </h2>
@@ -471,9 +471,9 @@ export default async function StudioDetailPage({
                     (amenity) => (
                       <div
                         key={amenity.id}
-                        className="flex items-center gap-3 text-sm text-zinc-300"
+                        className="flex items-center gap-3 text-sm text-[#333333]"
                       >
-                        <span className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900 text-xs">
+                        <span className="grid h-8 w-8 place-items-center rounded-full bg-[#f3f3f3] text-xs">
                           ✓
                         </span>
                         {amenity.name}
@@ -482,13 +482,13 @@ export default async function StudioDetailPage({
                   )}
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-zinc-600">
+                <p className="mt-4 text-sm text-[#8a8a8a]">
                   Amenities have not been listed yet.
                 </p>
               )}
             </section>
 
-            <section className="border-b border-zinc-800 py-8">
+            <section className="border-b border-[#dddddd] py-8">
               <div>
                 <span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">
                   Rooms
@@ -502,7 +502,7 @@ export default async function StudioDetailPage({
                 {studio.rooms.map((room) => (
                   <article
                     key={room.id}
-                    className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-5"
+                    className="rounded-2xl border border-[#dddddd] bg-white p-5"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
@@ -512,7 +512,7 @@ export default async function StudioDetailPage({
                         <h3 className="mt-2 text-xl font-black">
                           {room.name}
                         </h3>
-                        <p className="mt-2 text-xs text-zinc-600">
+                        <p className="mt-2 text-xs text-[#8a8a8a]">
                           {room.capacity} guest
                           {room.capacity === 1
                             ? ""
@@ -528,14 +528,14 @@ export default async function StudioDetailPage({
                         <b className="text-xl">
                           {room.hourlyRateMad} MAD
                         </b>
-                        <span className="block text-[10px] text-zinc-600">
+                        <span className="block text-[10px] text-[#8a8a8a]">
                           per hour
                         </span>
                       </div>
                     </div>
 
                     {room.description && (
-                      <p className="mt-4 text-sm leading-6 text-zinc-500">
+                      <p className="mt-4 text-sm leading-6 text-[#717171]">
                         {room.description}
                       </p>
                     )}
@@ -546,7 +546,7 @@ export default async function StudioDetailPage({
                           (item) => (
                             <span
                               key={item.id}
-                              className="rounded-lg border border-zinc-900 bg-black/20 px-3 py-2 text-[10px] text-zinc-500"
+                              className="rounded-lg border border-[#ebebeb] bg-[#f7f7f7] px-3 py-2 text-[10px] text-[#717171]"
                             >
                               {item.name}
                               {item.quantity > 1
@@ -563,11 +563,11 @@ export default async function StudioDetailPage({
               </div>
             </section>
 
-            <section className="border-b border-zinc-800 py-8">
+            <section className="border-b border-[#dddddd] py-8">
               <h2 className="text-2xl font-black">
                 Opening hours
               </h2>
-              <div className="mt-5 max-w-xl divide-y divide-zinc-900">
+              <div className="mt-5 max-w-xl divide-y divide-[#ebebeb]">
                 {DAYS.map((day, index) => {
                   const row =
                     studio.openingHours.find(
@@ -581,7 +581,7 @@ export default async function StudioDetailPage({
                       className="flex items-center justify-between py-3 text-sm"
                     >
                       <b>{day}</b>
-                      <span className="text-zinc-500">
+                      <span className="text-[#717171]">
                         {!row || row.closed
                           ? "Closed"
                           : row.opensAt +
@@ -596,7 +596,7 @@ export default async function StudioDetailPage({
 
             <section
               id="reviews"
-              className="border-b border-zinc-800 py-8"
+              className="border-b border-[#dddddd] py-8"
             >
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
@@ -612,7 +612,7 @@ export default async function StudioDetailPage({
                           : "s")
                       : "Guest reviews"}
                   </h2>
-                  <p className="mt-2 text-xs text-zinc-600">
+                  <p className="mt-2 text-xs text-[#8a8a8a]">
                     Reviews can only be left after a completed 36 session.
                   </p>
                 </div>
@@ -636,9 +636,9 @@ export default async function StudioDetailPage({
                   ].map(([label, value]) => (
                     <div
                       key={String(label)}
-                      className="rounded-xl border border-zinc-900 p-4"
+                      className="rounded-xl border border-[#ebebeb] p-4"
                     >
-                      <span className="text-xs text-zinc-600">
+                      <span className="text-xs text-[#8a8a8a]">
                         {label}
                       </span>
                       <b className="float-right text-sm">
@@ -653,17 +653,17 @@ export default async function StudioDetailPage({
 
               <div className="mt-6 grid gap-5 md:grid-cols-2">
                 {studio.reviews.length === 0 ? (
-                  <div className="rounded-2xl border border-zinc-900 p-5 text-sm text-zinc-600">
+                  <div className="rounded-2xl border border-[#ebebeb] p-5 text-sm text-[#8a8a8a]">
                     No verified reviews yet.
                   </div>
                 ) : (
                   studio.reviews.map((review) => (
                     <article
                       key={review.id}
-                      className="rounded-2xl border border-zinc-900 p-5"
+                      className="rounded-2xl border border-[#ebebeb] p-5"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="grid h-10 w-10 place-items-center rounded-full bg-zinc-900 text-xs font-black">
+                        <div className="grid h-10 w-10 place-items-center rounded-full bg-[#f3f3f3] text-xs font-black">
                           {initials(
                             review.creator.name,
                           ) || "36"}
@@ -684,17 +684,17 @@ export default async function StudioDetailPage({
                       </div>
 
                       {review.comment && (
-                        <p className="mt-4 text-sm leading-6 text-zinc-400">
+                        <p className="mt-4 text-sm leading-6 text-[#555555]">
                           {review.comment}
                         </p>
                       )}
 
                       {review.ownerReply && (
-                        <div className="mt-4 rounded-xl bg-zinc-950 p-4">
-                          <b className="text-[10px] uppercase tracking-[0.12em] text-zinc-600">
+                        <div className="mt-4 rounded-xl bg-white p-4">
+                          <b className="text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">
                             Host response
                           </b>
-                          <p className="mt-2 text-xs leading-5 text-zinc-500">
+                          <p className="mt-2 text-xs leading-5 text-[#717171]">
                             {review.ownerReply}
                           </p>
                         </div>
@@ -707,12 +707,12 @@ export default async function StudioDetailPage({
 
             <section
               id="location"
-              className="border-b border-zinc-800 py-8"
+              className="border-b border-[#dddddd] py-8"
             >
               <h2 className="text-2xl font-black">
                 Where you’ll be
               </h2>
-              <p className="mt-2 text-sm text-zinc-500">
+              <p className="mt-2 text-sm text-[#717171]">
                 {studio.neighborhood
                   ? studio.neighborhood + ", "
                   : ""}
@@ -724,7 +724,7 @@ export default async function StudioDetailPage({
                   <StudioMap points={mapPoints} />
                 </div>
               ) : (
-                <div className="mt-5 rounded-2xl border border-zinc-900 p-5 text-sm text-zinc-600">
+                <div className="mt-5 rounded-2xl border border-[#ebebeb] p-5 text-sm text-[#8a8a8a]">
                   {studio.address ||
                     "Map coordinates have not been added yet."}
                 </div>
@@ -742,29 +742,29 @@ export default async function StudioDetailPage({
                       Hosted by{" "}
                       <Link
                         href={"/profile/" + studio.owner.id}
-                        className="underline decoration-zinc-700 underline-offset-4 hover:text-acid"
+                        className="underline decoration-[#bdbdbd] underline-offset-4 hover:text-acid"
                       >
                         {studio.owner.name}
                       </Link>
                     </h2>
-                    <p className="mt-1 text-sm text-zinc-600">
+                    <p className="mt-1 text-sm text-[#8a8a8a]">
                       Hosting on 36 since {hostYear}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="rounded-full border border-zinc-800 px-3 py-1.5 text-[10px] font-black text-zinc-400">
+                      <span className="rounded-full border border-[#dddddd] px-3 py-1.5 text-[10px] font-black text-[#555555]">
                         ✓ Verified studio
                       </span>
-                      <span className="rounded-full border border-zinc-800 px-3 py-1.5 text-[10px] font-black text-zinc-400">
+                      <span className="rounded-full border border-[#dddddd] px-3 py-1.5 text-[10px] font-black text-[#555555]">
                         {trust.completedSessions} completed sessions
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
+                <div className="w-full max-w-sm rounded-2xl border border-[#dddddd] bg-white p-5">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="block text-[10px] text-zinc-600">
+                      <span className="block text-[10px] text-[#8a8a8a]">
                         Response rate
                       </span>
                       <b className="mt-1 block">
@@ -775,7 +775,7 @@ export default async function StudioDetailPage({
                       </b>
                     </div>
                     <div>
-                      <span className="block text-[10px] text-zinc-600">
+                      <span className="block text-[10px] text-[#8a8a8a]">
                         Response time
                       </span>
                       <b className="mt-1 block">
@@ -790,12 +790,12 @@ export default async function StudioDetailPage({
                         "/messages?booking=" +
                         creatorBooking.id
                       }
-                      className="mt-5 flex w-full justify-center rounded-xl border border-zinc-700 px-4 py-3 text-xs font-black hover:border-white"
+                      className="mt-5 flex w-full justify-center rounded-xl border border-[#cfcfcf] px-4 py-3 text-xs font-black hover:border-white"
                     >
                       Message host
                     </Link>
                   ) : user?.role === "CREATOR" ? (
-                    <p className="mt-5 text-xs leading-5 text-zinc-600">
+                    <p className="mt-5 text-xs leading-5 text-[#8a8a8a]">
                       Messaging opens after you reserve a session with this studio.
                     </p>
                   ) : !user ? (
@@ -807,7 +807,7 @@ export default async function StudioDetailPage({
                             studio.slug,
                         )
                       }
-                      className="mt-5 flex w-full justify-center rounded-xl border border-zinc-700 px-4 py-3 text-xs font-black"
+                      className="mt-5 flex w-full justify-center rounded-xl border border-[#cfcfcf] px-4 py-3 text-xs font-black"
                     >
                       Log in to book
                     </Link>
@@ -818,7 +818,7 @@ export default async function StudioDetailPage({
           </div>
 
           <aside className="self-start lg:sticky lg:top-6">
-            <section className="rounded-[1.75rem] border border-zinc-800 bg-[#11120f] p-5 shadow-[0_24px_80px_rgba(0,0,0,.42)] sm:p-6">
+            <section className="rounded-[1.75rem] border border-[#dddddd] bg-white p-5 shadow-[0_24px_80px_rgba(0,0,0,.42)] sm:p-6">
               <div className="mb-5 flex items-end justify-between gap-3">
                 <div>
                   <div className="flex items-baseline gap-1">
@@ -828,7 +828,7 @@ export default async function StudioDetailPage({
                         : "Choose a room"}
                     </b>
                     {minPrice && (
-                      <span className="text-xs text-zinc-600">
+                      <span className="text-xs text-[#8a8a8a]">
                         / hour
                       </span>
                     )}
@@ -841,7 +841,7 @@ export default async function StudioDetailPage({
                 {average && (
                   <a
                     href="#reviews"
-                    className="text-xs font-black underline decoration-zinc-700 underline-offset-4"
+                    className="text-xs font-black underline decoration-[#bdbdbd] underline-offset-4"
                   >
                     ★ {average.toFixed(1)}
                   </a>
@@ -881,7 +881,7 @@ export default async function StudioDetailPage({
                 }
               />
 
-              <div className="mt-5 border-t border-zinc-900 pt-4 text-[10px] leading-5 text-zinc-600">
+              <div className="mt-5 border-t border-[#ebebeb] pt-4 text-[10px] leading-5 text-[#8a8a8a]">
                 <p>
                   Free cancellation up to{" "}
                   {studio.freeCancellationHours}h before the session.

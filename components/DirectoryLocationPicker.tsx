@@ -86,8 +86,8 @@ export function DirectoryLocationPicker({
   }
 
   return (
-    <div className="relative rounded-2xl border-t border-zinc-900 px-4 py-2 lg:border-l lg:border-t-0">
-      <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+    <div className="relative rounded-2xl border-t border-[#ebebeb] px-4 py-2 lg:border-l lg:border-t-0">
+      <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-[#8a8a8a]">
         Location
       </span>
       <input
@@ -97,7 +97,7 @@ export function DirectoryLocationPicker({
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}
         placeholder="City or country"
         autoComplete="off"
-        className="mt-1 w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-zinc-700"
+        className="mt-1 w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-[#a3a3a3]"
         aria-label="Studio location"
       />
       <input type="hidden" name="city" value={city} />
@@ -106,24 +106,24 @@ export function DirectoryLocationPicker({
       <input type="hidden" name="lng" value={lng == null ? "" : String(lng)} />
 
       {open && matches.length > 0 && (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[1200] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[1200] overflow-hidden rounded-2xl border border-[#dddddd] bg-white shadow-2xl">
           {matches.map((option) => (
             <button
               key={option.key}
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(option)}
-              className="flex w-full items-center justify-between gap-3 border-b border-zinc-900 px-4 py-3 text-left last:border-b-0 hover:bg-zinc-900"
+              className="flex w-full items-center justify-between gap-3 border-b border-[#ebebeb] px-4 py-3 text-left last:border-b-0 hover:bg-[#f3f3f3]"
             >
               <span className="min-w-0">
-                <b className="block truncate text-sm text-zinc-200">
+                <b className="block truncate text-sm text-[#222222]">
                   {option.label}
                 </b>
-                <span className="text-[10px] uppercase tracking-[0.1em] text-zinc-600">
+                <span className="text-[10px] uppercase tracking-[0.1em] text-[#8a8a8a]">
                   {option.city ? "City" : "Country"}
                 </span>
               </span>
-              <span className="shrink-0 text-xs font-bold text-zinc-600">
+              <span className="shrink-0 text-xs font-bold text-[#8a8a8a]">
                 {option.count}
               </span>
             </button>
@@ -132,22 +132,22 @@ export function DirectoryLocationPicker({
       )}
 
       <div className="mt-2 flex items-center gap-2">
-        <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-700">
+        <span className="text-[10px] font-black uppercase tracking-[0.1em] text-[#a3a3a3]">
           Radius
         </span>
         <select
           name="radius"
           defaultValue={defaultRadius == null ? "" : String(defaultRadius)}
           disabled={lat == null || lng == null}
-          className="bg-transparent text-[11px] font-bold text-zinc-400 outline-none disabled:text-zinc-800"
+          className="bg-transparent text-[11px] font-bold text-[#555555] outline-none disabled:text-[#b8b8b8]"
           title={lat == null || lng == null ? "Choose a city to use radius search" : "Radius"}
         >
-          <option value="" className="bg-zinc-950">Any</option>
-          <option value="5" className="bg-zinc-950">5 km</option>
-          <option value="10" className="bg-zinc-950">10 km</option>
-          <option value="25" className="bg-zinc-950">25 km</option>
-          <option value="50" className="bg-zinc-950">50 km</option>
-          <option value="100" className="bg-zinc-950">100 km</option>
+          <option value="" className="bg-white">Any</option>
+          <option value="5" className="bg-white">5 km</option>
+          <option value="10" className="bg-white">10 km</option>
+          <option value="25" className="bg-white">25 km</option>
+          <option value="50" className="bg-white">50 km</option>
+          <option value="100" className="bg-white">100 km</option>
         </select>
       </div>
     </div>

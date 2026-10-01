@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
 import { AppHeader } from "@/components/AppHeader";
 import { AuthForm } from "@/components/AuthForm";
 import { getCurrentUser } from "@/lib/auth";
@@ -13,20 +14,18 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (user) redirect(nextTo || "/dashboard");
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[#f7f7f7] text-[#222]">
       <AppHeader />
-      <section className="mx-auto max-w-md px-5 py-20">
-        <div className="panel">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-acid">
-            Welcome back
-          </span>
-          <h1 className="mb-8 mt-3 text-3xl font-black">Log in to 36</h1>
+      <section className="air-auth-page">
+        <div className="air-auth-card">
+          <div className="air-auth-card-head">
+            <span>Welcome back</span>
+            <h1>Log in to 36</h1>
+            <p>Continue to your studios, bookings and messages.</p>
+          </div>
           <AuthForm mode="login" nextTo={nextTo} />
-          <p className="mt-6 text-center text-xs text-zinc-600">
-            New here?{" "}
-            <Link className="font-bold text-zinc-300 hover:text-acid" href="/auth/signup">
-              Create an account
-            </Link>
+          <p className="air-auth-switch">
+            New here? <Link href="/auth/signup">Create an account</Link>
           </p>
         </div>
       </section>

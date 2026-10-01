@@ -144,17 +144,17 @@ export default async function MessagesPage({
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
 
       <section className="mx-auto max-w-[1450px] px-3 py-4 sm:px-5 sm:py-8">
         {threads.length === 0 ? (
-          <div className="mx-auto max-w-xl rounded-[2rem] border border-zinc-800 bg-[#11120f] p-10 text-center">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-zinc-900 text-2xl">
+          <div className="mx-auto max-w-xl rounded-[2rem] border border-[#dddddd] bg-white p-10 text-center">
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#f3f3f3] text-2xl">
               💬
             </div>
             <h1 className="mt-5 text-3xl font-black">No messages yet</h1>
-            <p className="mt-3 text-sm leading-6 text-zinc-600">
+            <p className="mt-3 text-sm leading-6 text-[#8a8a8a]">
               Your booking conversations will appear here.
             </p>
           </div>

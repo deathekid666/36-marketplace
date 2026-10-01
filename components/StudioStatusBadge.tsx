@@ -2,8 +2,8 @@ import type { StudioStatus } from "@prisma/client";
 import { studioStatusLabel } from "@/lib/studio";
 
 const styles: Record<StudioStatus, string> = {
-  DRAFT: "border-zinc-700 text-zinc-400",
-  SUBMITTED: "border-amber-700/60 bg-amber-500/5 text-amber-300",
+  DRAFT: "border-[#cfcfcf] text-[#555555]",
+  SUBMITTED: "border-amber-700/60 bg-amber-500/5 text-amber-600",
   VERIFIED: "border-acid/50 bg-acid/[0.06] text-acid",
   REJECTED: "border-red-900/70 bg-red-500/5 text-red-300",
   SUSPENDED: "border-red-900 bg-red-950/40 text-red-300",

@@ -19,5 +19,5 @@ export function UseMyLocation() {
       setState("idle");
     }, () => setState("error"), { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
   }
-  return <button type="button" onClick={locate} className="rounded-xl border border-zinc-800 px-3 py-3 text-xs font-bold text-zinc-400 hover:border-zinc-600 hover:text-white">{state === "loading" ? "Locating…" : state === "error" ? "Location unavailable" : "◎ Near me"}</button>;
+  return <button type="button" onClick={locate} className="rounded-xl border border-[#dddddd] px-3 py-3 text-xs font-bold text-[#555555] hover:border-[#bdbdbd] hover:text-[#222222]">{state === "loading" ? "Locating…" : state === "error" ? "Location unavailable" : "◎ Near me"}</button>;
 }

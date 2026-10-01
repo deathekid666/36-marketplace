@@ -1,90 +1,144 @@
 import Link from "next/link";
+
 import { AppHeader } from "@/components/AppHeader";
 import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { categoryLabel } from "@/lib/studio";
 
 const categories = [
-  ["Recording", "Vocals, production, mixing rooms"],
-  ["Podcast", "Ready-to-record podcast spaces"],
-  ["Photo", "Photography studios and sets"],
-  ["Video", "Cyclorama, content and production spaces"],
+  { value: "RECORDING", label: "Recording", glyph: "◉" },
+  { value: "PODCAST", label: "Podcast", glyph: "◌" },
+  { value: "PHOTO", label: "Photo", glyph: "▣" },
+  { value: "VIDEO", label: "Video", glyph: "▷" },
+  { value: "REHEARSAL", label: "Rehearsal", glyph: "♫" },
+  { value: "DJ", label: "DJ", glyph: "⌁" },
+  { value: "PRODUCTION", label: "Production", glyph: "◇" },
 ];
 
 export default async function HomePage() {
   const user = await getCurrentUser();
+  const featured = await db.studio.findMany({
+    where: { status: "VERIFIED" },
+    include: {
+      photos: { orderBy: { sortOrder: "asc" }, take: 1 },
+      rooms: { where: { active: true }, orderBy: { hourlyRateMad: "asc" }, take: 1 },
+      reviews: { select: { rating: true } },
+    },
+    orderBy: [{ verifiedAt: "desc" }, { name: "asc" }],
+    take: 8,
+  }).catch(() => []);
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
 
-      <section className="mx-auto max-w-7xl px-5 pb-24 pt-20 sm:pt-28">
-        <div className="max-w-4xl">
-          <div className="mb-5 inline-flex rounded-full border border-acid/20 bg-acid/[0.05] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-acid">
-            Casablanca first · Morocco next
-          </div>
-          <h1 className="text-5xl font-black leading-[0.9] tracking-[-0.06em] sm:text-7xl md:text-8xl">
-            Book a space
-            <br />
-            <span className="text-zinc-600">to create.</span>
-          </h1>
-          <p className="mt-7 max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg">
-            36 is a marketplace for independent creative studios. Compare spaces,
-            availability and prices in one place, then book with confidence.
-          </p>
-
-          <form action="/studios" method="GET" className="mt-9 grid max-w-3xl gap-3 rounded-2xl border border-zinc-900 bg-zinc-950/80 p-3 sm:grid-cols-[1fr_1fr_auto]">
-            <select name="category" className="field"><option value="">What are you creating?</option><option value="RECORDING">Recording</option><option value="PODCAST">Podcast</option><option value="PHOTO">Photo</option><option value="VIDEO">Video</option><option value="REHEARSAL">Rehearsal</option><option value="DJ">DJ</option><option value="PRODUCTION">Production</option></select>
-            <input name="city" className="field" defaultValue="Casablanca" aria-label="City or neighborhood" />
-            <button className="rounded-xl bg-acid px-6 py-3 text-sm font-black text-black">Find studios</button>
-          </form>
-
-          <div className="mt-5 flex flex-wrap gap-3">
-            {user ? (
-              <Link
-                href="/dashboard"
-                className="rounded-full bg-acid px-6 py-3 text-sm font-black text-black"
-              >
-                Open dashboard
-              </Link>
-            ) : (
-              <>
-                <Link
-                  href="/studios"
-                  className="rounded-full bg-acid px-6 py-3 text-sm font-black text-black"
-                >
-                  Find a studio
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-bold text-white"
-                >
-                  List your studio
-                </Link>
-              </>
-            )}
-          </div>
+      <section className="air-home-hero">
+        <div className="air-home-tabs">
+          <Link href="/studios" className="active">Studios</Link>
+          <Link href="/now">36 NOW</Link>
+          <Link href="/discover">Discover</Link>
         </div>
 
-        <div className="mt-20 grid gap-4 md:grid-cols-4">
-          {categories.map(([title, text]) => (
-            <article key={title} className="panel min-h-40">
-              <span className="text-xs font-bold uppercase tracking-[0.18em] text-acid">
-                {title}
-              </span>
-              <p className="mt-10 text-sm leading-6 text-zinc-500">{text}</p>
-            </article>
+        <h1>Find the right space to create.</h1>
+        <p>Recording, podcast, photo, video and production studios — bookable in one place.</p>
+
+        <form action="/studios" method="GET" className="air-home-search">
+          <label>
+            <b>Where</b>
+            <input name="city" defaultValue="Casablanca" placeholder="Search city or neighborhood" />
+          </label>
+          <label>
+            <b>When</b>
+            <input name="date" type="date" />
+          </label>
+          <label>
+            <b>Duration</b>
+            <select name="duration" defaultValue="1">
+              {[1,2,3,4,5,6,8].map((hours) => <option key={hours} value={hours}>{hours} hour{hours === 1 ? "" : "s"}</option>)}
+            </select>
+          </label>
+          <label>
+            <b>Studio type</b>
+            <select name="category" defaultValue="">
+              <option value="">Any studio</option>
+              {categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+          <button aria-label="Search studios">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            <span>Search</span>
+          </button>
+        </form>
+      </section>
+
+      <section className="air-category-strip">
+        <div className="air-category-strip-inner">
+          {categories.map((item) => (
+            <Link key={item.value} href={"/studios?category=" + item.value + "&city=Casablanca"}>
+              <span>{item.glyph}</span>
+              <b>{item.label}</b>
+            </Link>
           ))}
         </div>
+      </section>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          <article className="panel md:col-span-2">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-600">Two ways to book</p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2"><div><h2 className="text-2xl font-black tracking-[-0.04em]">36 Request</h2><p className="mt-3 text-sm leading-6 text-zinc-500">Post your time, budget and requirements. Compatible verified studios can send offers.</p>{user?.role === "CREATOR" && <Link href="/creator/requests" className="mt-4 inline-flex text-xs font-black text-acid">Post a request →</Link>}</div><div><h2 className="text-2xl font-black tracking-[-0.04em]">⚡ 36 NOW</h2><p className="mt-3 text-sm leading-6 text-zinc-500">Book last-minute empty studio time at temporary lower rates.</p><Link href="/now" className="mt-4 inline-flex text-xs font-black text-acid">See live slots →</Link></div></div>
-          </article>
-          <article className="panel">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-600">Marketplace status</p>
-            <div className="mt-7 text-4xl font-black text-acid">M4</div>
-            <p className="mt-2 text-sm text-zinc-500">Exact-time search, 36 NOW, booking chat, verified reviews, cancellation/refunds and payment-gateway boundary.</p>
-          </article>
+      <section className="air-home-content">
+        <div className="air-section-heading">
+          <div>
+            <h2>Studios to get you started</h2>
+            <p>Verified creative spaces available on 36.</p>
+          </div>
+          <Link href="/studios">Show all</Link>
+        </div>
+
+        {featured.length > 0 ? (
+          <div className="air-listing-grid">
+            {featured.map((studio) => {
+              const photo = studio.photos[0]?.url;
+              const price = studio.rooms[0]?.hourlyRateMad;
+              const rating = studio.reviews.length
+                ? studio.reviews.reduce((sum, review) => sum + review.rating, 0) / studio.reviews.length
+                : null;
+
+              return (
+                <Link key={studio.id} href={"/studios/" + studio.slug} className="air-listing-card">
+                  <div className="air-listing-photo">
+                    {photo ? <img src={photo} alt={studio.name} /> : <div className="air-listing-fallback">36</div>}
+                    <span className="air-listing-heart">♡</span>
+                    <span className="air-listing-badge">Verified</span>
+                  </div>
+                  <div className="air-listing-title-row">
+                    <b>{studio.name}</b>
+                    <span>{rating ? "★ " + rating.toFixed(1) : "New"}</span>
+                  </div>
+                  <p>{studio.neighborhood || studio.city}, {studio.city}</p>
+                  <p>{categoryLabel(studio.primaryCategory)}</p>
+                  <strong>{price ? price + " MAD" : "—"} <span>/ hour</span></strong>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="air-empty-home">
+            <b>Verified studios are being added.</b>
+            <p>Browse the full marketplace or discover contact-only studios while inventory grows.</p>
+            <Link href="/studios">Explore studios</Link>
+          </div>
+        )}
+      </section>
+
+      <section className="air-home-banner">
+        <div>
+          <span>For creators</span>
+          <h2>Need something specific?</h2>
+          <p>Post your time, budget and requirements and let compatible studios respond.</p>
+          <Link href={user?.role === "CREATOR" ? "/creator/requests" : "/auth/signup"}>Create a 36 Request</Link>
+        </div>
+        <div>
+          <span>Last minute</span>
+          <h2>Book empty studio time.</h2>
+          <p>36 NOW surfaces short-notice availability from studio owners.</p>
+          <Link href="/now">Browse 36 NOW</Link>
         </div>
       </section>
     </main>

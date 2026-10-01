@@ -439,7 +439,7 @@ export default async function StudiosPage({
   const returnTo = "/studios?" + returnParams.toString();
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
 
       <section className="mx-auto max-w-[1500px] px-5 py-10">
@@ -451,7 +451,7 @@ export default async function StudiosPage({
             <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
               Find your next creative space
             </h1>
-            <p className="mt-3 text-sm text-zinc-500">
+            <p className="mt-3 text-sm text-[#717171]">
               Search by location, date and studio type. See live availability before you open a listing.
             </p>
           </div>
@@ -481,13 +481,13 @@ export default async function StudiosPage({
         />
 
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-zinc-500">
-            <b className="text-zinc-200">{results.length}</b> bookable studio
+          <p className="text-sm text-[#717171]">
+            <b className="text-[#222222]">{results.length}</b> bookable studio
             {results.length === 1 ? "" : "s"}
             {date ? ` available for ${durationHours}h` : ""}
             {city ? ` in ${city}` : ""}
             {discoveryResults.length > 0 ? (
-              <span className="ml-2 text-sky-300">
+              <span className="ml-2 text-sky-600">
                 · {discoveryResults.length} discovered
               </span>
             ) : null}
@@ -500,23 +500,23 @@ export default async function StudiosPage({
         </div>
 
         {seoCities.length > 0 && (
-          <section className="mt-5 rounded-2xl border border-zinc-900 bg-zinc-950/50 p-4">
+          <section className="mt-5 rounded-2xl border border-[#ebebeb] bg-white p-4">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-700">
+              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#a3a3a3]">
                 Browse verified pages
               </span>
               {seoCities.map((seoCity) => (
                 <Link
                   key={seoCity}
                   href={"/studios/in/" + slugify(seoCity)}
-                  className="text-xs font-bold text-zinc-500 hover:text-acid"
+                  className="text-xs font-bold text-[#717171] hover:text-acid"
                 >
                   {seoCity}
                 </Link>
               ))}
             </div>
             {city && (
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-zinc-900 pt-3">
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-[#ebebeb] pt-3">
                 {STUDIO_CATEGORIES.map((item) => (
                   <Link
                     key={item.value}
@@ -526,7 +526,7 @@ export default async function StudiosPage({
                       "/" +
                       slugify(item.label)
                     }
-                    className="rounded-full border border-zinc-900 px-3 py-1.5 text-[10px] font-black text-zinc-600 hover:border-acid/30 hover:text-acid"
+                    className="rounded-full border border-[#ebebeb] px-3 py-1.5 text-[10px] font-black text-[#8a8a8a] hover:border-acid/30 hover:text-acid"
                   >
                     {item.label} in {city}
                   </Link>
@@ -537,9 +537,9 @@ export default async function StudiosPage({
         )}
 
         {results.length === 0 ? (
-          <div className="mt-8 rounded-3xl border border-dashed border-zinc-800 p-14 text-center">
+          <div className="mt-8 rounded-3xl border border-dashed border-[#dddddd] p-14 text-center">
             <h2 className="text-xl font-black">No matching studios</h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-zinc-600">
+            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#8a8a8a]">
               Try another location, date, category or price ceiling.
             </p>
           </div>
@@ -565,7 +565,7 @@ export default async function StudiosPage({
                   <article key={studio.id} className="group">
                     <div className="relative">
                       <Link href={"/studios/" + studio.slug + detailSuffix}>
-                        <div className="aspect-[4/3] overflow-hidden rounded-3xl bg-zinc-900">
+                        <div className="aspect-[4/3] overflow-hidden rounded-3xl bg-[#f3f3f3]">
                           {photo ? (
                             <img
                               src={photo}
@@ -599,7 +599,7 @@ export default async function StudiosPage({
                         studioId={studio.id}
                         studioName={studio.name}
                       />
-                      <span className="text-[10px] text-zinc-700">
+                      <span className="text-[10px] text-[#a3a3a3]">
                         {studio.rooms[0]?.capacity || 1} people
                         {studio.rooms.some((room) => room.engineerIncluded)
                           ? " · Engineer included"
@@ -611,10 +611,10 @@ export default async function StudiosPage({
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <h2 className="truncate text-base font-black">{studio.name}</h2>
-                          <p className="mt-1 text-sm text-zinc-500">
+                          <p className="mt-1 text-sm text-[#717171]">
                             {studio.neighborhood || studio.city}, {studio.city}
                           </p>
-                          <p className="mt-1 text-xs text-zinc-600">
+                          <p className="mt-1 text-xs text-[#8a8a8a]">
                             {categoryLabel(studio.primaryCategory)}
                             {date ? " · Available" : ""}
                           </p>
@@ -626,7 +626,7 @@ export default async function StudiosPage({
 
                       <p className="mt-2 text-sm">
                         <b>{minRate ? `${minRate} MAD` : "—"}</b>
-                        <span className="text-zinc-500"> / hour</span>
+                        <span className="text-[#717171]"> / hour</span>
                       </p>
                       {(studio.rooms[0]?.equipment.length > 0 ||
                         studio.amenities.length > 0) && (
@@ -634,7 +634,7 @@ export default async function StudiosPage({
                           {studio.rooms[0]?.equipment.slice(0, 2).map((item) => (
                             <span
                               key={"equipment-" + item.id}
-                              className="rounded-full border border-zinc-900 px-2 py-1 text-[9px] text-zinc-600"
+                              className="rounded-full border border-[#ebebeb] px-2 py-1 text-[9px] text-[#8a8a8a]"
                             >
                               {item.name}
                             </span>
@@ -642,7 +642,7 @@ export default async function StudiosPage({
                           {studio.amenities.slice(0, 2).map((item) => (
                             <span
                               key={"amenity-" + item.id}
-                              className="rounded-full border border-zinc-900 px-2 py-1 text-[9px] text-zinc-600"
+                              className="rounded-full border border-[#ebebeb] px-2 py-1 text-[9px] text-[#8a8a8a]"
                             >
                               {item.name}
                             </span>
@@ -660,7 +660,7 @@ export default async function StudiosPage({
                 <div className="sticky top-5">
                   <div className="mb-3 flex items-center justify-between">
                     <b className="text-sm">Map</b>
-                    <span className="text-xs text-zinc-600">
+                    <span className="text-xs text-[#8a8a8a]">
                       {mapPoints.length} mapped studio{mapPoints.length === 1 ? "" : "s"}
                     </span>
                   </div>
@@ -678,7 +678,7 @@ export default async function StudiosPage({
         )}
 
         {advancedInventoryFilters && candidateRows.length > 0 && (
-          <div className="mt-10 rounded-2xl border border-sky-950 bg-sky-950/[0.06] p-4 text-xs leading-5 text-zinc-600">
+          <div className="mt-10 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-xs leading-5 text-[#8a8a8a]">
             Contact-only discovery listings are hidden while advanced inventory
             filters are active because they do not have verified room pricing,
             capacity, equipment or rating data.
@@ -686,21 +686,21 @@ export default async function StudiosPage({
         )}
 
         {discoveryResults.length > 0 && (
-          <section className="mt-12 border-t border-zinc-900 pt-9">
+          <section className="mt-12 border-t border-[#ebebeb] pt-9">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="max-w-2xl">
-                <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-600">
                   36 Discovery
                 </span>
                 <h2 className="mt-2 text-2xl font-black">
                   More studios found around this search
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-zinc-600">
+                <p className="mt-2 text-sm leading-6 text-[#8a8a8a]">
                   These studios match the location/category search, but they are not bookable on 36 yet.
                   Date availability and maximum-price filters do not apply to discovery listings because no owner-verified inventory or pricing exists yet.
                 </p>
               </div>
-              <Link href={"/discover?city=" + encodeURIComponent(city)} className="text-xs font-black text-sky-300">
+              <Link href={"/discover?city=" + encodeURIComponent(city)} className="text-xs font-black text-sky-600">
                 Open discovery →
               </Link>
             </div>
@@ -710,27 +710,27 @@ export default async function StudiosPage({
                 <Link
                   key={candidate.id}
                   href={"/discover/" + candidate.slug}
-                  className="rounded-2xl border border-sky-950 bg-sky-950/[0.08] p-5 transition hover:border-sky-900"
+                  className="rounded-2xl border border-sky-100 bg-sky-50 p-5 transition hover:border-sky-200"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <span className="rounded-full border border-sky-900/50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-sky-300">
+                    <span className="rounded-full border border-sky-200/50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-sky-600">
                       {candidate.status === "CONVERTED" ? "Owner onboarding" : "Discovered"}
                     </span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-700">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#a3a3a3]">
                       {discoveryCategoryLabel(candidate.category)}
                     </span>
                   </div>
                   <h3 className="mt-4 text-lg font-black">{candidate.name}</h3>
-                  <p className="mt-1 text-sm text-zinc-500">
+                  <p className="mt-1 text-sm text-[#717171]">
                     {[candidate.district, candidate.city].filter(Boolean).join(", ") || candidate.country || "Location available"}
                   </p>
                   {candidate.phone && (
-                    <p className="mt-3 text-sm font-bold text-sky-300">☎ {candidate.phone}</p>
+                    <p className="mt-3 text-sm font-bold text-sky-600">☎ {candidate.phone}</p>
                   )}
                   <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-amber-300">Contact only · not bookable</span>
+                    <span className="text-xs font-bold text-amber-600">Contact only · not bookable</span>
                     {candidate.sources.map((source) => (
-                      <span key={source.id} className="rounded-full border border-zinc-900 px-2 py-1 text-[9px] text-zinc-600">
+                      <span key={source.id} className="rounded-full border border-[#ebebeb] px-2 py-1 text-[9px] text-[#8a8a8a]">
                         {source.provider}
                       </span>
                     ))}

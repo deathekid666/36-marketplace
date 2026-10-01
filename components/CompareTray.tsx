@@ -65,7 +65,7 @@ export function CompareTray({
   }
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-[80] w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 rounded-2xl border border-zinc-700 bg-[#11120f]/95 p-4 shadow-[0_22px_70px_rgba(0,0,0,.65)] backdrop-blur">
+    <div className="fixed bottom-4 left-1/2 z-[80] w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 rounded-2xl border border-[#cfcfcf] bg-white/95 p-4 shadow-[0_22px_70px_rgba(0,0,0,.65)] backdrop-blur">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
           <span className="text-[10px] font-black uppercase tracking-[0.12em] text-acid">
@@ -75,7 +75,7 @@ export function CompareTray({
             {items.map((item) => (
               <span
                 key={item.id}
-                className="max-w-44 truncate rounded-full border border-zinc-800 px-3 py-1 text-[10px] font-bold text-zinc-300"
+                className="max-w-44 truncate rounded-full border border-[#dddddd] px-3 py-1 text-[10px] font-bold text-[#333333]"
                 title={item.name}
               >
                 {item.name}
@@ -87,19 +87,19 @@ export function CompareTray({
           <button
             type="button"
             onClick={clear}
-            className="text-xs font-bold text-zinc-600 hover:text-white"
+            className="text-xs font-bold text-[#8a8a8a] hover:text-[#222222]"
           >
             Clear
           </button>
           {items.length >= 2 ? (
             <Link
               href={href}
-              className="rounded-xl bg-acid px-4 py-3 text-xs font-black text-black"
+              className="rounded-xl bg-acid px-4 py-3 text-xs font-black text-white"
             >
               Compare {items.length} →
             </Link>
           ) : (
-            <span className="rounded-xl border border-zinc-800 px-4 py-3 text-xs font-black text-zinc-600">
+            <span className="rounded-xl border border-[#dddddd] px-4 py-3 text-xs font-black text-[#8a8a8a]">
               Select one more
             </span>
           )}

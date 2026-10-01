@@ -187,7 +187,7 @@ export default async function OwnerAnalyticsPage() {
   );
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
       <section className="mx-auto max-w-7xl px-5 py-10 sm:py-12">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -198,7 +198,7 @@ export default async function OwnerAnalyticsPage() {
             <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
               Marketplace performance
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
               Last 30 days compared with the previous 30 days. Only real
               36 marketplace activity is counted.
             </p>
@@ -223,7 +223,7 @@ export default async function OwnerAnalyticsPage() {
                   className={
                     "text-xs font-black " +
                     (item.value >= item.previous
-                      ? "text-emerald-300"
+                      ? "text-emerald-600"
                       : "text-red-300")
                   }
                 >
@@ -237,7 +237,7 @@ export default async function OwnerAnalyticsPage() {
             <b className="mt-2 block text-3xl">
               {rate(currentCreated, currentViews)}%
             </b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               booking events / profile views
             </span>
           </div>
@@ -247,14 +247,14 @@ export default async function OwnerAnalyticsPage() {
           <div className="panel">
             <span className="label">Active booking value</span>
             <b className="mt-2 block text-2xl">{activeValue} MAD</b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               bookings created in the last 30 days, excluding cancelled
             </span>
           </div>
           <div className="panel">
             <span className="label">Completed sessions</span>
             <b className="mt-2 block text-2xl">{completedCurrent}</b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               sessions completed in the last 30 days
             </span>
           </div>
@@ -263,19 +263,19 @@ export default async function OwnerAnalyticsPage() {
             <b className="mt-2 block text-2xl">
               {currentFavorites.length}
             </b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               creators currently saving your studios
             </span>
           </div>
         </div>
 
-        <section className="mt-6 rounded-2xl border border-zinc-900 bg-zinc-950/60 p-5">
+        <section className="mt-6 rounded-2xl border border-[#ebebeb] bg-white p-5">
           <div className="flex items-end justify-between gap-4">
             <div>
               <span className="label">30-day funnel</span>
               <h2 className="text-xl font-black">Discovery → booking</h2>
             </div>
-            <span className="text-[10px] text-zinc-700">
+            <span className="text-[10px] text-[#a3a3a3]">
               Checkout starts are recorded after a valid server price quote
             </span>
           </div>
@@ -284,10 +284,10 @@ export default async function OwnerAnalyticsPage() {
             {funnel.slice(0, 3).map((item) => (
               <div key={item.label}>
                 <div className="mb-1 flex justify-between gap-4 text-xs">
-                  <span className="text-zinc-500">{item.label}</span>
+                  <span className="text-[#717171]">{item.label}</span>
                   <b>{item.value}</b>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-zinc-900">
+                <div className="h-2 overflow-hidden rounded-full bg-[#f3f3f3]">
                   <div
                     className="h-full rounded-full bg-acid"
                     style={{
@@ -304,13 +304,13 @@ export default async function OwnerAnalyticsPage() {
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-zinc-900 bg-black/20 p-4">
+            <div className="rounded-xl border border-[#ebebeb] bg-[#f7f7f7] p-4">
               <span className="label">View → checkout</span>
               <b className="text-xl">
                 {rate(currentStarts, currentViews)}%
               </b>
             </div>
-            <div className="rounded-xl border border-zinc-900 bg-black/20 p-4">
+            <div className="rounded-xl border border-[#ebebeb] bg-[#f7f7f7] p-4">
               <span className="label">Checkout → booking</span>
               <b className="text-xl">
                 {rate(currentCreated, currentStarts)}%
@@ -319,8 +319,8 @@ export default async function OwnerAnalyticsPage() {
           </div>
         </section>
 
-        <section className="mt-6 overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950/60">
-          <div className="border-b border-zinc-900 p-5">
+        <section className="mt-6 overflow-hidden rounded-2xl border border-[#ebebeb] bg-white">
+          <div className="border-b border-[#ebebeb] p-5">
             <span className="label">Per studio</span>
             <h2 className="text-xl font-black">
               Conversion & trust signals
@@ -328,11 +328,11 @@ export default async function OwnerAnalyticsPage() {
           </div>
 
           {studios.length === 0 ? (
-            <div className="p-8 text-sm text-zinc-600">
+            <div className="p-8 text-sm text-[#8a8a8a]">
               Create a studio to start collecting marketplace analytics.
             </div>
           ) : (
-            <div className="divide-y divide-zinc-900">
+            <div className="divide-y divide-[#ebebeb]">
               {studios.map((studio) => {
                 const studioEvents = currentEvents.filter(
                   (event) => event.studioId === studio.id,
@@ -376,13 +376,13 @@ export default async function OwnerAnalyticsPage() {
                       >
                         {studio.name}
                       </Link>
-                      <span className="mt-1 block text-[10px] uppercase tracking-[0.1em] text-zinc-700">
+                      <span className="mt-1 block text-[10px] uppercase tracking-[0.1em] text-[#a3a3a3]">
                         {studio.status}
                       </span>
                       {trust &&
                         trust.responseSampleSize >= 3 &&
                         trust.responseRate != null && (
-                          <span className="mt-2 block text-[10px] text-emerald-300">
+                          <span className="mt-2 block text-[10px] text-emerald-600">
                             {trust.responseRate}% response rate
                             {responseLabel ? " · " + responseLabel : ""}
                           </span>

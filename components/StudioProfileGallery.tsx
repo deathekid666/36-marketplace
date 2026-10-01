@@ -36,10 +36,10 @@ export function StudioProfileGallery({
 
   if (photos.length === 0) {
     return (
-      <div className="mt-6 grid h-[420px] place-items-center overflow-hidden rounded-[1.75rem] bg-zinc-900">
+      <div className="mt-6 grid h-[420px] place-items-center overflow-hidden rounded-[1.75rem] bg-[#f3f3f3]">
         <div className="text-center">
           <div className="text-7xl font-black text-acid">36</div>
-          <p className="mt-3 text-sm text-zinc-600">
+          <p className="mt-3 text-sm text-[#8a8a8a]">
             Studio photos coming soon
           </p>
         </div>
@@ -56,7 +56,7 @@ export function StudioProfileGallery({
             key={photo.id}
             onClick={() => setOpen(true)}
             className={
-              "group relative overflow-hidden bg-zinc-900 " +
+              "group relative overflow-hidden bg-[#f3f3f3] " +
               (index === 0
                 ? "md:col-span-2 md:row-span-2"
                 : "")
@@ -75,7 +75,7 @@ export function StudioProfileGallery({
           Array.from({ length: 5 - visible.length }, (_, index) => (
             <div
               key={"placeholder-" + index}
-              className="hidden bg-zinc-900 md:block"
+              className="hidden bg-[#f3f3f3] md:block"
             />
           ))}
 
@@ -89,18 +89,18 @@ export function StudioProfileGallery({
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-[6000] overflow-y-auto bg-black">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-900 bg-black/90 px-5 py-4 backdrop-blur">
+        <div className="fixed inset-0 z-[6000] overflow-y-auto bg-black text-white">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#ebebeb] bg-black/90 px-5 py-4 backdrop-blur">
             <div>
               <b className="text-sm">{studioName}</b>
-              <span className="ml-2 text-xs text-zinc-600">
+              <span className="ml-2 text-xs text-[#8a8a8a]">
                 {photos.length} photo{photos.length === 1 ? "" : "s"}
               </span>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="grid h-10 w-10 place-items-center rounded-full border border-zinc-800 text-lg text-zinc-300"
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#dddddd] text-lg text-[#333333]"
               aria-label="Close photos"
             >
               ×
@@ -112,7 +112,7 @@ export function StudioProfileGallery({
               <div
                 key={photo.id}
                 className={
-                  "overflow-hidden rounded-2xl bg-zinc-950 " +
+                  "overflow-hidden rounded-2xl bg-white " +
                   (index % 5 === 0 ? "sm:col-span-2" : "")
                 }
               >

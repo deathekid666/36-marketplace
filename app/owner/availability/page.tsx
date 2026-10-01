@@ -107,16 +107,16 @@ export default async function OwnerAvailabilityPage({
 
   if (!studios.length) {
     return (
-      <main className="min-h-screen">
+      <main className="min-h-screen bg-white text-[#222]">
         <AppHeader user={user} />
         <section className="mx-auto max-w-4xl px-5 py-14 text-center">
           <h1 className="text-4xl font-black">Availability</h1>
-          <p className="mt-3 text-sm text-zinc-500">
+          <p className="mt-3 text-sm text-[#717171]">
             Create a studio before configuring its calendar.
           </p>
           <Link
             href="/owner/studios/new"
-            className="mt-6 inline-flex rounded-xl bg-acid px-5 py-3 text-sm font-black text-black"
+            className="mt-6 inline-flex rounded-xl bg-acid px-5 py-3 text-sm font-black text-white"
           >
             Create studio
           </Link>
@@ -208,7 +208,7 @@ export default async function OwnerAvailabilityPage({
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
       <section className="mx-auto max-w-7xl px-5 py-10 sm:py-12">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -219,13 +219,13 @@ export default async function OwnerAvailabilityPage({
             <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
               Availability
             </h1>
-            <p className="mt-3 text-sm text-zinc-500">
+            <p className="mt-3 text-sm text-[#717171]">
               Block dates and hours without changing your verified listing.
             </p>
           </div>
           <Link
             href="/owner/bookings"
-            className="rounded-full border border-zinc-700 px-5 py-3 text-xs font-black"
+            className="rounded-full border border-[#cfcfcf] px-5 py-3 text-xs font-black"
           >
             Booking dashboard
           </Link>
@@ -240,11 +240,11 @@ export default async function OwnerAvailabilityPage({
 
         <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_340px]">
           <div className="space-y-5">
-            <section className="rounded-2xl border border-zinc-900 bg-zinc-950/60 p-4">
+            <section className="rounded-2xl border border-[#ebebeb] bg-white p-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <span className="label">Studio</span>
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-semibold">
+                  <div className="rounded-xl border border-[#dddddd] bg-white px-4 py-3 text-sm font-semibold">
                     {studio.name}
                   </div>
                   {studios.length > 1 && (
@@ -260,7 +260,7 @@ export default async function OwnerAvailabilityPage({
                             "rounded-full border px-3 py-1.5 text-[10px] font-black " +
                             (item.id === studio.id
                               ? "border-acid/40 text-acid"
-                              : "border-zinc-800 text-zinc-500")
+                              : "border-[#dddddd] text-[#717171]")
                           }
                         >
                           {item.name}
@@ -279,7 +279,7 @@ export default async function OwnerAvailabilityPage({
                         "rounded-full border px-3 py-2 text-[10px] font-black " +
                         (roomId === "ALL"
                           ? "border-acid/40 bg-acid/[0.05] text-acid"
-                          : "border-zinc-800 text-zinc-500")
+                          : "border-[#dddddd] text-[#717171]")
                       }
                     >
                       All rooms
@@ -292,7 +292,7 @@ export default async function OwnerAvailabilityPage({
                           "rounded-full border px-3 py-2 text-[10px] font-black " +
                           (roomId === room.id
                             ? "border-acid/40 bg-acid/[0.05] text-acid"
-                            : "border-zinc-800 text-zinc-500")
+                            : "border-[#dddddd] text-[#717171]")
                         }
                       >
                         {room.name}
@@ -303,16 +303,16 @@ export default async function OwnerAvailabilityPage({
               </div>
             </section>
 
-            <section className="rounded-2xl border border-zinc-900 bg-zinc-950/60 p-4 sm:p-5">
+            <section className="rounded-2xl border border-[#ebebeb] bg-white p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <Link
                   href={hrefFor({ month: previousMonth })}
-                  className="grid h-10 w-10 place-items-center rounded-full border border-zinc-800 text-zinc-400 hover:text-white"
+                  className="grid h-10 w-10 place-items-center rounded-full border border-[#dddddd] text-[#555555] hover:text-[#222222]"
                 >
                   ←
                 </Link>
                 <div className="text-center">
-                  <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+                  <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8a8a8a]">
                     {selectedRoomName}
                   </span>
                   <h2 className="mt-1 text-xl font-black">
@@ -321,7 +321,7 @@ export default async function OwnerAvailabilityPage({
                 </div>
                 <Link
                   href={hrefFor({ month: nextMonth })}
-                  className="grid h-10 w-10 place-items-center rounded-full border border-zinc-800 text-zinc-400 hover:text-white"
+                  className="grid h-10 w-10 place-items-center rounded-full border border-[#dddddd] text-[#555555] hover:text-[#222222]"
                 >
                   →
                 </Link>
@@ -332,7 +332,7 @@ export default async function OwnerAvailabilityPage({
                   (day) => (
                     <div
                       key={day}
-                      className="py-2 text-[9px] font-black uppercase tracking-[0.1em] text-zinc-700"
+                      className="py-2 text-[9px] font-black uppercase tracking-[0.1em] text-[#a3a3a3]"
                     >
                       {day}
                     </div>
@@ -354,19 +354,19 @@ export default async function OwnerAvailabilityPage({
                           ? "border-acid/30 bg-acid/[0.035]"
                           : hasBlock
                             ? "border-amber-900/35 bg-amber-950/10"
-                            : "border-zinc-900 bg-black/20")
+                            : "border-[#ebebeb] bg-[#f7f7f7]")
                       }
                     >
                       <div className="flex items-start justify-between gap-1">
                         <b className="text-xs">{cell.day}</b>
                         <div className="flex gap-1">
                           {hasBooking && (
-                            <span className="rounded-full bg-acid px-1.5 py-0.5 text-[8px] font-black text-black">
+                            <span className="rounded-full bg-acid px-1.5 py-0.5 text-[8px] font-black text-white">
                               {cell.dayBookings.length} B
                             </span>
                           )}
                           {hasBlock && (
-                            <span className="rounded-full border border-amber-900/40 px-1.5 py-0.5 text-[8px] font-black text-amber-300">
+                            <span className="rounded-full border border-amber-900/40 px-1.5 py-0.5 text-[8px] font-black text-amber-600">
                               {cell.dayBlocks.length} X
                             </span>
                           )}
@@ -404,7 +404,7 @@ export default async function OwnerAvailabilityPage({
                             name="date"
                             value={cell.key}
                           />
-                          <button className="text-[9px] font-black text-zinc-700 hover:text-amber-300">
+                          <button className="text-[9px] font-black text-[#a3a3a3] hover:text-amber-600">
                             + Block day
                           </button>
                         </form>
@@ -414,12 +414,12 @@ export default async function OwnerAvailabilityPage({
                 })}
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-4 text-[10px] text-zinc-600">
+              <div className="mt-4 flex flex-wrap gap-4 text-[10px] text-[#8a8a8a]">
                 <span>
                   <b className="text-acid">B</b> booking
                 </span>
                 <span>
-                  <b className="text-amber-300">X</b> unavailable block
+                  <b className="text-amber-600">X</b> unavailable block
                 </span>
                 <span>Calendar changes do not affect verification status.</span>
               </div>
@@ -474,16 +474,16 @@ export default async function OwnerAvailabilityPage({
                   <button className="button-dark w-full">Block time</button>
                 </form>
               ) : (
-                <p className="mt-4 text-xs text-zinc-600">Add a room first.</p>
+                <p className="mt-4 text-xs text-[#8a8a8a]">Add a room first.</p>
               )}
             </section>
 
             <section className="panel">
-              <span className="text-xs font-bold uppercase tracking-[0.14em] text-amber-300">
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-amber-600">
                 Vacation mode
               </span>
               <h2 className="mt-2 text-xl font-black">Block every room</h2>
-              <p className="mt-2 text-xs leading-5 text-zinc-600">
+              <p className="mt-2 text-xs leading-5 text-[#8a8a8a]">
                 Use this for holidays, renovation or studio-wide closure.
               </p>
               <form action={blockVacationRangeAction} className="mt-5 space-y-3">
@@ -504,7 +504,7 @@ export default async function OwnerAvailabilityPage({
                     placeholder="Vacation / renovation"
                   />
                 </label>
-                <button className="w-full rounded-xl border border-amber-900/40 px-4 py-3 text-xs font-black text-amber-300">
+                <button className="w-full rounded-xl border border-amber-900/40 px-4 py-3 text-xs font-black text-amber-600">
                   Block studio range
                 </button>
               </form>
@@ -513,30 +513,30 @@ export default async function OwnerAvailabilityPage({
             <section className="panel">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-black">Current blocks</h2>
-                <span className="text-xs text-zinc-600">
+                <span className="text-xs text-[#8a8a8a]">
                   {upcomingBlocks.length}
                 </span>
               </div>
               <div className="mt-4 space-y-2">
                 {upcomingBlocks.length === 0 ? (
-                  <p className="text-xs text-zinc-600">
+                  <p className="text-xs text-[#8a8a8a]">
                     No upcoming blocked time in this month.
                   </p>
                 ) : (
                   upcomingBlocks.slice(0, 12).map((slot) => (
                     <div
                       key={slot.id}
-                      className="rounded-xl border border-zinc-900 bg-black/20 p-3"
+                      className="rounded-xl border border-[#ebebeb] bg-[#f7f7f7] p-3"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <b className="text-xs">{slot.room.name}</b>
-                          <span className="mt-1 block text-[10px] leading-4 text-zinc-600">
+                          <span className="mt-1 block text-[10px] leading-4 text-[#8a8a8a]">
                             {formatMarketplaceDateTime(slot.startAt)} →{" "}
                             {formatMarketplaceDateTime(slot.endAt)}
                           </span>
                           {slot.reason && (
-                            <span className="mt-1 block text-[10px] text-zinc-700">
+                            <span className="mt-1 block text-[10px] text-[#a3a3a3]">
                               {slot.reason}
                             </span>
                           )}

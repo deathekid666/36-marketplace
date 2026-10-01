@@ -133,7 +133,7 @@ export default async function OwnerBookingsPage({
   ];
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
       <section className="mx-auto max-w-7xl px-5 py-10 sm:py-12">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -144,7 +144,7 @@ export default async function OwnerBookingsPage({
             <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
               Booking dashboard
             </h1>
-            <p className="mt-3 text-sm text-zinc-500">
+            <p className="mt-3 text-sm text-[#717171]">
               Sessions, creator details and offline payment collection across
               every room.
             </p>
@@ -152,7 +152,7 @@ export default async function OwnerBookingsPage({
           <div className="flex flex-wrap gap-2">
             <Link
               href="/owner"
-              className="rounded-full border border-zinc-700 px-5 py-3 text-xs font-black"
+              className="rounded-full border border-[#cfcfcf] px-5 py-3 text-xs font-black"
             >
               Studios
             </Link>
@@ -164,7 +164,7 @@ export default async function OwnerBookingsPage({
             </Link>
             <Link
               href="/owner/requests"
-              className="rounded-full border border-zinc-700 px-5 py-3 text-xs font-black"
+              className="rounded-full border border-[#cfcfcf] px-5 py-3 text-xs font-black"
             >
               36 Requests
             </Link>
@@ -175,43 +175,43 @@ export default async function OwnerBookingsPage({
           <div className="panel">
             <span className="label">Today</span>
             <b className="mt-2 block text-3xl">{today.length}</b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               scheduled session{today.length === 1 ? "" : "s"}
             </span>
           </div>
           <div className="panel">
             <span className="label">Upcoming</span>
             <b className="mt-2 block text-3xl">{upcoming.length}</b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               active future bookings
             </span>
           </div>
           <div className="panel">
             <span className="label">Collected</span>
             <b className="mt-2 block text-3xl">{collectedMad} MAD</b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               marked paid in this 180-day window
             </span>
           </div>
           <div className="panel">
             <span className="label">To collect</span>
-            <b className="mt-2 block text-3xl text-emerald-300">
+            <b className="mt-2 block text-3xl text-emerald-600">
               {pendingCollectionMad} MAD
             </b>
-            <span className="mt-1 block text-xs text-zinc-600">
+            <span className="mt-1 block text-xs text-[#8a8a8a]">
               {offlinePending.length} offline booking
               {offlinePending.length === 1 ? "" : "s"}
             </span>
           </div>
         </div>
 
-        <section className="mt-6 rounded-2xl border border-zinc-900 bg-zinc-950/60 p-4">
+        <section className="mt-6 rounded-2xl border border-[#ebebeb] bg-white p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
               <span className="label">Next 14 days</span>
               <b className="text-sm">Session calendar</b>
             </div>
-            <span className="text-[10px] text-zinc-700">
+            <span className="text-[10px] text-[#a3a3a3]">
               Casablanca time
             </span>
           </div>
@@ -223,17 +223,17 @@ export default async function OwnerBookingsPage({
                   "rounded-xl border p-2 text-center " +
                   (day.count
                     ? "border-acid/30 bg-acid/[0.035]"
-                    : "border-zinc-900 bg-black/20")
+                    : "border-[#ebebeb] bg-[#f7f7f7]")
                 }
               >
-                <span className="block text-[9px] font-black uppercase text-zinc-600">
+                <span className="block text-[9px] font-black uppercase text-[#8a8a8a]">
                   {shortDay(day.date)}
                 </span>
                 <b className="mt-1 block text-sm">{dayNumber(day.date)}</b>
                 <span
                   className={
                     "mt-1 block text-[9px] font-black " +
-                    (day.count ? "text-acid" : "text-zinc-800")
+                    (day.count ? "text-acid" : "text-[#b8b8b8]")
                   }
                 >
                   {day.count || "—"}
@@ -256,7 +256,7 @@ export default async function OwnerBookingsPage({
                 "shrink-0 rounded-full border px-4 py-2 text-xs font-black " +
                 (view === tab.value
                   ? "border-acid/40 bg-acid/[0.06] text-acid"
-                  : "border-zinc-800 text-zinc-500 hover:text-white")
+                  : "border-[#dddddd] text-[#717171] hover:text-[#222222]")
               }
             >
               {tab.label} · {tab.count}
@@ -268,7 +268,7 @@ export default async function OwnerBookingsPage({
           {visible.length === 0 ? (
             <div className="panel py-12 text-center">
               <h2 className="font-black">No {view} bookings</h2>
-              <p className="mt-2 text-sm text-zinc-600">
+              <p className="mt-2 text-sm text-[#8a8a8a]">
                 Bookings will appear here as creators reserve your verified
                 rooms.
               </p>
@@ -277,10 +277,10 @@ export default async function OwnerBookingsPage({
             Array.from(grouped.entries()).map(([date, dayBookings]) => (
               <section key={date}>
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-sm font-black uppercase tracking-[0.16em] text-zinc-500">
+                  <h2 className="text-sm font-black uppercase tracking-[0.16em] text-[#717171]">
                     {date}
                   </h2>
-                  <span className="text-[10px] text-zinc-700">
+                  <span className="text-[10px] text-[#a3a3a3]">
                     {dayBookings.length} session
                     {dayBookings.length === 1 ? "" : "s"}
                   </span>
@@ -300,7 +300,7 @@ export default async function OwnerBookingsPage({
                     return (
                       <article
                         key={booking.id}
-                        className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-5"
+                        className="rounded-2xl border border-[#ebebeb] bg-white p-5"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-5">
                           <div className="min-w-0">
@@ -313,8 +313,8 @@ export default async function OwnerBookingsPage({
                                   className={
                                     "rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.08em] " +
                                     (paymentPending
-                                      ? "border-amber-900/40 text-amber-300"
-                                      : "border-emerald-900/40 text-emerald-300")
+                                      ? "border-amber-900/40 text-amber-600"
+                                      : "border-emerald-900/40 text-emerald-600")
                                   }
                                 >
                                   {paymentPending
@@ -327,15 +327,15 @@ export default async function OwnerBookingsPage({
                             <h3 className="mt-2 text-xl font-black">
                               {booking.room.name}
                             </h3>
-                            <p className="mt-1 text-xs text-zinc-500">
+                            <p className="mt-1 text-xs text-[#717171]">
                               {booking.studio.name} ·{" "}
                               {formatMarketplaceDateTime(booking.startAt)} →{" "}
                               {formatMarketplaceDateTime(booking.endAt)}
                             </p>
-                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-600">
+                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#8a8a8a]">
                               <span>
                                 Creator:{" "}
-                                <b className="text-zinc-300">
+                                <b className="text-[#333333]">
                                   {booking.creator.name}
                                 </b>
                               </span>
@@ -350,12 +350,12 @@ export default async function OwnerBookingsPage({
                             <b className="text-xl">
                               {booking.totalAmountMad} MAD
                             </b>
-                            <span className="block text-[10px] uppercase tracking-[0.08em] text-zinc-600">
+                            <span className="block text-[10px] uppercase tracking-[0.08em] text-[#8a8a8a]">
                               {booking.paymentStatus.replaceAll("_", " ")}
                             </span>
                             <Link
                               href={"/owner/bookings/" + booking.id}
-                              className="mt-4 inline-flex rounded-xl border border-zinc-800 px-4 py-2 text-xs font-black text-acid hover:border-acid/40"
+                              className="mt-4 inline-flex rounded-xl border border-[#dddddd] px-4 py-2 text-xs font-black text-acid hover:border-acid/40"
                             >
                               Manage booking →
                             </Link>

@@ -46,7 +46,7 @@ export default async function FavoritesPage() {
   }));
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
 
       <section className="mx-auto max-w-7xl px-5 py-12">
@@ -58,7 +58,7 @@ export default async function FavoritesPage() {
             <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
               Favorites
             </h1>
-            <p className="mt-3 text-sm text-zinc-500">
+            <p className="mt-3 text-sm text-[#717171]">
               Save studios, organize them into project shortlists,
               compare options and decide with context.
             </p>
@@ -66,20 +66,20 @@ export default async function FavoritesPage() {
 
           <Link
             href="/studios"
-            className="rounded-full bg-acid px-5 py-3 text-xs font-black text-black"
+            className="rounded-full bg-acid px-5 py-3 text-xs font-black text-white"
           >
             Find more studios
           </Link>
         </div>
 
         {favorites.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-dashed border-zinc-800 p-10 text-center">
-            <p className="text-sm text-zinc-500">
+          <div className="mt-8 rounded-2xl border border-dashed border-[#dddddd] p-10 text-center">
+            <p className="text-sm text-[#717171]">
               No saved studios yet.
             </p>
             <Link
               href="/studios"
-              className="mt-5 inline-flex rounded-full bg-acid px-5 py-3 text-xs font-black text-black"
+              className="mt-5 inline-flex rounded-full bg-acid px-5 py-3 text-xs font-black text-white"
             >
               Browse studios
             </Link>
@@ -98,7 +98,7 @@ export default async function FavoritesPage() {
                     Saved studios
                   </h2>
                 </div>
-                <span className="text-xs text-zinc-600">
+                <span className="text-xs text-[#8a8a8a]">
                   {favorites.length} saved
                 </span>
               </div>
@@ -118,10 +118,10 @@ export default async function FavoritesPage() {
                   return (
                     <article
                       key={studio.id}
-                      className="overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950/70"
+                      className="overflow-hidden rounded-2xl border border-[#ebebeb] bg-white"
                     >
                       <Link href={"/studios/" + studio.slug}>
-                        <div className="h-48 bg-zinc-900">
+                        <div className="h-48 bg-[#f3f3f3]">
                           {photo ? (
                             <img
                               src={photo}
@@ -138,7 +138,7 @@ export default async function FavoritesPage() {
                           <h3 className="text-xl font-black">
                             {studio.name}
                           </h3>
-                          <p className="mt-1 text-xs text-zinc-600">
+                          <p className="mt-1 text-xs text-[#8a8a8a]">
                             {studio.neighborhood ||
                               studio.city}
                             {rate
@@ -155,7 +155,7 @@ export default async function FavoritesPage() {
                         </div>
                       </Link>
 
-                      <div className="flex items-center justify-between gap-3 border-t border-zinc-900 p-4">
+                      <div className="flex items-center justify-between gap-3 border-t border-[#ebebeb] p-4">
                         <form action={toggleFavoriteAction}>
                           <input
                             type="hidden"
@@ -167,7 +167,7 @@ export default async function FavoritesPage() {
                             name="returnTo"
                             value="/creator/favorites"
                           />
-                          <button className="text-xs font-bold text-zinc-500 hover:text-red-300">
+                          <button className="text-xs font-bold text-[#717171] hover:text-red-300">
                             Remove from favorites
                           </button>
                         </form>

@@ -1,43 +1,97 @@
 import Link from "next/link";
 import type { User } from "@prisma/client";
+
 import { Logo } from "@/components/Logo";
 import { LogoutButton } from "@/components/LogoutButton";
 import { MobileDock } from "@/components/MobileDock";
 import { db } from "@/lib/db";
 
-export async function AppHeader({ user }: { user?: User | null }) {
-  const unread = user ? await db.notification.count({ where: { userId: user.id, readAt: null } }).catch(() => 0) : 0;
-  return (<>
-    <header className="border-b border-zinc-900 bg-ink/95">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-4">
-        <Logo />
-        <nav className="flex flex-wrap items-center justify-end gap-3">
-          <Link href="/studios" className="text-xs font-semibold text-zinc-400 hover:text-white">Studios</Link>
-          <Link href="/discover" className="hidden text-xs font-semibold text-zinc-400 hover:text-white md:inline">Discover</Link>
-          <Link href="/now" className="text-xs font-semibold text-acid hover:text-white">⚡ 36 NOW</Link>
-          {user ? (
-            <>
-              {!user.emailVerifiedAt && <Link href="/auth/verify-email" className="rounded-full border border-amber-700/50 bg-amber-950/20 px-3 py-1.5 text-[10px] font-black text-amber-300">Verify email</Link>}
-              {user.role === "CREATOR" && <Link href="/creator/favorites" className="hidden text-xs font-semibold text-zinc-400 hover:text-white sm:inline">♥ Favorites</Link>}
-              {user.role === "CREATOR" && <Link href="/creator/referrals" className="hidden text-xs font-semibold text-zinc-400 hover:text-white lg:inline">Referrals</Link>}
-              {user.role === "CREATOR" && <Link href="/creator/requests" className="hidden text-xs font-semibold text-zinc-400 hover:text-white sm:inline">36 Request</Link>}
-              {user.role === "STUDIO_OWNER" && <Link href="/owner/now" className="hidden text-xs font-semibold text-zinc-400 hover:text-white sm:inline">Sell empty time</Link>}
-              {(user.role === "CREATOR" || user.role === "STUDIO_OWNER") && <Link href="/messages" className="text-xs font-semibold text-zinc-400 hover:text-white">Messages</Link>}
-              <Link href="/notifications" className="relative text-xs font-semibold text-zinc-400 hover:text-white">Notifications{unread > 0 && <span className="ml-1 inline-flex min-w-5 justify-center rounded-full bg-acid px-1.5 py-0.5 text-[9px] font-black text-black">{unread > 99 ? "99+" : unread}</span>}</Link>
-              <Link href="/profile" className="text-xs font-semibold text-zinc-400 hover:text-white">Profile</Link>
-              <Link href="/dashboard" className="text-xs font-semibold text-zinc-400 hover:text-white">Dashboard</Link>
-              <LogoutButton />
-            </>
-          ) : (
-            <>
-              <Link href="/auth/login" className="text-xs font-semibold text-zinc-300 hover:text-white">Log in</Link>
-              <Link href="/auth/signup" className="rounded-full bg-acid px-4 py-2 text-xs font-black text-black">Join 36</Link>
-            </>
-          )}
-        </nav>
-      </div>
-    </header>
-    {user && <MobileDock role={user.role} />}
-  </>);
+function initials(name?: string | null) {
+  return String(name || "36")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "36";
+}
 
+function Icon({ name }: { name: "search" | "bell" | "message" | "menu" }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.9,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  if (name === "search") return <svg {...common}><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>;
+  if (name === "bell") return <svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></svg>;
+  if (name === "message") return <svg {...common}><path d="M21 12a8 8 0 0 1-8 8H6l-3 2v-7a8 8 0 1 1 18-3Z" /></svg>;
+  return <svg {...common}><path d="M5 7h14M5 12h14M5 17h14" /></svg>;
+}
+
+export async function AppHeader({ user }: { user?: User | null }) {
+  const unread = user
+    ? await db.notification.count({ where: { userId: user.id, readAt: null } }).catch(() => 0)
+    : 0;
+
+  return (
+    <>
+      <header className="air-header">
+        <div className="air-header-inner">
+          <Logo />
+
+          <nav className="air-header-nav" aria-label="Main navigation">
+            <Link href="/studios">Studios</Link>
+            <Link href="/now">36 NOW</Link>
+            <Link href="/discover">Discover</Link>
+          </nav>
+
+          <div className="air-header-actions">
+            {user?.role === "STUDIO_OWNER" ? (
+              <Link href="/owner/studios/new" className="air-host-link">
+                List your studio
+              </Link>
+            ) : (
+              <Link href="/auth/signup" className="air-host-link">
+                List your studio
+              </Link>
+            )}
+
+            {user ? (
+              <>
+                {(user.role === "CREATOR" || user.role === "STUDIO_OWNER") && (
+                  <Link href="/messages" className="air-icon-button" aria-label="Messages">
+                    <Icon name="message" />
+                  </Link>
+                )}
+                <Link href="/notifications" className="air-icon-button air-notification" aria-label="Notifications">
+                  <Icon name="bell" />
+                  {unread > 0 && (
+                    <span>{unread > 99 ? "99+" : unread}</span>
+                  )}
+                </Link>
+                <Link href="/profile" className="air-profile-menu" aria-label="Profile">
+                  <Icon name="menu" />
+                  <span className="air-profile-avatar">{initials(user.name)}</span>
+                </Link>
+                <Link href="/dashboard" className="air-dashboard-link">Dashboard</Link>
+                <LogoutButton />
+              </>
+            ) : (
+              <>
+                <Link href="/auth/login" className="air-login-link">Log in</Link>
+                <Link href="/auth/signup" className="air-signup-link">Sign up</Link>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+      {user && <MobileDock role={user.role} />}
+    </>
+  );
 }

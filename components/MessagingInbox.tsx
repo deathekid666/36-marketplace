@@ -213,15 +213,15 @@ export function MessagingInbox({
   }
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-[#11120f] shadow-[0_24px_90px_rgba(0,0,0,.42)]">
+    <div className="overflow-hidden rounded-[2rem] border border-[#dddddd] bg-white shadow-[0_24px_90px_rgba(0,0,0,.42)]">
       <div className="grid min-h-[720px] lg:grid-cols-[360px_1fr]">
         <aside
           className={
-            "border-r border-zinc-900 bg-black/15 " +
+            "border-r border-[#ebebeb] bg-black/15 " +
             (mobileThread ? "hidden lg:block" : "block")
           }
         >
-          <div className="border-b border-zinc-900 p-5">
+          <div className="border-b border-[#ebebeb] p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-acid">
@@ -229,25 +229,25 @@ export function MessagingInbox({
                 </span>
                 <h1 className="mt-1 text-2xl font-black">Messages</h1>
               </div>
-              <span className="rounded-full border border-zinc-800 px-3 py-1 text-[10px] font-black text-zinc-500">
+              <span className="rounded-full border border-[#dddddd] px-3 py-1 text-[10px] font-black text-[#717171]">
                 {threads.length}
               </span>
             </div>
 
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-3">
-              <span className="text-zinc-700">⌕</span>
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-[#dddddd] bg-white px-3">
+              <span className="text-[#a3a3a3]">⌕</span>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search messages"
-                className="w-full bg-transparent py-3 text-xs text-white outline-none placeholder:text-zinc-700"
+                className="w-full bg-transparent py-3 text-xs text-[#222222] outline-none placeholder:text-[#a3a3a3]"
               />
             </div>
           </div>
 
           <div className="max-h-[645px] overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="p-8 text-center text-sm text-zinc-600">
+              <div className="p-8 text-center text-sm text-[#8a8a8a]">
                 No conversations found.
               </div>
             ) : (
@@ -259,13 +259,13 @@ export function MessagingInbox({
                     type="button"
                     onClick={() => openThread(thread.bookingId)}
                     className={
-                      "flex w-full gap-3 border-b border-zinc-900 p-4 text-left transition " +
+                      "flex w-full gap-3 border-b border-[#ebebeb] p-4 text-left transition " +
                       (selected
                         ? "bg-white/[0.05]"
                         : "hover:bg-white/[0.025]")
                     }
                   >
-                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-zinc-900">
+                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#f3f3f3]">
                       {thread.photoUrl ? (
                         <img
                           src={thread.photoUrl}
@@ -287,21 +287,21 @@ export function MessagingInbox({
                         <b className="truncate text-sm">
                           {thread.counterpartName}
                         </b>
-                        <span className="shrink-0 text-[9px] text-zinc-700">
+                        <span className="shrink-0 text-[9px] text-[#a3a3a3]">
                           {thread.lastMessageAt
                             ? shortDate(thread.lastMessageAt)
                             : dayLabel(thread.startAt)}
                         </span>
                       </div>
-                      <p className="mt-1 truncate text-[11px] font-bold text-zinc-500">
+                      <p className="mt-1 truncate text-[11px] font-bold text-[#717171]">
                         {thread.studioName}
                       </p>
                       <p
                         className={
                           "mt-1 truncate text-xs " +
                           (thread.needsReply
-                            ? "font-semibold text-zinc-300"
-                            : "text-zinc-600")
+                            ? "font-semibold text-[#333333]"
+                            : "text-[#8a8a8a]")
                         }
                       >
                         {thread.lastMessage || "Start the conversation"}
@@ -324,37 +324,37 @@ export function MessagingInbox({
           {!active ? (
             <div className="grid flex-1 place-items-center p-10 text-center">
               <div>
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-zinc-800 bg-zinc-950 text-2xl">
+                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-[#dddddd] bg-white text-2xl">
                   💬
                 </div>
                 <h2 className="mt-5 text-2xl font-black">
                   Your 36 conversations
                 </h2>
-                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-600">
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#8a8a8a]">
                   Choose a booking conversation to message the studio or creator.
                 </p>
               </div>
             </div>
           ) : (
             <>
-              <header className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-900 bg-[#11120f]/95 p-4 sm:p-5">
+              <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#ebebeb] bg-white/95 p-4 sm:p-5">
                 <div className="flex min-w-0 items-center gap-3">
                   <button
                     type="button"
                     onClick={() => setMobileThread(false)}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-zinc-800 text-zinc-400 lg:hidden"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#dddddd] text-[#555555] lg:hidden"
                     aria-label="Back to conversations"
                   >
                     ←
                   </button>
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-acid text-xs font-black text-black">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-acid text-xs font-black text-white">
                     {initials(active.counterpartName) || "36"}
                   </div>
                   <div className="min-w-0">
                     <h2 className="truncate text-sm font-black">
                       {active.counterpartName}
                     </h2>
-                    <p className="truncate text-[10px] text-zinc-600">
+                    <p className="truncate text-[10px] text-[#8a8a8a]">
                       {active.studioName} · {active.roomName}
                     </p>
                   </div>
@@ -363,7 +363,7 @@ export function MessagingInbox({
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
                     href={"/studios/" + active.studioSlug}
-                    className="rounded-full border border-zinc-800 px-3 py-2 text-[10px] font-black text-zinc-400 hover:text-white"
+                    className="rounded-full border border-[#dddddd] px-3 py-2 text-[10px] font-black text-[#555555] hover:text-[#222222]"
                   >
                     Studio
                   </Link>
@@ -373,22 +373,22 @@ export function MessagingInbox({
                         ? "/creator/bookings/" + active.bookingId
                         : "/owner/bookings/" + active.bookingId
                     }
-                    className="rounded-full border border-zinc-800 px-3 py-2 text-[10px] font-black text-zinc-400 hover:text-white"
+                    className="rounded-full border border-[#dddddd] px-3 py-2 text-[10px] font-black text-[#555555] hover:text-[#222222]"
                   >
                     Booking
                   </Link>
                 </div>
               </header>
 
-              <div className="border-b border-zinc-900 bg-black/10 px-4 py-3 sm:px-5">
+              <div className="border-b border-[#ebebeb] bg-black/10 px-4 py-3 sm:px-5">
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px]">
                   <span className="font-black text-acid">
                     {active.status.replaceAll("_", " ")}
                   </span>
-                  <span className="text-zinc-500">
+                  <span className="text-[#717171]">
                     {dayLabel(active.startAt)} · {timeLabel(active.startAt)}–{timeLabel(active.endAt)}
                   </span>
-                  <span className="text-zinc-500">
+                  <span className="text-[#717171]">
                     {active.totalAmountMad} MAD
                   </span>
                 </div>
@@ -398,13 +398,13 @@ export function MessagingInbox({
                 <div className="mx-auto max-w-3xl space-y-3">
                   {messages.length === 0 ? (
                     <div className="py-20 text-center">
-                      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-zinc-900 text-lg">
+                      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#f3f3f3] text-lg">
                         👋
                       </div>
                       <b className="mt-4 block text-sm">
                         Start the conversation
                       </b>
-                      <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-zinc-600">
+                      <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-[#8a8a8a]">
                         Use this thread for arrival details, equipment questions and session coordination.
                       </p>
                     </div>
@@ -425,7 +425,7 @@ export function MessagingInbox({
                         >
                           <div className="max-w-[82%] sm:max-w-[68%]">
                             {showName && !mine && (
-                              <span className="mb-1 block px-1 text-[9px] font-bold text-zinc-600">
+                              <span className="mb-1 block px-1 text-[9px] font-bold text-[#8a8a8a]">
                                 {message.senderName}
                               </span>
                             )}
@@ -433,8 +433,8 @@ export function MessagingInbox({
                               className={
                                 "rounded-[1.25rem] px-4 py-3 text-sm leading-6 " +
                                 (mine
-                                  ? "rounded-br-md bg-acid text-black"
-                                  : "rounded-bl-md border border-zinc-800 bg-zinc-900 text-zinc-200") +
+                                  ? "rounded-br-md bg-acid text-[#222222]"
+                                  : "rounded-bl-md border border-[#dddddd] bg-[#f3f3f3] text-[#222222]") +
                                 (message.pending ? " opacity-60" : "")
                               }
                             >
@@ -444,7 +444,7 @@ export function MessagingInbox({
                             </div>
                             <span
                               className={
-                                "mt-1 block px-1 text-[9px] text-zinc-700 " +
+                                "mt-1 block px-1 text-[9px] text-[#a3a3a3] " +
                                 (mine ? "text-right" : "text-left")
                               }
                             >
@@ -460,12 +460,12 @@ export function MessagingInbox({
                 </div>
               </div>
 
-              <footer className="border-t border-zinc-900 bg-[#11120f] p-3 sm:p-4">
+              <footer className="border-t border-[#ebebeb] bg-white p-3 sm:p-4">
                 <div className="mx-auto max-w-3xl">
                   {error && (
                     <p className="mb-2 text-xs text-red-300">{error}</p>
                   )}
-                  <div className="flex items-end gap-2 rounded-[1.35rem] border border-zinc-800 bg-zinc-950 p-2 focus-within:border-zinc-600">
+                  <div className="flex items-end gap-2 rounded-[1.35rem] border border-[#dddddd] bg-white p-2 focus-within:border-[#bdbdbd]">
                     <textarea
                       value={body}
                       onChange={(event) => setBody(event.target.value)}
@@ -482,19 +482,19 @@ export function MessagingInbox({
                           ? "Message the studio…"
                           : "Message the creator…"
                       }
-                      className="max-h-36 min-h-11 flex-1 resize-none bg-transparent px-3 py-3 text-sm text-white outline-none placeholder:text-zinc-700"
+                      className="max-h-36 min-h-11 flex-1 resize-none bg-transparent px-3 py-3 text-sm text-[#222222] outline-none placeholder:text-[#a3a3a3]"
                     />
                     <button
                       type="button"
                       onClick={send}
                       disabled={!body.trim() || sending}
-                      className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-acid text-lg font-black text-black transition disabled:bg-zinc-800 disabled:text-zinc-600"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-acid text-lg font-black text-white transition disabled:bg-zinc-800 disabled:text-[#8a8a8a]"
                       aria-label="Send message"
                     >
                       ↑
                     </button>
                   </div>
-                  <p className="mt-2 px-2 text-[9px] text-zinc-700">
+                  <p className="mt-2 px-2 text-[9px] text-[#a3a3a3]">
                     Enter to send · Shift + Enter for a new line
                   </p>
                 </div>
