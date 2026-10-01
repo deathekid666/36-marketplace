@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Prisma, StudioCategory } from "@prisma/client";
 
 import { AppHeader } from "@/components/AppHeader";
+import { CreativeExplorerMap } from "@/components/CreativeExplorerMap";
 import { MarketplaceSearchBar } from "@/components/MarketplaceSearchBar";
-import { StudioMap } from "@/components/StudioMap";
 import { CompareStudioButton } from "@/components/CompareStudioButton";
 import { CompareTray } from "@/components/CompareTray";
 import { toggleFavoriteAction } from "@/app/favorites/actions";
@@ -80,7 +80,7 @@ export default async function StudiosPage({
   const user = await getCurrentUser();
   const query = await searchParams;
   const category = parseCategory(query.category);
-  const city = String(query.city || "Casablanca").trim();
+  const city = String(query.city || "").trim();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(String(query.date || ""))
     ? String(query.date)
     : "";
@@ -373,30 +373,6 @@ export default async function StudiosPage({
         )
       : new Set<string>();
 
-  const mapPoints = results
-    .filter((studio) => studio.latitude != null && studio.longitude != null)
-    .map((studio) => {
-      const mapRating = studio.reviews.length
-        ? studio.reviews.reduce(
-            (sum, review) => sum + review.rating,
-            0,
-          ) / studio.reviews.length
-        : null;
-
-      return {
-        id: studio.id,
-        name: studio.name,
-        lat: Number(studio.latitude),
-        lng: Number(studio.longitude),
-        href: "/studios/" + studio.slug,
-        price: studio.rooms[0]?.hourlyRateMad || null,
-        kind: "BOOKABLE" as const,
-        category: categoryLabel(studio.primaryCategory),
-        rating: mapRating,
-        photoUrl: studio.photos[0]?.url || null,
-      };
-    });
-
   const locationSuggestions = Array.from(
     new Set([
       ...locationRows.flatMap((row) => [
@@ -452,7 +428,7 @@ export default async function StudiosPage({
               Find your next creative space
             </h1>
             <p className="mt-3 text-sm text-[#717171]">
-              Search by location, date and studio type. See live availability before you open a listing.
+              Search bookable studios or explore creative spaces worldwide on the map.
             </p>
           </div>
           <Link
@@ -544,14 +520,8 @@ export default async function StudiosPage({
             </p>
           </div>
         ) : (
-          <div
-            className={
-              mapPoints.length > 0
-                ? "mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.05fr)_minmax(460px,.95fr)]"
-                : "mt-7"
-            }
-          >
-            <div className={mapPoints.length > 0 ? "grid gap-5 md:grid-cols-2" : "grid gap-5 md:grid-cols-2 xl:grid-cols-3"}>
+          <div className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.05fr)_minmax(460px,.95fr)]">
+            <div className="grid gap-5 md:grid-cols-2">
               {results.map((studio) => {
                 const photo = studio.photos[0]?.url;
                 const minRate = studio.rooms[0]?.hourlyRateMad;
@@ -655,25 +625,38 @@ export default async function StudiosPage({
               })}
             </div>
 
-            {mapPoints.length > 0 && (
-              <aside className="hidden xl:block">
-                <div className="sticky top-5">
-                  <div className="mb-3 flex items-center justify-between">
-                    <b className="text-sm">Map</b>
-                    <span className="text-xs text-[#8a8a8a]">
-                      {mapPoints.length} mapped studio{mapPoints.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <StudioMap points={mapPoints} />
+            <aside className="self-start xl:sticky xl:top-24">
+              <div className="mb-3 flex items-center justify-between gap-4">
+                <div>
+                  <b className="block text-sm">Creative spaces map</b>
+                  <span className="mt-1 block text-[10px] text-[#8a8a8a]">
+                    Bookable + contact-only spaces
+                  </span>
                 </div>
-              </aside>
-            )}
-
-            {mapPoints.length > 0 && (
-              <div className="xl:hidden">
-                <StudioMap points={mapPoints} />
+                <Link
+                  href={
+                    "/discover" +
+                    (city || category
+                      ? "?" +
+                        new URLSearchParams({
+                          ...(city ? { city } : {}),
+                          ...(category ? { category } : {}),
+                        }).toString()
+                      : "")
+                  }
+                  className="text-[10px] font-black text-[#222] underline underline-offset-4"
+                >
+                  Open explorer
+                </Link>
               </div>
-            )}
+
+              <CreativeExplorerMap
+                filters={{
+                  city,
+                  category: category || "",
+                }}
+              />
+            </aside>
           </div>
         )}
 
