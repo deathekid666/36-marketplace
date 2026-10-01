@@ -369,7 +369,7 @@ export function CreativeExplorerMap({
               ? cityElement(node)
               : node.type === "category"
                 ? categoryElement(node)
-                : placeElement(node);
+                : placeElement(node as PlaceNode);
 
         const marker = new maplibre.Marker({
           element,
