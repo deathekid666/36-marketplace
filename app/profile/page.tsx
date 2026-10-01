@@ -54,9 +54,9 @@ export default async function ProfilePage({
   const view = transform(data);
 
   return (
-    <main className="min-h-screen bg-[#e9eef5]">
+    <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
-      <section className="mx-auto max-w-[1536px] px-0 pb-8 sm:px-3 sm:py-4 lg:px-4">
+      <section className="mx-auto max-w-[1320px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         <AirbnbUserProfile
           profile={{
             id: data.user.id,
