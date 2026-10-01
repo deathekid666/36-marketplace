@@ -56,6 +56,24 @@ export function StudioMap({
     useState<LabelMode>("price");
   const [fullScreen, setFullScreen] =
     useState(false);
+  const [directionsOpen, setDirectionsOpen] =
+    useState(false);
+
+  const navigationPoint =
+    points.length === 1 ? points[0] : null;
+  const googleMapsUrl = navigationPoint
+    ? "https://www.google.com/maps/dir/?api=1&destination=" +
+      encodeURIComponent(
+        navigationPoint.lat + "," + navigationPoint.lng,
+      )
+    : null;
+  const wazeUrl = navigationPoint
+    ? "https://www.waze.com/ul?ll=" +
+      encodeURIComponent(
+        navigationPoint.lat + "," + navigationPoint.lng,
+      ) +
+      "&navigate=yes"
+    : null;
 
   useEffect(() => {
     if (!fullScreen) return;
@@ -178,9 +196,17 @@ export function StudioMap({
               point.price +
               " MAD / hour</span>"
             : '<span class="studio-map-popup-contact">Contact only · not bookable</span>') +
+          '<div class="studio-map-popup-actions">' +
           '<a href="' +
           escapeHtml(point.href) +
-          '">View studio →</a></div>',
+          '">View studio →</a>' +
+          '<a href="' +
+          escapeHtml(
+            "https://www.google.com/maps/dir/?api=1&destination=" +
+              encodeURIComponent(point.lat + "," + point.lng),
+          ) +
+          '" target="_blank" rel="noreferrer">Directions ↗</a>' +
+          "</div></div>",
       );
 
       marker.on("click", () => {
@@ -607,17 +633,59 @@ export function StudioMap({
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          setFullScreen((value) => !value)
-        }
-        className="absolute right-3 top-3 z-[1100] rounded-full border border-zinc-700 bg-zinc-950/95 px-4 py-2.5 text-[10px] font-black text-white shadow-xl backdrop-blur"
-      >
-        {fullScreen
-          ? "Close map ×"
-          : "Full map"}
-      </button>
+      <div className="absolute right-3 top-3 z-[1200] flex items-center gap-2">
+        {navigationPoint && googleMapsUrl && wazeUrl && (
+          <div className="relative">
+            <button
+              type="button"
+              aria-expanded={directionsOpen}
+              onClick={() =>
+                setDirectionsOpen((value) => !value)
+              }
+              className="rounded-full border border-zinc-700 bg-zinc-950/95 px-4 py-2.5 text-[10px] font-black text-white shadow-xl backdrop-blur"
+            >
+              Directions
+            </button>
+
+            {directionsOpen && (
+              <div className="absolute right-0 top-[calc(100%+8px)] min-w-[180px] overflow-hidden rounded-2xl border border-[#dddddd] bg-white p-1.5 text-[#222] shadow-2xl">
+                <a
+                  href={googleMapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => setDirectionsOpen(false)}
+                  className="flex items-center justify-between rounded-xl px-3 py-3 text-[10px] font-black transition hover:bg-[#f7f7f7]"
+                >
+                  <span>Google Maps</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+                <a
+                  href={wazeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => setDirectionsOpen(false)}
+                  className="flex items-center justify-between rounded-xl px-3 py-3 text-[10px] font-black transition hover:bg-[#f7f7f7]"
+                >
+                  <span>Waze</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() =>
+            setFullScreen((value) => !value)
+          }
+          className="rounded-full border border-zinc-700 bg-zinc-950/95 px-4 py-2.5 text-[10px] font-black text-white shadow-xl backdrop-blur"
+        >
+          {fullScreen
+            ? "Close map ×"
+            : "Full map"}
+        </button>
+      </div>
 
       <div className="absolute bottom-3 left-3 z-[1100] flex flex-wrap gap-2">
         <span className="rounded-full border border-acid/30 bg-zinc-950/90 px-3 py-1.5 text-[9px] font-black text-acid">
