@@ -77,7 +77,7 @@ export async function AppHeader({ user }: { user?: User | null }) {
                 </Link>
                 <Link href="/profile" className="air-profile-menu" aria-label="Profile">
                   <Icon name="menu" />
-                  <span className="air-profile-avatar">{initials(user.name)}</span>
+                  <span className="air-header-avatar">{initials(user.name)}</span>
                 </Link>
                 <Link href="/dashboard" className="air-dashboard-link">Dashboard</Link>
                 <LogoutButton />

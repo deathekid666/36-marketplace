@@ -4694,3 +4694,89 @@ label.air-search-segment:hover {
     grid-column: auto;
   }
 }
+
+
+/* Rendering fixes — header/profile class isolation */
+.air-header-avatar {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  place-items: center;
+  border-radius: 999px;
+  background: #222;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.air-profile-menu {
+  min-height: 43px;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.air-header-actions {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.air-profile-summary {
+  align-items: start;
+  margin-top: 0;
+}
+
+.air-profile-avatar-wrap {
+  margin-top: -54px;
+}
+
+.air-profile-summary-copy {
+  padding-top: 18px;
+  padding-bottom: 0;
+}
+
+.air-profile-public-button {
+  align-self: start;
+  margin-top: 18px;
+  margin-bottom: 0;
+}
+
+.air-profile-cover-grid {
+  z-index: 0;
+}
+
+.air-profile-cover-ring {
+  z-index: 1;
+}
+
+.air-profile-cover-disc {
+  z-index: 2;
+}
+
+.air-profile-cover-shade {
+  z-index: 3;
+}
+
+.air-profile-cover-source {
+  z-index: 4;
+}
+
+@media (max-width: 700px) {
+  .air-profile-summary {
+    margin-top: 0;
+  }
+
+  .air-profile-avatar-wrap {
+    margin-top: -42px;
+  }
+
+  .air-profile-summary-copy {
+    padding-top: 13px;
+  }
+
+  .air-profile-public-button {
+    grid-column: 2;
+    margin: 6px 0 0;
+  }
+}
