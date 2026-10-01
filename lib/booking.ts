@@ -7,6 +7,7 @@ import {
   formatMarketplaceTime,
   localDateKey,
   mondayIndexForDateKey,
+  studioTimeZone,
   zonedLocalToUtc,
 } from "@/lib/time";
 
@@ -40,6 +41,7 @@ export async function validateRoomInterval(
   });
   if (!room) return { ok: false as const, reason: "Room is not bookable." };
 
+  const timeZone = studioTimeZone(room.studio);
   const durationMinutes = Math.round((endAt.getTime() - startAt.getTime()) / 60000);
   if (durationMinutes < room.minimumHours * 60) {
     return { ok: false as const, reason: `Minimum booking is ${room.minimumHours} hour(s).` };
@@ -48,15 +50,15 @@ export async function validateRoomInterval(
     return { ok: false as const, reason: "Bookings must be 30-minute increments, up to 12 hours." };
   }
 
-  const startDateKey = localDateKey(startAt);
-  if (localDateKey(endAt) !== startDateKey) {
+  const startDateKey = localDateKey(startAt, timeZone);
+  if (localDateKey(endAt, timeZone) !== startDateKey) {
     return { ok: false as const, reason: "Bookings cannot cross midnight in this version." };
   }
   const opening = room.studio.openingHours.find((h) => h.dayOfWeek === mondayIndexForDateKey(startDateKey));
   if (!opening || opening.closed) return { ok: false as const, reason: "Studio is closed on this date." };
 
-  const openAt = zonedLocalToUtc(startDateKey, opening.opensAt);
-  const closeAt = zonedLocalToUtc(startDateKey, opening.closesAt);
+  const openAt = zonedLocalToUtc(startDateKey, opening.opensAt, timeZone);
+  const closeAt = zonedLocalToUtc(startDateKey, opening.closesAt, timeZone);
   if (!openAt || !closeAt || startAt < openAt || endAt > closeAt) {
     return { ok: false as const, reason: "Time is outside opening hours." };
   }
@@ -96,10 +98,11 @@ export async function getRoomAvailability(roomId: string, dateValue: string, dur
   });
   if (!room || durationMinutes < room.minimumHours * 60) return [];
 
+  const timeZone = studioTimeZone(room.studio);
   const opening = room.studio.openingHours.find((h) => h.dayOfWeek === mondayIndexForDateKey(dateValue));
   if (!opening || opening.closed) return [];
-  const openAt = zonedLocalToUtc(dateValue, opening.opensAt);
-  const closeAt = zonedLocalToUtc(dateValue, opening.closesAt);
+  const openAt = zonedLocalToUtc(dateValue, opening.opensAt, timeZone);
+  const closeAt = zonedLocalToUtc(dateValue, opening.closesAt, timeZone);
   if (!openAt || !closeAt) return [];
 
   const windowEnd = new Date(closeAt.getTime() + 1);
@@ -134,7 +137,7 @@ export async function getRoomAvailability(roomId: string, dateValue: string, dur
     slots.push({
       startAt: startAt.toISOString(),
       endAt: endAt.toISOString(),
-      label: `${formatMarketplaceTime(startAt)} – ${formatMarketplaceTime(endAt)}`,
+      label: `${formatMarketplaceTime(startAt, timeZone)} – ${formatMarketplaceTime(endAt, timeZone)}`,
     });
   }
   return slots;
@@ -164,6 +167,7 @@ export async function getRoomAvailabilityCalendar(
 
   if (!room || durationMinutes < room.minimumHours * 60) return {};
 
+  const timeZone = studioTimeZone(room.studio);
   const [startYear, startMonth, startDay] = startDateValue.split("-").map(Number);
   const startUtc = new Date(Date.UTC(startYear, startMonth - 1, startDay));
 
@@ -178,14 +182,14 @@ export async function getRoomAvailabilityCalendar(
 
   const firstDate = dateKeys[0];
   const lastDate = dateKeys[dateKeys.length - 1];
-  const queryStart = zonedLocalToUtc(firstDate, "00:00");
+  const queryStart = zonedLocalToUtc(firstDate, "00:00", timeZone);
   const nextDayUtc = new Date(startUtc.getTime() + days * 24 * 60 * 60 * 1000);
   const nextDate = [
     String(nextDayUtc.getUTCFullYear()).padStart(4, "0"),
     String(nextDayUtc.getUTCMonth() + 1).padStart(2, "0"),
     String(nextDayUtc.getUTCDate()).padStart(2, "0"),
   ].join("-");
-  const queryEnd = zonedLocalToUtc(nextDate, "00:00");
+  const queryEnd = zonedLocalToUtc(nextDate, "00:00", timeZone);
 
   if (!queryStart || !queryEnd) return {};
 
@@ -226,8 +230,8 @@ export async function getRoomAvailabilityCalendar(
       continue;
     }
 
-    const openAt = zonedLocalToUtc(dateValue, opening.opensAt);
-    const closeAt = zonedLocalToUtc(dateValue, opening.closesAt);
+    const openAt = zonedLocalToUtc(dateValue, opening.opensAt, timeZone);
+    const closeAt = zonedLocalToUtc(dateValue, opening.closesAt, timeZone);
 
     if (!openAt || !closeAt || closeAt <= openAt) {
       result[dateValue] = 0;

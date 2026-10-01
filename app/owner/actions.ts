@@ -13,7 +13,10 @@ import {
   studioCompletion,
   studioOnboardingChecklist,
 } from "@/lib/studio";
-import { casablancaDateTimeLocalToUtc } from "@/lib/time";
+import {
+  marketplaceDateTimeLocalToUtc,
+  studioTimeZone,
+} from "@/lib/time";
 import {
   deleteManagedMarketplaceStudioPhotos,
   isManagedMarketplaceStudioPhotoUrl,
@@ -413,10 +416,22 @@ export async function addBlockedSlotAction(form: FormData) {
   const roomId = text(form, "roomId", 80);
   const room = await db.room.findFirst({
     where: { id: roomId, studio: { ownerId: user.id, id: studioId } },
+    include: {
+      studio: {
+        select: { latitude: true, longitude: true },
+      },
+    },
   });
   if (!room) return;
-  const startAt = casablancaDateTimeLocalToUtc(String(form.get("startAt") ?? ""));
-  const endAt = casablancaDateTimeLocalToUtc(String(form.get("endAt") ?? ""));
+  const timeZone = studioTimeZone(room.studio);
+  const startAt = marketplaceDateTimeLocalToUtc(
+    String(form.get("startAt") ?? ""),
+    timeZone,
+  );
+  const endAt = marketplaceDateTimeLocalToUtc(
+    String(form.get("endAt") ?? ""),
+    timeZone,
+  );
   if (!startAt || !endAt || endAt <= startAt) return;
   const overlap = await db.booking.findFirst({
     where: {
@@ -716,8 +731,15 @@ export async function blockFullDayAction(form: FormData) {
       : studio.rooms.filter((room) => room.id === roomId);
   if (!targetRooms.length) return;
 
-  const startAt = casablancaDateTimeLocalToUtc(date + "T00:00");
-  const endAt = casablancaDateTimeLocalToUtc(nextDateKey(date) + "T00:00");
+  const timeZone = studioTimeZone(studio);
+  const startAt = marketplaceDateTimeLocalToUtc(
+    date + "T00:00",
+    timeZone,
+  );
+  const endAt = marketplaceDateTimeLocalToUtc(
+    nextDateKey(date) + "T00:00",
+    timeZone,
+  );
   if (!startAt || !endAt) return;
 
   const conflict = await db.booking.findFirst({
@@ -764,8 +786,15 @@ export async function blockVacationRangeAction(form: FormData) {
   });
   if (!studio || !studio.rooms.length) return;
 
-  const startAt = casablancaDateTimeLocalToUtc(startDate + "T00:00");
-  const endAt = casablancaDateTimeLocalToUtc(nextDateKey(endDate) + "T00:00");
+  const timeZone = studioTimeZone(studio);
+  const startAt = marketplaceDateTimeLocalToUtc(
+    startDate + "T00:00",
+    timeZone,
+  );
+  const endAt = marketplaceDateTimeLocalToUtc(
+    nextDateKey(endDate) + "T00:00",
+    timeZone,
+  );
   if (!startAt || !endAt) return;
 
   const conflict = await db.booking.findFirst({

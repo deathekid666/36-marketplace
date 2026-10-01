@@ -20,7 +20,8 @@
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "@vercel/blob": "2.6.1",
-    "leaflet": "1.9.4"
+    "leaflet": "1.9.4",
+    "@photostructure/tz-lookup": "11.7.0"
   },
   "devDependencies": {
     "@types/node": "22.18.6",
