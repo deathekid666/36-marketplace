@@ -20,7 +20,28 @@ API_URL = "https://36-marketplace.vercel.app/api/internal/discovery/global-conta
 CONSOLIDATE_URL = "https://36-marketplace.vercel.app/api/internal/discovery/consolidate"
 AUDIENCE = "36-marketplace-global-contacts"
 MAX_RECORDS = max(0, int(os.environ.get("MAX_RECORDS", "0") or "0"))
+COUNTRY_LIMIT = max(0, int(os.environ.get("COUNTRY_LIMIT", "0") or "0"))
+REGION_NAME = str(os.environ.get("REGION_NAME", "global") or "global").strip()
+COUNTRIES = [
+    code.strip().upper()
+    for code in str(os.environ.get("COUNTRIES", "") or "").split(",")
+    if len(code.strip()) == 2
+]
+BBOX_RAW = str(os.environ.get("BBOX", "") or "").strip()
 BATCH_SIZE = 12
+
+def parse_bbox(raw):
+    if not raw:
+        return None
+    parts = [part.strip() for part in raw.split(",")]
+    if len(parts) != 4:
+        raise RuntimeError(f"Invalid BBOX for {REGION_NAME}: {raw}")
+    min_lng, min_lat, max_lng, max_lat = [float(part) for part in parts]
+    if min_lng >= max_lng or min_lat >= max_lat:
+        raise RuntimeError(f"Invalid BBOX range for {REGION_NAME}: {raw}")
+    return (min_lng, min_lat, max_lng, max_lat)
+
+REGION_BBOX = parse_bbox(BBOX_RAW)
 
 def normalize_public_phone(raw_phone, country_code):
     raw = str(raw_phone or "").strip()
@@ -159,6 +180,37 @@ db.execute("INSTALL httpfs")
 db.execute("LOAD httpfs")
 db.execute("SET s3_region='us-west-2'")
 
+region_filters = []
+
+if COUNTRIES:
+    quoted = ",".join("'" + code.replace("'", "''") + "'" for code in COUNTRIES)
+    region_filters.append(f"upper(addresses[1].country) IN ({quoted})")
+
+if REGION_BBOX:
+    min_lng, min_lat, max_lng, max_lat = REGION_BBOX
+    region_filters.extend(
+        [
+            f"bbox.xmin >= {min_lng}",
+            f"bbox.xmin <= {max_lng}",
+            f"bbox.ymin >= {min_lat}",
+            f"bbox.ymin <= {max_lat}",
+        ]
+    )
+
+region_sql = ""
+if region_filters:
+    region_sql = "\n  AND " + "\n  AND ".join(region_filters)
+
+country_limit_sql = ""
+if COUNTRY_LIMIT:
+    country_limit_sql = f"""
+QUALIFY
+  row_number() OVER (
+    PARTITION BY upper(addresses[1].country)
+    ORDER BY confidence DESC NULLS LAST, names.primary
+  ) <= {COUNTRY_LIMIT}
+"""
+
 query = f"""
 SELECT
   id,
@@ -197,7 +249,8 @@ WHERE
       lower(names.primary),
       'studio|studios|estudio|estudios|estúdio|estúdios|recording|rehearsal|podcast|mixing|mastering|voice[ _-]?over|grabaci[oó]n|enregistrement|tonstudio|fotostudio|aufnahmestudio|استوديو|تسجيل|студия|звукозапис|スタジオ|レコーディング|스튜디오|녹음|录音棚|录音室|錄音室|摄影棚|攝影棚'
     )
-  )
+  ){region_sql}
+{country_limit_sql}
 """
 
 cursor = db.execute(query)
@@ -291,6 +344,10 @@ print(
     json.dumps(
         {
             "release": release,
+            "region": REGION_NAME,
+            "countriesRequested": COUNTRIES,
+            "bbox": REGION_BBOX,
+            "countryLimit": COUNTRY_LIMIT,
             "selected": selected,
             "phoneRejected": phone_rejected,
             "countries": dict(

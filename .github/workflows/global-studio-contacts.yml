@@ -9,9 +9,13 @@ on:
   workflow_dispatch:
     inputs:
       max_records:
-        description: "Maximum structured business contacts to import (0 = all)"
+        description: "Maximum records per region after country balancing (0 = all)"
         required: false
         default: "0"
+      country_limit:
+        description: "Maximum candidate rows per country (0 = all)"
+        required: false
+        default: "500"
   schedule:
     - cron: "20 4 25 * *"
 
@@ -25,10 +29,40 @@ concurrency:
 
 jobs:
   import:
+    name: import-${{ matrix.region }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - region: africa
+            bbox: "-20,-36,55,38"
+            countries: "DZ,AO,BJ,BW,BF,BI,CV,CM,CF,TD,KM,CD,CG,CI,DJ,EG,GQ,ER,SZ,ET,GA,GM,GH,GN,GW,KE,LS,LR,LY,MG,MW,ML,MR,MU,MA,MZ,NA,NE,NG,RW,ST,SN,SC,SL,SO,ZA,SS,SD,TZ,TG,TN,UG,ZM,ZW,EH"
+          - region: europe
+            bbox: "-25,34,45,72"
+            countries: "AL,AD,AT,BY,BE,BA,BG,HR,CY,CZ,DK,EE,FI,FR,DE,GR,HU,IS,IE,IT,XK,LV,LI,LT,LU,MT,MD,MC,ME,NL,MK,NO,PL,PT,RO,RU,SM,RS,SK,SI,ES,SE,CH,UA,GB,VA"
+          - region: asia
+            bbox: "25,-10,180,82"
+            countries: "AF,AM,AZ,BH,BD,BT,BN,KH,CN,GE,HK,IN,ID,IR,IQ,IL,JP,JO,KZ,KW,KG,LA,LB,MO,MY,MV,MN,MM,NP,KP,PS,PH,QA,SA,SG,LK,SY,TW,TJ,TH,TL,TR,TM,AE,UZ,VN,YE"
+          - region: north-america
+            bbox: "-170,5,-50,85"
+            countries: "CA,US,MX,GT,BZ,HN,SV,NI,CR,PA,BS,BB,CU,JM,HT,DO,TT,GD,LC,VC,AG,DM,KN,GL,BM,PM"
+          - region: south-america
+            bbox: "-85,-60,-30,15"
+            countries: "AR,BO,BR,CL,CO,EC,GY,PY,PE,SR,UY,VE,GF,FK"
+          - region: oceania
+            bbox: "110,-50,180,5"
+            countries: "AU,NZ,FJ,PG,SB,VU,NC,PF,WS,TO,KI,FM,MH,PW,NR,TV"
+
     env:
-      MAX_RECORDS: ${{ github.event_name == 'push' && '0' || (github.event_name == 'workflow_dispatch' && inputs.max_records) || '0' }}
+      REGION_NAME: ${{ matrix.region }}
+      COUNTRIES: ${{ matrix.countries }}
+      BBOX: ${{ matrix.bbox }}
+      MAX_RECORDS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_records || '0' }}
+      COUNTRY_LIMIT: ${{ github.event_name == 'push' && '250' || (github.event_name == 'workflow_dispatch' && inputs.country_limit) || '0' }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

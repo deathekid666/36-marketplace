@@ -61,45 +61,27 @@ type MapMeta = {
 
 declare global {
   interface Window {
-    L?: any;
+    __36MapLibre?: any;
   }
 }
 
 const CATEGORY_META: Record<string, { icon: string; color: string }> = {
-  RECORDING: { icon: "●", color: "#ff2d67" },
+  RECORDING: { icon: "●", color: "#ff385c" },
   PODCAST: { icon: "◉", color: "#7c3cff" },
   PHOTO: { icon: "▣", color: "#2677ff" },
   VIDEO: { icon: "▶", color: "#ff8a00" },
   REHEARSAL: { icon: "♪", color: "#12b76a" },
-  DJ: { icon: "⌁", color: "#111111" },
-  PRODUCTION: { icon: "◆", color: "#111111" },
+  DJ: { icon: "⌁", color: "#222222" },
+  PRODUCTION: { icon: "◆", color: "#222222" },
   IMAGE_LAB: { icon: "△", color: "#f5a300" },
   POST_PRODUCTION: { icon: "△", color: "#f5a300" },
   VOICE_OVER: { icon: "▮", color: "#1888ff" },
   LIVE_STREAMING: { icon: "◍", color: "#00a6a6" },
-  OTHER: { icon: "•", color: "#555555" },
+  OTHER: { icon: "•", color: "#717171" },
 };
-
-const COUNTRY_COLORS = [
-  "#7c3cff",
-  "#12b76a",
-  "#ff3b5c",
-  "#f5a300",
-  "#2677ff",
-  "#00a6a6",
-  "#8f3cff",
-];
 
 function categoryMeta(key: string | null | undefined) {
   return CATEGORY_META[String(key || "OTHER")] || CATEGORY_META.OTHER;
-}
-
-function hashColor(value: string) {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
-  }
-  return COUNTRY_COLORS[hash % COUNTRY_COLORS.length];
 }
 
 function escapeHtml(value: string) {
@@ -118,7 +100,7 @@ function escapeHtml(value: string) {
 
 function compactName(value: string) {
   const cleaned = value.trim();
-  return cleaned.length > 24 ? cleaned.slice(0, 22) + "…" : cleaned;
+  return cleaned.length > 26 ? cleaned.slice(0, 24) + "…" : cleaned;
 }
 
 function cssEscape(value: string) {
@@ -126,48 +108,53 @@ function cssEscape(value: string) {
   return value.replace(/["\\]/g, "\\$&");
 }
 
-async function ensureLeaflet() {
-  if (!document.querySelector('link[data-leaflet="36"]')) {
+async function ensureMapLibre() {
+  if (window.__36MapLibre) return window.__36MapLibre;
+
+  if (!document.querySelector('link[data-maplibre="36"]')) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-    link.dataset.leaflet = "36";
+    link.href =
+      "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css";
+    link.dataset.maplibre = "36";
     document.head.appendChild(link);
   }
 
-  if (window.L) return window.L;
+  return await new Promise<any>((resolve, reject) => {
+    const ready = () => {
+      window.removeEventListener("36:maplibre-ready", ready);
+      if (window.__36MapLibre) resolve(window.__36MapLibre);
+      else reject(new Error("Map library failed to initialize."));
+    };
 
-  await new Promise<void>((resolve, reject) => {
+    window.addEventListener("36:maplibre-ready", ready);
+
     const existing = document.querySelector(
-      'script[data-leaflet="36"]',
+      'script[data-maplibre="36"]',
     ) as HTMLScriptElement | null;
 
     if (existing) {
-      if (existing.dataset.loaded === "true") {
-        resolve();
-        return;
+      if (window.__36MapLibre) {
+        window.removeEventListener("36:maplibre-ready", ready);
+        resolve(window.__36MapLibre);
       }
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener(
-        "error",
-        () => reject(new Error("Map library failed")),
-        { once: true },
-      );
       return;
     }
 
     const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.dataset.leaflet = "36";
-    script.onload = () => {
-      script.dataset.loaded = "true";
-      resolve();
+    script.type = "module";
+    script.dataset.maplibre = "36";
+    script.textContent = `
+      import * as maplibregl from "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
+      window.__36MapLibre = maplibregl;
+      window.dispatchEvent(new Event("36:maplibre-ready"));
+    `;
+    script.onerror = () => {
+      window.removeEventListener("36:maplibre-ready", ready);
+      reject(new Error("Map library failed to load."));
     };
-    script.onerror = () => reject(new Error("Map library failed"));
-    document.body.appendChild(script);
+    document.head.appendChild(script);
   });
-
-  return window.L;
 }
 
 export function CreativeExplorerMap({
@@ -177,12 +164,11 @@ export function CreativeExplorerMap({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
-  const markerLayerRef = useRef<any>(null);
-  const markersByIdRef = useRef<Map<string, any>>(new Map());
+  const markersRef = useRef<any[]>([]);
   const fetchAbortRef = useRef<AbortController | null>(null);
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingFocusRef = useRef<string | null>(null);
-  const didAutoFocusRef = useRef(false);
+  const didAutoFitRef = useRef(false);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -195,25 +181,32 @@ export function CreativeExplorerMap({
   const [mapError, setMapError] = useState("");
 
   const filterKey = JSON.stringify(filters);
+  const debug = searchParams.get("mapdebug") === "1";
 
   useEffect(() => {
     if (!fullScreen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setFullScreen(false);
-    };
-    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = previous;
-      window.removeEventListener("keydown", onKey);
     };
+  }, [fullScreen]);
+
+  useEffect(() => {
+    mapRef.current?.resize?.();
   }, [fullScreen]);
 
   useEffect(() => {
     if (!ref.current) return;
 
     let disposed = false;
+
+    function clearMarkers() {
+      for (const marker of markersRef.current) {
+        marker.remove?.();
+      }
+      markersRef.current = [];
+    }
 
     function highlightCard(id: string) {
       document.querySelectorAll<HTMLElement>("[data-directory-card]").forEach(
@@ -224,150 +217,178 @@ export function CreativeExplorerMap({
       );
     }
 
-    function createClusterIcon(L: any, node: ClusterNode) {
-      const color =
-        node.type === "category"
-          ? categoryMeta(node.categoryKey).color
-          : node.type === "city"
-            ? "#ff3b5c"
-            : hashColor(node.id);
-
-      const className =
-        "creative-map-cluster " +
-        (node.type === "country"
-          ? "world country"
-          : node.type === "city"
-            ? "city"
-            : "category");
-
-      const metaForCategory =
-        node.type === "category" ? categoryMeta(node.categoryKey) : null;
-
-      const subtitle =
-        node.type === "category" && metaForCategory
-          ? metaForCategory.icon + " " + node.label
-          : "";
-
-      return L.divIcon({
-        className: "studio-map-marker-wrap",
-        html:
-          '<div class="' +
-          className +
-          '" style="--cluster-color:' +
-          color +
-          '">' +
-          "<strong>" +
-          node.count +
-          "</strong>" +
-          (subtitle
-            ? "<span>" + escapeHtml(subtitle) + "</span>"
-            : "") +
-          '<small>' +
-          escapeHtml(node.label) +
-          "</small>" +
-          "</div>",
-        iconSize:
-          node.type === "country"
-            ? [78, 72]
-            : node.type === "city"
-              ? [76, 64]
-              : [82, 64],
-        iconAnchor:
-          node.type === "country"
-            ? [39, 36]
-            : node.type === "city"
-              ? [38, 32]
-              : [41, 32],
-      });
+    function countryElement(node: ClusterNode) {
+      const element = document.createElement("button");
+      element.type = "button";
+      element.className = "air-map-country-pin";
+      element.innerHTML =
+        "<b>" +
+        node.count.toLocaleString("en") +
+        "</b><span>" +
+        escapeHtml(node.label) +
+        "</span>";
+      return element;
     }
 
-    function createPlaceIcon(L: any, node: PlaceNode) {
+    function cityElement(node: ClusterNode) {
+      const element = document.createElement("button");
+      element.type = "button";
+      element.className = "air-map-city-pin";
+      element.innerHTML =
+        "<b>" +
+        escapeHtml(node.label) +
+        "</b><span>" +
+        node.count.toLocaleString("en") +
+        "</span>";
+      return element;
+    }
+
+    function categoryElement(node: ClusterNode) {
       const category = categoryMeta(node.categoryKey);
-      const label =
-        node.kind === "BOOKABLE" && node.price
-          ? node.price + " MAD"
-          : category.icon + " " + compactName(node.name);
-      const width = Math.max(76, Math.min(170, 34 + label.length * 6.2));
-
-      return L.divIcon({
-        className: "studio-map-marker-wrap",
-        html:
-          '<div class="creative-map-pin ' +
-          (node.kind === "BOOKABLE" ? "is-bookable" : "is-contact") +
-          '" style="--pin-color:' +
-          category.color +
-          '">' +
-          '<span class="creative-map-pin-dot">' +
-          escapeHtml(category.icon) +
-          "</span>" +
-          "<b>" +
-          escapeHtml(label) +
-          "</b>" +
-          "</div>",
-        iconSize: [width, 40],
-        iconAnchor: [Math.round(width / 2), 20],
-      });
+      const element = document.createElement("button");
+      element.type = "button";
+      element.className = "air-map-category-pin";
+      element.innerHTML =
+        '<i style="--pin-color:' +
+        category.color +
+        '">' +
+        escapeHtml(category.icon) +
+        "</i><b>" +
+        escapeHtml(node.label) +
+        "</b><span>" +
+        node.count.toLocaleString("en") +
+        "</span>";
+      return element;
     }
 
-    function bindPlacePopup(marker: any, node: PlaceNode) {
+    function placeElement(node: PlaceNode) {
+      const category = categoryMeta(node.categoryKey);
+      const element = document.createElement("button");
+      element.type = "button";
+
+      if (node.kind === "BOOKABLE" && node.price) {
+        element.className = "air-map-price-pin";
+        element.innerHTML =
+          "<b>" + node.price.toLocaleString("en") + " MAD</b>";
+        return element;
+      }
+
+      element.className = "air-map-mini-pin";
+      element.title = node.name;
+      element.innerHTML =
+        '<span style="--pin-color:' +
+        category.color +
+        '"></span>';
+      return element;
+    }
+
+    function popupHtml(node: PlaceNode) {
       const photo = node.photoUrl
-        ? '<img src="' +
+        ? '<img class="air-map-popup-photo" src="' +
           escapeHtml(node.photoUrl) +
           '" alt="" referrerpolicy="no-referrer" />'
-        : "";
+        : '<div class="air-map-popup-photo fallback">36</div>';
 
-      marker.bindPopup(
-        '<div class="creative-map-popup">' +
-          photo +
-          '<div class="creative-map-popup-copy">' +
-          "<strong>" +
-          escapeHtml(node.name) +
-          "</strong>" +
-          "<span>" +
-          escapeHtml(
-            [node.category, node.city].filter(Boolean).join(" · "),
-          ) +
-          "</span>" +
-          (node.rating
-            ? '<span class="creative-map-rating">★ ' +
-              node.rating.toFixed(1) +
-              "</span>"
-            : "") +
-          (node.kind === "BOOKABLE" && node.price
-            ? "<b>" +
-              node.price +
-              " MAD <small>/ hour</small></b>"
-            : "<em>Contact only</em>") +
-          '<div class="studio-map-popup-actions">' +
-          '<a href="' +
-          escapeHtml(node.href) +
-          '">View details</a>' +
-          '<a href="https://www.google.com/maps/dir/?api=1&destination=' +
-          encodeURIComponent(node.lat + "," + node.lng) +
-          '" target="_blank" rel="noreferrer">Directions ↗</a>' +
-          "</div></div></div>",
+      return (
+        '<div class="air-map-popup-card">' +
+        photo +
+        '<div class="air-map-popup-copy">' +
+        '<div class="air-map-popup-title">' +
+        "<strong>" +
+        escapeHtml(node.name) +
+        "</strong>" +
+        (node.rating
+          ? "<span>★ " + node.rating.toFixed(1) + "</span>"
+          : "") +
+        "</div>" +
+        "<p>" +
+        escapeHtml(
+          [node.category, node.city].filter(Boolean).join(" · "),
+        ) +
+        "</p>" +
+        (node.kind === "BOOKABLE" && node.price
+          ? "<b>" +
+            node.price.toLocaleString("en") +
+            " MAD <small>/ hour</small></b>"
+          : "<em>Contact only</em>") +
+        '<div class="air-map-popup-actions">' +
+        '<a href="' +
+        escapeHtml(node.href) +
+        '">View details</a>' +
+        '<a href="https://www.google.com/maps/dir/?api=1&destination=' +
+        encodeURIComponent(node.lat + "," + node.lng) +
+        '" target="_blank" rel="noreferrer">Directions ↗</a>' +
+        "</div></div></div>"
       );
     }
 
-    function renderNodes(L: any, nodes: MapNode[]) {
+    function fitNodes(nodes: MapNode[]) {
       const map = mapRef.current;
-      const layer = markerLayerRef.current;
-      if (!map || !layer) return;
+      if (!map || !nodes.length) return;
 
-      layer.clearLayers();
-      markersByIdRef.current.clear();
+      const lngs = nodes.map((node) => node.lng);
+      const lats = nodes.map((node) => node.lat);
+      const west = Math.min(...lngs);
+      const east = Math.max(...lngs);
+      const south = Math.min(...lats);
+      const north = Math.max(...lats);
+
+      if (nodes.length === 1) {
+        map.easeTo({
+          center: [nodes[0].lng, nodes[0].lat],
+          zoom: filters.city ? 10 : 5.5,
+          duration: 0,
+        });
+        return;
+      }
+
+      map.fitBounds(
+        [
+          [west, south],
+          [east, north],
+        ],
+        {
+          padding: 70,
+          maxZoom: filters.city ? 10 : 5.5,
+          duration: 0,
+        },
+      );
+    }
+
+    function renderNodes(maplibre: any, nodes: MapNode[]) {
+      const map = mapRef.current;
+      if (!map) return;
+
+      clearMarkers();
 
       for (const node of nodes) {
-        const marker = L.marker([node.lat, node.lng], {
-          icon:
-            node.type === "place"
-              ? createPlaceIcon(L, node)
-              : createClusterIcon(L, node),
-        }).addTo(layer);
+        const element =
+          node.type === "country"
+            ? countryElement(node)
+            : node.type === "city"
+              ? cityElement(node)
+              : node.type === "category"
+                ? categoryElement(node)
+                : placeElement(node);
+
+        const marker = new maplibre.Marker({
+          element,
+          anchor: "center",
+        })
+          .setLngLat([node.lng, node.lat])
+          .addTo(map);
 
         if (node.type === "place") {
-          bindPlacePopup(marker, node);
-          marker.on("click", () => {
+          const popup = new maplibre.Popup({
+            offset: 18,
+            closeButton: true,
+            maxWidth: "310px",
+            className: "air-map-popup",
+          }).setHTML(popupHtml(node));
+
+          marker.setPopup(popup);
+
+          element.addEventListener("click", () => {
             highlightCard(node.id);
             document
               .querySelector<HTMLElement>(
@@ -380,36 +401,37 @@ export function CreativeExplorerMap({
                 block: "center",
               });
           });
-          markersByIdRef.current.set(node.id, marker);
-          continue;
+
+          if (pendingFocusRef.current === node.id) {
+            map.easeTo({
+              center: [node.lng, node.lat],
+              zoom: 14,
+              duration: 350,
+            });
+            marker.togglePopup();
+            pendingFocusRef.current = null;
+          }
+        } else {
+          element.addEventListener("click", () => {
+            const targetZoom =
+              node.type === "country"
+                ? 5.5
+                : node.type === "city"
+                  ? 8.5
+                  : 12;
+            map.easeTo({
+              center: [node.lng, node.lat],
+              zoom: Math.max(map.getZoom() + 1.5, targetZoom),
+              duration: 500,
+            });
+          });
         }
 
-        marker.on("click", () => {
-          const targetZoom =
-            node.type === "country"
-              ? 6
-              : node.type === "city"
-                ? 9
-                : 12;
-          map.setView(
-            [node.lat, node.lng],
-            Math.max(map.getZoom() + 1, targetZoom),
-            { animate: true },
-          );
-        });
-      }
-
-      const pending = pendingFocusRef.current;
-      if (pending) {
-        const marker = markersByIdRef.current.get(pending);
-        if (marker) {
-          marker.openPopup();
-          pendingFocusRef.current = null;
-        }
+        markersRef.current.push(marker);
       }
     }
 
-    async function refreshNodes(L: any) {
+    async function refreshNodes(maplibre: any) {
       const map = mapRef.current;
       if (!map) return;
 
@@ -464,22 +486,18 @@ export function CreativeExplorerMap({
         if (disposed) return;
 
         setMeta(payload.meta);
-        renderNodes(L, payload.nodes);
+        renderNodes(maplibre, payload.nodes);
 
         if (
-          !didAutoFocusRef.current &&
-          !filters.lat &&
-          !filters.north &&
-          (filters.city || filters.country) &&
+          !didAutoFitRef.current &&
+          (filters.city ||
+            filters.country ||
+            filters.lat != null ||
+            filters.north != null) &&
           payload.nodes.length > 0
         ) {
-          didAutoFocusRef.current = true;
-          const first = payload.nodes[0];
-          map.setView(
-            [first.lat, first.lng],
-            filters.city ? 8 : 5,
-            { animate: false },
-          );
+          didAutoFitRef.current = true;
+          fitNodes(payload.nodes);
         }
       } catch (error) {
         if (
@@ -500,82 +518,56 @@ export function CreativeExplorerMap({
       }
     }
 
-    function scheduleRefresh(L: any, delay = 120) {
+    function scheduleRefresh(maplibre: any, delay = 160) {
       if (fetchTimerRef.current) {
         clearTimeout(fetchTimerRef.current);
       }
       fetchTimerRef.current = setTimeout(() => {
-        refreshNodes(L);
+        refreshNodes(maplibre);
       }, delay);
     }
 
     async function initialize() {
-      const L = await ensureLeaflet();
-      if (!L || disposed || !ref.current) return;
+      const maplibre = await ensureMapLibre();
+      if (!maplibre || disposed || !ref.current) return;
 
-      const map = L.map(ref.current, {
-        scrollWheelZoom: fullScreen,
-        attributionControl: true,
-        zoomControl: true,
-        minZoom: 2,
+      const map = new maplibre.Map({
+        container: ref.current,
+        style: "https://tiles.openfreemap.org/styles/positron",
+        center: [0, 22],
+        zoom: 1.75,
+        minZoom: 1.5,
         maxZoom: 18,
-        zoomSnap: 1,
-        worldCopyJump: false,
         maxBounds: [
-          [-85.0511, -180],
-          [85.0511, 180],
+          [-180, -75],
+          [180, 84],
         ],
-        maxBoundsViscosity: 1,
+        attributionControl: true,
+        dragRotate: false,
+        pitchWithRotate: false,
       });
 
       mapRef.current = map;
+      map.touchZoomRotate.disableRotation();
 
-      L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-          minZoom: 2,
-          maxZoom: 19,
-          noWrap: true,
-          bounds: [
-            [-85.0511, -180],
-            [85.0511, 180],
-          ],
-          className: "studio-map-base-tiles",
-          attribution: "© OpenStreetMap contributors",
-        },
-      ).addTo(map);
+      map.addControl(
+        new maplibre.NavigationControl({
+          showCompass: false,
+          visualizePitch: false,
+        }),
+        "bottom-right",
+      );
 
-      markerLayerRef.current = L.layerGroup().addTo(map);
+      map.on("load", async () => {
+        if (disposed) return;
+        await refreshNodes(maplibre);
+      });
 
-      if (
-        filters.north != null &&
-        filters.south != null &&
-        filters.east != null &&
-        filters.west != null
-      ) {
-        map.fitBounds(
-          [
-            [filters.south, filters.west],
-            [filters.north, filters.east],
-          ],
-          { padding: [30, 30], maxZoom: 11 },
-        );
-      } else if (filters.lat != null && filters.lng != null) {
-        map.setView(
-          [filters.lat, filters.lng],
-          filters.radius && filters.radius <= 10 ? 12 : 10,
-        );
-      } else {
-        map.setView([20, 0], 2);
-      }
-
-      map.on("zoomend", () => scheduleRefresh(L, 90));
-      map.on("moveend", () => scheduleRefresh(L, 130));
+      map.on("zoomend", () => scheduleRefresh(maplibre, 100));
+      map.on("moveend", () => scheduleRefresh(maplibre, 160));
       map.on("dragend", () => setAreaDirty(true));
 
-      const focusListener = (
-        event: Event,
-      ) => {
+      const focusListener = (event: Event) => {
         const custom = event as CustomEvent<{
           studioId?: string;
           lat?: number | null;
@@ -585,28 +577,21 @@ export function CreativeExplorerMap({
         const lat = Number(custom.detail?.lat);
         const lng = Number(custom.detail?.lng);
 
-        if (!id || !Number.isFinite(lat) || !Number.isFinite(lng)) {
-          return;
-        }
+        if (!id || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
         pendingFocusRef.current = id;
         highlightCard(id);
-        map.setView([lat, lng], 14, { animate: true });
+        map.easeTo({
+          center: [lng, lat],
+          zoom: 14,
+          duration: 450,
+        });
       };
 
-      window.addEventListener(
-        "36:focus-studio",
-        focusListener,
-      );
-
-      map.invalidateSize();
-      await refreshNodes(L);
+      window.addEventListener("36:focus-studio", focusListener);
 
       return () => {
-        window.removeEventListener(
-          "36:focus-studio",
-          focusListener,
-        );
+        window.removeEventListener("36:focus-studio", focusListener);
       };
     }
 
@@ -631,14 +616,12 @@ export function CreativeExplorerMap({
       disposed = true;
       cleanup?.();
       fetchAbortRef.current?.abort();
-      if (fetchTimerRef.current) {
-        clearTimeout(fetchTimerRef.current);
-      }
-      mapRef.current?.remove();
+      if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+      clearMarkers();
+      mapRef.current?.remove?.();
       mapRef.current = null;
-      markerLayerRef.current = null;
     };
-  }, [filterKey, fullScreen]);
+  }, [filterKey]);
 
   function searchThisArea() {
     const map = mapRef.current;
@@ -668,7 +651,7 @@ export function CreativeExplorerMap({
       className={
         fullScreen
           ? "fixed inset-0 z-[5000] bg-white"
-          : "creative-map-shell"
+          : "air-map-shell"
       }
     >
       <div
@@ -676,7 +659,7 @@ export function CreativeExplorerMap({
         className={
           fullScreen
             ? "h-screen w-full"
-            : "creative-map-canvas"
+            : "air-map-canvas"
         }
         aria-label="Creative spaces map"
       />
@@ -685,42 +668,39 @@ export function CreativeExplorerMap({
         <button
           type="button"
           onClick={searchThisArea}
-          className="creative-map-search-area"
+          className="air-map-search-area"
         >
-          ⌕ Search this area
+          Search this area
         </button>
       )}
 
-      <div className="creative-map-top-actions">
-        <button
-          type="button"
-          onClick={() => setFullScreen((value) => !value)}
-          className="creative-map-action dark"
-        >
-          {fullScreen ? "Close map ×" : "Full map"}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setFullScreen((value) => !value)}
+        className="air-map-fullscreen"
+      >
+        {fullScreen ? "Close ×" : "Full map"}
+      </button>
 
-      <div className="creative-map-diagnostics" aria-live="polite">
-        {loading ? (
-          <span>Loading map…</span>
-        ) : mapError ? (
-          <span className="error">{mapError}</span>
-        ) : meta ? (
-          <>
-            <b>{meta.matchedMapped.toLocaleString("en")} mapped</b>
-            <span>
-              {meta.level} view · {meta.renderedNodes} marker
-              {meta.renderedNodes === 1 ? "" : "s"}
-            </span>
-            {meta.unknownCountryCount > 0 && (
-              <span>
-                {meta.unknownCountryCount} unknown-country
-              </span>
-            )}
-          </>
-        ) : null}
-      </div>
+      {loading && (
+        <div className="air-map-loading">
+          <span />
+          Loading spaces
+        </div>
+      )}
+
+      {mapError && (
+        <div className="air-map-error">
+          {mapError}
+        </div>
+      )}
+
+      {debug && meta && !loading && !mapError && (
+        <div className="air-map-debug">
+          {meta.matchedMapped.toLocaleString("en")} mapped · {meta.level} ·{" "}
+          {meta.renderedNodes} markers
+        </div>
+      )}
     </div>
   );
 }
