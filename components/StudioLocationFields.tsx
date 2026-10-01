@@ -12,7 +12,7 @@ type Result = {
   countryCode?: string;
 };
 
-const CASABLANCA = { lat: 33.5731, lng: -7.5898 };
+const WORLD_CENTER = { lat: 20, lng: 0 };
 
 function validCoordinate(value: string, min: number, max: number) {
   const number = Number(value);
@@ -94,11 +94,11 @@ export function StudioLocationFields(props: {
         validCoordinate(lng, -180, 180);
       const center: [number, number] = hasSaved
         ? [Number(lat), Number(lng)]
-        : [CASABLANCA.lat, CASABLANCA.lng];
+        : [WORLD_CENTER.lat, WORLD_CENTER.lng];
 
       const map = L.map(mapElementRef.current, {
         center,
-        zoom: hasSaved ? 16 : 11,
+        zoom: hasSaved ? 16 : 2,
         zoomControl: true,
         attributionControl: true,
       });
