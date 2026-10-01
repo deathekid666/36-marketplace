@@ -54,6 +54,9 @@ export function StudioMap({
     useState<Bounds | null>(null);
   const [labelMode, setLabelMode] =
     useState<LabelMode>("price");
+  const labelModeRef = useRef<LabelMode>("price");
+  const renderMarkersRef = useRef<(() => void) | null>(null);
+  labelModeRef.current = labelMode;
   const [fullScreen, setFullScreen] =
     useState(false);
   const [directionsOpen, setDirectionsOpen] =
@@ -61,6 +64,9 @@ export function StudioMap({
 
   const navigationPoint =
     points.length === 1 ? points[0] : null;
+  const hasVerifiedPrices = points.some(
+    (point) => point.price != null && point.price > 0,
+  );
   const googleMapsUrl = navigationPoint
     ? "https://www.google.com/maps/dir/?api=1&destination=" +
       encodeURIComponent(
@@ -121,7 +127,7 @@ export function StudioMap({
       if (points.length === 1) {
         return compactMarkerName(point.name);
       }
-      if (labelMode === "price" && point.price) {
+      if (labelModeRef.current === "price" && point.price) {
         return point.price + " MAD";
       }
       return compactMarkerName(point.name);
@@ -133,7 +139,7 @@ export function StudioMap({
     ) {
       const label = markerLabel(point);
       const markerWidth =
-        labelMode === "price" && point.price
+        labelModeRef.current === "price" && point.price
           ? 86
           : Math.max(
               92,
@@ -246,7 +252,8 @@ export function StudioMap({
         return;
       }
 
-      const cellSize = zoom < 7 ? 110 : zoom < 11 ? 90 : 72;
+      const cellSize =
+        zoom < 4 ? 58 : zoom < 7 ? 68 : zoom < 11 ? 76 : 66;
       const groups = new Map<
         string,
         StudioMapPoint[]
@@ -275,16 +282,39 @@ export function StudioMap({
           continue;
         }
 
-        const lat =
-          group.reduce(
-            (sum, point) => sum + point.lat,
+        const projectedPoints = group.map((point) => ({
+          point,
+          projected: map.project(
+            [point.lat, point.lng],
+            zoom,
+          ),
+        }));
+        const centerX =
+          projectedPoints.reduce(
+            (sum, item) => sum + item.projected.x,
             0,
-          ) / group.length;
-        const lng =
-          group.reduce(
-            (sum, point) => sum + point.lng,
+          ) / projectedPoints.length;
+        const centerY =
+          projectedPoints.reduce(
+            (sum, item) => sum + item.projected.y,
             0,
-          ) / group.length;
+          ) / projectedPoints.length;
+        const representative = projectedPoints.reduce(
+          (best, item) => {
+            const distance =
+              Math.pow(item.projected.x - centerX, 2) +
+              Math.pow(item.projected.y - centerY, 2);
+            return distance < best.distance
+              ? { point: item.point, distance }
+              : best;
+          },
+          {
+            point: projectedPoints[0].point,
+            distance: Number.POSITIVE_INFINITY,
+          },
+        ).point;
+        const lat = representative.lat;
+        const lng = representative.lng;
         const bookableCount = group.filter(
           (point) =>
             (point.kind ||
@@ -304,15 +334,38 @@ export function StudioMap({
               group.length +
               "</strong>" +
               "<span>" +
-              (bookableCount &&
-              contactCount
-                ? bookableCount +
-                  " bookable · " +
-                  contactCount +
-                  " contacts"
-                : bookableCount
-                  ? "bookable"
-                  : "contacts") +
+              (hasVerifiedPrices &&
+              labelModeRef.current === "price"
+                ? (() => {
+                    const prices = group
+                      .map((point) => point.price)
+                      .filter(
+                        (value): value is number =>
+                          typeof value === "number" &&
+                          value > 0,
+                      );
+                    if (!prices.length) return "studios";
+                    const min = Math.min(...prices);
+                    const max = Math.max(...prices);
+                    return min === max
+                      ? min + " MAD"
+                      : min + "–" + max + " MAD";
+                  })()
+                : hasVerifiedPrices &&
+                    labelModeRef.current === "name"
+                  ? compactMarkerName(group[0].name) +
+                    (group.length > 1
+                      ? " +" + (group.length - 1)
+                      : "")
+                  : bookableCount &&
+                      contactCount
+                    ? bookableCount +
+                      " bookable · " +
+                      contactCount +
+                      " contacts"
+                    : bookableCount
+                      ? "studios"
+                      : "studios") +
               "</span></div>",
             iconSize: [92, 52],
             iconAnchor: [46, 26],
@@ -422,11 +475,12 @@ export function StudioMap({
       });
 
       L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
         {
-          maxZoom: 19,
+          maxZoom: 20,
+          subdomains: "abcd",
           attribution:
-            "© OpenStreetMap contributors",
+            "© OpenStreetMap contributors © CARTO",
         },
       ).addTo(map);
 
@@ -444,9 +498,23 @@ export function StudioMap({
           14,
         );
       } else {
-        map.fitBounds(bounds.pad(0.18));
+        const latSpan =
+          bounds.getNorth() - bounds.getSouth();
+        const lngSpan =
+          bounds.getEast() - bounds.getWest();
+
+        if (latSpan > 100 || lngSpan > 250) {
+          map.setView([20, 5], 2);
+        } else {
+          map.fitBounds(bounds.pad(0.08), {
+            padding: [24, 24],
+            maxZoom: 12,
+          });
+        }
       }
 
+      renderMarkersRef.current = () =>
+        renderMarkers(L);
       renderMarkers(L);
 
       window.setTimeout(() => {
@@ -534,14 +602,18 @@ export function StudioMap({
     return () => {
       cancelled = true;
       detach?.();
+      renderMarkersRef.current = null;
       if (map) map.remove();
     };
   }, [
     points,
     searchArea,
-    labelMode,
     fullScreen,
   ]);
+
+  useEffect(() => {
+    renderMarkersRef.current?.();
+  }, [labelMode]);
 
   function applyAreaSearch() {
     if (!areaBounds) return;
@@ -594,24 +666,24 @@ export function StudioMap({
         className={
           fullScreen
             ? "h-screen w-full bg-zinc-950"
-            : "h-[520px] w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 xl:h-[680px]"
+            : "h-[500px] w-full overflow-hidden rounded-[22px] border border-[#dddddd] bg-[#f3f3f3] xl:h-[590px]"
         }
         aria-label="Studio locations map"
       />
 
-      {points.length > 1 && (
+      {points.length > 1 && hasVerifiedPrices && (
         <div className="absolute left-3 top-3 z-[1100] flex overflow-hidden rounded-full border border-zinc-700 bg-zinc-950/95 p-1 shadow-xl backdrop-blur">
           <button
             type="button"
             aria-pressed={
-              labelMode === "price"
+              labelModeRef.current === "price"
             }
             onClick={() =>
               setLabelMode("price")
             }
             className={
               "rounded-full px-3 py-2 text-[10px] font-black " +
-              (labelMode === "price"
+              (labelModeRef.current === "price"
                 ? "bg-white text-black"
                 : "text-zinc-400")
             }
@@ -692,14 +764,18 @@ export function StudioMap({
         </button>
       </div>
 
-      <div className="absolute bottom-3 left-3 z-[1100] flex flex-wrap gap-2">
-        <span className="rounded-full border border-acid/30 bg-zinc-950/90 px-3 py-1.5 text-[9px] font-black text-acid">
-          ● Bookable
-        </span>
-        <span className="rounded-full border border-sky-400/30 bg-zinc-950/90 px-3 py-1.5 text-[9px] font-black text-sky-300">
-          ● Contact only
-        </span>
-      </div>
+      {hasVerifiedPrices && (
+        <div className="absolute bottom-3 left-3 z-[1100] flex flex-wrap gap-2">
+          <span className="rounded-full border border-[#dddddd] bg-white/95 px-3 py-1.5 text-[9px] font-black text-[#222] shadow-sm">
+            ● Bookable
+          </span>
+          {points.some((point) => point.kind === "CONTACT") && (
+            <span className="rounded-full border border-[#dddddd] bg-white/95 px-3 py-1.5 text-[9px] font-black text-[#717171] shadow-sm">
+              ● Contact only
+            </span>
+          )}
+        </div>
+      )}
 
       {searchArea && areaBounds && (
         <button

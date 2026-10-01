@@ -280,7 +280,7 @@ export default async function DiscoverStudiosPage({
     ],
   };
 
-  const [candidates, total, countryRows, cityRows] = await Promise.all([
+  const [candidates, total, countryRows, cityRows, mapCandidates] = await Promise.all([
     db.candidateStudio.findMany({
       where: visibility,
       include: {
@@ -336,6 +336,27 @@ export default async function DiscoverStudiosPage({
       _avg: { latitude: true, longitude: true },
       orderBy: { _count: { city: "desc" } },
       take: 250,
+    }),
+    db.candidateStudio.findMany({
+      where: {
+        AND: [
+          visibility,
+          { latitude: { not: null } },
+          { longitude: { not: null } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        latitude: true,
+        longitude: true,
+        category: true,
+        convertedStudio: {
+          select: { status: true },
+        },
+      },
+      orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
     }),
   ]);
 
@@ -401,29 +422,25 @@ export default async function DiscoverStudiosPage({
     return b.updatedAt.getTime() - a.updatedAt.getTime();
   });
 
-  const mapPoints = rankedCandidates
+  const mapPoints = mapCandidates
     .filter(
       (candidate) =>
-        candidate.latitude != null && candidate.longitude != null,
+        candidate.convertedStudio?.status !== "VERIFIED" &&
+        candidate.latitude != null &&
+        candidate.longitude != null,
     )
-    .map((candidate) => {
-      const profile = parseDirectoryProfileV2(
-        candidate.transitions[0]?.metadata,
-      );
-
-      return {
-        id: candidate.id,
-        name: candidate.name,
-        lat: Number(candidate.latitude),
-        lng: Number(candidate.longitude),
-        href: "/discover/" + candidate.slug,
-        price: null,
-        kind: "CONTACT" as const,
-        category: labelCategory(candidate.category),
-        rating: null,
-        photoUrl: profile.photoUrls[0] || null,
-      };
-    });
+    .map((candidate) => ({
+      id: candidate.id,
+      name: candidate.name,
+      lat: Number(candidate.latitude),
+      lng: Number(candidate.longitude),
+      href: "/discover/" + candidate.slug,
+      price: null,
+      kind: "CONTACT" as const,
+      category: labelCategory(candidate.category),
+      rating: null,
+      photoUrl: null,
+    }));
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
@@ -483,7 +500,7 @@ export default async function DiscoverStudiosPage({
               name="q"
               defaultValue={q}
               placeholder="Studio, city, area or phone"
-              className="mt-1 w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-[#a3a3a3]"
+              className="mt-1 w-full bg-transparent text-sm font-semibold text-[#222] outline-none placeholder:text-[#a3a3a3]"
             />
           </label>
 
@@ -504,7 +521,7 @@ export default async function DiscoverStudiosPage({
             <select
               name="category"
               defaultValue={category}
-              className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-white outline-none"
+              className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold text-[#222] outline-none"
             >
               <option value="" className="bg-white">
                 All types
@@ -603,7 +620,7 @@ export default async function DiscoverStudiosPage({
                   <div className="mb-3 flex items-center justify-between">
                     <b className="text-sm">Map</b>
                     <span className="text-xs text-[#8a8a8a]">
-                      {mapPoints.length} locations on this page
+                      {mapPoints.length} mapped location{mapPoints.length === 1 ? "" : "s"}
                     </span>
                   </div>
                   <StudioMap points={mapPoints} searchArea />
