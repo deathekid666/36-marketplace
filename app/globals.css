@@ -4780,3 +4780,134 @@ label.air-search-segment:hover {
     margin: 6px 0 0;
   }
 }
+
+
+/* Profile editing controls */
+.air-profile-avatar {
+  overflow: hidden;
+}
+
+.air-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.air-profile-cover-edit {
+  position: absolute;
+  z-index: 6;
+  right: 16px;
+  top: 16px;
+}
+
+.air-profile-avatar-edit {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: -13px;
+  transform: translateX(-50%);
+}
+
+.air-profile-upload {
+  position: relative;
+}
+
+.air-profile-upload button {
+  border: 1px solid #dddddd;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,.96);
+  color: #222;
+  font-size: 9px;
+  font-weight: 850;
+  box-shadow: 0 4px 16px rgba(0,0,0,.10);
+  backdrop-filter: blur(12px);
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.air-profile-upload button:hover {
+  transform: translateY(-1px);
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(0,0,0,.14);
+}
+
+.air-profile-upload button:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
+.air-profile-upload.compact button {
+  border-color: #fff;
+  padding: 6px 9px;
+  background: #222;
+  color: #fff;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.air-profile-upload > span {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 7px);
+  width: max-content;
+  max-width: 240px;
+  border-radius: 9px;
+  padding: 7px 9px;
+  background: #222;
+  color: #fff;
+  font-size: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.16);
+}
+
+.air-profile-avatar-edit .air-profile-upload > span {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.air-profile-summary-actions {
+  display: flex;
+  align-self: start;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.air-profile-edit-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: #222;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 850;
+  transition: transform .2s ease, background .2s ease;
+}
+
+.air-profile-edit-button:hover {
+  transform: translateY(-1px);
+  background: #111;
+}
+
+.air-profile-summary-actions .air-profile-public-button {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .air-profile-cover-edit {
+    right: 10px;
+    top: 10px;
+  }
+
+  .air-profile-summary-actions {
+    grid-column: 1 / -1;
+    margin: 7px 0 0 106px;
+  }
+
+  .air-profile-public-button {
+    grid-column: auto;
+    margin: 0;
+  }
+}

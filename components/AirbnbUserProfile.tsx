@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { UserRole } from "@prisma/client";
 
 import { updateProfileAction } from "@/app/profile/actions";
+import { ProfileImageUploader } from "@/components/ProfileImageUploader";
 import {
   memberSinceLabel,
   profileInitials,
@@ -164,6 +165,8 @@ export function AirbnbUserProfile({
     completedSessions: number;
     reviewCount: number;
     averageRating: number | null;
+    avatarUrl: string | null;
+    coverUrl: string | null;
   };
   studios: ProfileStudio[];
   reviews: ProfileReview[];
@@ -178,7 +181,8 @@ export function AirbnbUserProfile({
   const publicRole = profileRoleLabel(profile.role);
   const initials = profileInitials(profile.name) || "36";
   const coverStudio = studios.find((studio) => Boolean(studio.photoUrl));
-  const coverUrl = coverStudio?.photoUrl || null;
+  const coverUrl = profile.coverUrl || coverStudio?.photoUrl || null;
+  const usingStudioCover = !profile.coverUrl && Boolean(coverStudio?.photoUrl);
 
   const stats = [
     {
@@ -217,20 +221,36 @@ export function AirbnbUserProfile({
           <CoverFallback />
         )}
         <div className="air-profile-cover-shade" />
-        {coverStudio && (
+        {usingStudioCover && coverStudio && (
           <span className="air-profile-cover-source">
             Cover from {coverStudio.name}
           </span>
+        )}
+        {isSelf && (
+          <div className="air-profile-cover-edit">
+            <ProfileImageUploader kind="cover" />
+          </div>
         )}
       </section>
 
       <section className="air-profile-summary">
         <div className="air-profile-avatar-wrap">
-          <div className="air-profile-avatar">{initials}</div>
+          <div className="air-profile-avatar">
+            {profile.avatarUrl ? (
+              <img src={profile.avatarUrl} alt={profile.name} />
+            ) : (
+              initials
+            )}
+          </div>
           {profile.emailVerified && (
             <span className="air-profile-avatar-check" title="Verified">
               <Icon name="check" className="h-4 w-4" />
             </span>
+          )}
+          {isSelf && (
+            <div className="air-profile-avatar-edit">
+              <ProfileImageUploader kind="avatar" compact />
+            </div>
           )}
         </div>
 
@@ -252,13 +272,19 @@ export function AirbnbUserProfile({
         </div>
 
         {isSelf && (
-          <Link
-            href={"/profile/" + profile.id}
-            className="air-profile-public-button"
-          >
-            View public profile
-            <Icon name="arrow" className="h-4 w-4" />
-          </Link>
+          <div className="air-profile-summary-actions">
+            <a href="#account" className="air-profile-edit-button">
+              <Icon name="edit" className="h-4 w-4" />
+              Edit profile
+            </a>
+            <Link
+              href={"/profile/" + profile.id}
+              className="air-profile-public-button"
+            >
+              View public profile
+              <Icon name="arrow" className="h-4 w-4" />
+            </Link>
+          </div>
         )}
       </section>
 

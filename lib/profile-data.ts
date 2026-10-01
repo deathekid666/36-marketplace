@@ -20,7 +20,7 @@ export async function loadPublicProfile(userId: string) {
   const isOwner = user.role === "STUDIO_OWNER";
   const isCreator = user.role === "CREATOR";
 
-  const [completedSessions, creatorReviews, ownerReviews, studios] =
+  const [completedSessions, creatorReviews, ownerReviews, studios, profileImages] =
     await Promise.all([
       isCreator
         ? db.booking.count({
@@ -104,6 +104,17 @@ export async function loadPublicProfile(userId: string) {
             take: 12,
           })
         : Promise.resolve([]),
+      db.storedFile.findMany({
+        where: {
+          ownerId: user.id,
+          kind: { in: ["PROFILE_AVATAR", "PROFILE_COVER"] },
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          kind: true,
+          url: true,
+        },
+      }),
     ]);
 
   const publicReviews = isOwner ? ownerReviews : creatorReviews;
@@ -115,8 +126,17 @@ export async function loadPublicProfile(userId: string) {
         ) / ownerReviews.length
       : null;
 
+  const avatarUrl =
+    profileImages.find((file) => file.kind === "PROFILE_AVATAR")?.url || null;
+  const coverUrl =
+    profileImages.find((file) => file.kind === "PROFILE_COVER")?.url || null;
+
   return {
-    user,
+    user: {
+      ...user,
+      avatarUrl,
+      coverUrl,
+    },
     completedSessions,
     reviewsWritten: isCreator ? creatorReviews.length : 0,
     reviewsReceived: isOwner ? ownerReviews.length : 0,

@@ -70,6 +70,8 @@ export default async function ProfilePage({
                 ? data.reviewsReceived
                 : data.reviewsWritten,
             averageRating: data.averageRating,
+            avatarUrl: data.user.avatarUrl,
+            coverUrl: data.user.coverUrl,
           }}
           studios={view.studios}
           reviews={view.reviews}
