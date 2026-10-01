@@ -11,6 +11,7 @@ import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMarketplaceDateTime } from "@/lib/time";
 import { offlinePaymentLabel } from "@/lib/offline-payment";
+import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
 function stars(value: number) {
   return "★".repeat(value) + "☆".repeat(5 - value);
@@ -33,6 +34,12 @@ export default async function CreatorBookingDetailPage({
   const user = await requireRole("CREATOR");
   const { id } = await params;
   const query = await searchParams;
+
+  await expireStaleBookingHolds({
+    creatorId: user.id,
+    limit: 100,
+  });
+
   const booking = await db.booking.findFirst({
     where: { id, creatorId: user.id },
     include: {
@@ -49,11 +56,16 @@ export default async function CreatorBookingDetailPage({
   });
   if (!booking) notFound();
 
+  const effectiveStatus = booking.status;
   const deposit = booking.payments.find((p) => p.kind === "DEPOSIT");
   const balance = booking.payments.find((p) => p.kind === "BALANCE");
   const refund = booking.payments.find((p) => p.kind === "REFUND");
-  const canCancel = ["PENDING_DEPOSIT", "CONFIRMED"].includes(booking.status) && booking.startAt > new Date();
-  const pendingDeposit = booking.status === "PENDING_DEPOSIT" && (!booking.expiresAt || booking.expiresAt > new Date());
+  const canCancel =
+    ["PENDING_DEPOSIT", "CONFIRMED"].includes(effectiveStatus) &&
+    booking.startAt > new Date();
+  const pendingDeposit =
+    effectiveStatus === "PENDING_DEPOSIT" &&
+    (!booking.expiresAt || booking.expiresAt > new Date());
   const offlinePayment = booking.payments.find((payment) =>
     offlinePaymentLabel(payment.provider),
   );
@@ -68,7 +80,7 @@ export default async function CreatorBookingDetailPage({
         <Link href="/creator/bookings" className="text-xs font-bold text-zinc-500 hover:text-white">← Your bookings</Link>
         <div className="mt-7 flex flex-wrap items-start justify-between gap-5">
           <div>
-            <span className="text-xs font-bold uppercase tracking-[0.15em] text-acid">{booking.status.replaceAll("_", " ")}</span>
+            <span className="text-xs font-bold uppercase tracking-[0.15em] text-acid">{effectiveStatus.replaceAll("_", " ")}</span>
             <h1 className="mt-2 text-4xl font-black tracking-[-0.045em]">{booking.studio.name}</h1>
             <p className="mt-2 text-sm text-zinc-500">{booking.room.name} · {formatMarketplaceDateTime(booking.startAt)} → {formatMarketplaceDateTime(booking.endAt)}</p>
             <p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-700">
@@ -82,7 +94,7 @@ export default async function CreatorBookingDetailPage({
           </div>
         </div>
 
-        {!["CANCELLED", "EXPIRED"].includes(booking.status) && (
+        {!["CANCELLED", "EXPIRED"].includes(effectiveStatus) && (
           <div className="mt-5 flex flex-wrap gap-2">
             <a
               href={"/api/bookings/" + booking.id + "/calendar"}
@@ -124,8 +136,31 @@ export default async function CreatorBookingDetailPage({
             </div>
           </div>
         )}
+        {effectiveStatus === "EXPIRED" && (
+          <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 text-sm text-zinc-400">
+            This payment hold expired and the studio slot was released. You can choose another available time from the studio page.
+          </div>
+        )}
         {(query.cancelled || query.reviewed) && <div className="mt-6 rounded-xl border border-acid/30 bg-acid/[0.04] p-4 text-sm text-acid">{query.cancelled ? "Booking cancelled. Refund status is shown below." : "Review submitted. Thank you."}</div>}
         {query.error && <div className="mt-6 rounded-xl border border-red-900/50 bg-red-950/20 p-4 text-sm text-red-300">That action could not be completed.</div>}
+
+        {["CONFIRMED", "COMPLETED", "DISPUTED"].includes(effectiveStatus) && (
+          <section className="mt-6 rounded-2xl border border-acid/20 bg-acid/[0.035] p-5">
+            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-acid">
+              Confirmed booking · exact location
+            </span>
+            <h2 className="mt-2 text-lg font-black">
+              {booking.studio.address || [booking.studio.neighborhood, booking.studio.city].filter(Boolean).join(", ")}
+            </h2>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">
+              {[booking.studio.neighborhood, booking.studio.city].filter(Boolean).join(" · ")}
+              {booking.studio.phone ? " · " + booking.studio.phone : ""}
+            </p>
+            <p className="mt-3 text-[10px] leading-5 text-zinc-600">
+              Exact studio details are shown after confirmation; public listing maps show only an approximate area.
+            </p>
+          </section>
+        )}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_340px]">
           <div className="space-y-6">
@@ -215,7 +250,7 @@ export default async function CreatorBookingDetailPage({
                   )}
                 </div>
               )}
-              {booking.status === "CONFIRMED" && balance?.status === "PENDING" && <div className="mt-4 rounded-xl border border-sky-800/40 bg-sky-950/15 p-4"><b className="text-sm text-sky-200">Balance due before the session is financially complete</b><p className="mt-1 text-xs leading-5 text-sky-100/70">Remaining balance: {balance.amountMad} MAD.</p>{balance.checkoutUrl ? <a href={balance.checkoutUrl} rel="noreferrer" className="mt-3 inline-flex rounded-lg bg-acid px-4 py-2 text-xs font-black text-black">Pay remaining balance</a> : <p className="mt-3 text-xs text-zinc-500">36 Admin can attach the secure balance checkout link.</p>}</div>}
+              {effectiveStatus === "CONFIRMED" && balance?.status === "PENDING" && <div className="mt-4 rounded-xl border border-sky-800/40 bg-sky-950/15 p-4"><b className="text-sm text-sky-200">Balance due before the session is financially complete</b><p className="mt-1 text-xs leading-5 text-sky-100/70">Remaining balance: {balance.amountMad} MAD.</p>{balance.checkoutUrl ? <a href={balance.checkoutUrl} rel="noreferrer" className="mt-3 inline-flex rounded-lg bg-acid px-4 py-2 text-xs font-black text-black">Pay remaining balance</a> : <p className="mt-3 text-xs text-zinc-500">36 Admin can attach the secure balance checkout link.</p>}</div>}
               {refund && <div className="mt-4 rounded-xl border border-zinc-800 p-4 text-xs"><span className="text-zinc-500">Refund</span><b className="ml-3">{refund.amountMad} MAD · {refund.status}</b></div>}
               {booking.addons.length > 0 && <div className="mt-4 border-t border-zinc-900 pt-4"><span className="label">Add-ons</span><div className="space-y-2">{booking.addons.map((addon)=><div key={addon.id} className="flex justify-between text-xs"><span className="text-zinc-500">{addon.nameSnapshot} ×{addon.quantity}</span><b>{addon.totalMad} MAD</b></div>)}</div></div>}
             </section>
@@ -228,7 +263,7 @@ export default async function CreatorBookingDetailPage({
               <form action={sendBookingMessageAction} className="mt-5 flex gap-2"><input type="hidden" name="bookingId" value={booking.id} /><input className="field" name="body" maxLength={2000} placeholder="Ask about access, setup, equipment…" required /><button className="rounded-xl bg-acid px-4 text-xs font-black text-black">Send</button></form>
             </section>
 
-            {booking.status === "COMPLETED" && !booking.review && (
+            {effectiveStatus === "COMPLETED" && !booking.review && (
               <section className="panel">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div>

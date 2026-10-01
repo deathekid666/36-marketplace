@@ -17,6 +17,7 @@ import {
   isOfflinePaymentProvider,
   offlinePaymentLabel,
 } from "@/lib/offline-payment";
+import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
 export default async function OwnerBookingDetailPage({
   params,
@@ -32,6 +33,12 @@ export default async function OwnerBookingDetailPage({
   const user = await requireRole("STUDIO_OWNER");
   const { id } = await params;
   const query = await searchParams;
+
+  await expireStaleBookingHolds({
+    ownerId: user.id,
+    limit: 150,
+  });
+
   const booking = await db.booking.findFirst({
     where: { id, studio: { ownerId: user.id } },
     include: {

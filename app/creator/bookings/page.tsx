@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { offlinePaymentLabel } from "@/lib/offline-payment";
 import { formatMarketplaceDateTime } from "@/lib/time";
+import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
 type View = "upcoming" | "past" | "cancelled" | "all";
 
@@ -49,6 +50,11 @@ export default async function CreatorBookingsPage({
   const query = await searchParams;
   const view = parseView(query.view);
   const now = new Date();
+
+  await expireStaleBookingHolds({
+    creatorId: user.id,
+    limit: 100,
+  });
 
   const bookings = await db.booking.findMany({
     where: { creatorId: user.id },

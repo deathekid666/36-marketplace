@@ -7,11 +7,15 @@ import { validateRoomInterval } from "@/lib/booking";
 import { db } from "@/lib/db";
 import { categoryLabel } from "@/lib/studio";
 import { formatMarketplaceDateTime } from "@/lib/time";
+import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
 export const metadata = { title: "36 NOW" };
 
 export default async function NowPage() {
   const user = await getCurrentUser();
+
+  await expireStaleBookingHolds({ limit: 100 });
+
   const raw = await db.flashSlot.findMany({
     where: {
       status: "ACTIVE",

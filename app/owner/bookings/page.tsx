@@ -10,6 +10,7 @@ import {
   formatMarketplaceDateTime,
   localDateKey,
 } from "@/lib/time";
+import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
 type View = "today" | "upcoming" | "completed" | "cancelled" | "all";
 
@@ -54,6 +55,11 @@ export default async function OwnerBookingsPage({
   const view = parseView(query.view);
   const now = new Date();
   const todayKey = localDateKey(now);
+
+  await expireStaleBookingHolds({
+    ownerId: user.id,
+    limit: 150,
+  });
 
   const bookings = await db.booking.findMany({
     where: {
