@@ -5,11 +5,13 @@ import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { BookingWidget } from "@/components/BookingWidget";
 import { StudioMap } from "@/components/StudioMap";
+import { StudioRecommendations } from "@/components/StudioRecommendations";
 import { toggleFavoriteAction } from "@/app/favorites/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { trackMarketplaceEvent } from "@/lib/analytics";
 import { db } from "@/lib/db";
 import { DAYS, categoryLabel } from "@/lib/studio";
+import { getStudioRecommendations } from "@/lib/recommendations";
 import {
   getStudioTrustMetrics,
   responseTimeLabel,
@@ -137,6 +139,38 @@ export default async function StudioDetailPage({
     trust.responseSampleSize >= 3
       ? responseTimeLabel(trust.typicalResponseMinutes)
       : null;
+
+  const recommendationDate = safeDate(query.date);
+  const recommendationDuration =
+    safeDuration(query.duration) || 1;
+  const recommendations = await getStudioRecommendations(
+    {
+      id: studio.id,
+      city: studio.city,
+      primaryCategory: studio.primaryCategory,
+      latitude:
+        studio.latitude != null
+          ? Number(studio.latitude)
+          : null,
+      longitude:
+        studio.longitude != null
+          ? Number(studio.longitude)
+          : null,
+      rooms: studio.rooms.map((room) => ({
+        hourlyRateMad: room.hourlyRateMad,
+        equipment: room.equipment.map((item) => ({
+          name: item.name,
+        })),
+      })),
+      amenities: studio.amenities.map((item) => ({
+        name: item.name,
+      })),
+    },
+    {
+      date: recommendationDate,
+      durationHours: recommendationDuration,
+    },
+  );
 
   const mapPoints = studio.latitude != null && studio.longitude != null
     ? [{
@@ -326,6 +360,15 @@ export default async function StudioDetailPage({
             </section>
           </aside>
         </div>
+
+        <StudioRecommendations
+          similar={recommendations.similar}
+          cheaper={recommendations.cheaper}
+          nearby={recommendations.nearby}
+          available={recommendations.available}
+          date={recommendationDate}
+          durationHours={recommendationDuration}
+        />
       </section>
     </main>
   );
