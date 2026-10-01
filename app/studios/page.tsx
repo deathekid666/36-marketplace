@@ -16,7 +16,7 @@ import {
 import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
 import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
-import { categoryLabel, STUDIO_CATEGORIES } from "@/lib/studio";
+import { categoryLabel, slugify, STUDIO_CATEGORIES } from "@/lib/studio";
 
 function parseCategory(value?: string): StudioCategory | undefined {
   return STUDIO_CATEGORIES.some((item) => item.value === value)
@@ -247,6 +247,14 @@ export default async function StudiosPage({
     ]),
   ).filter(Boolean);
 
+  const seoCities = Array.from(
+    new Set(
+      locationRows
+        .map((row) => row.city)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ).slice(0, 10);
+
   const detailParams = new URLSearchParams();
   if (date) detailParams.set("date", date);
   detailParams.set("duration", String(durationHours));
@@ -313,6 +321,43 @@ export default async function StudiosPage({
             </Link>
           )}
         </div>
+
+        {seoCities.length > 0 && (
+          <section className="mt-5 rounded-2xl border border-zinc-900 bg-zinc-950/50 p-4">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-700">
+                Browse verified pages
+              </span>
+              {seoCities.map((seoCity) => (
+                <Link
+                  key={seoCity}
+                  href={"/studios/in/" + slugify(seoCity)}
+                  className="text-xs font-bold text-zinc-500 hover:text-acid"
+                >
+                  {seoCity}
+                </Link>
+              ))}
+            </div>
+            {city && (
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-zinc-900 pt-3">
+                {STUDIO_CATEGORIES.map((item) => (
+                  <Link
+                    key={item.value}
+                    href={
+                      "/studios/in/" +
+                      slugify(city) +
+                      "/" +
+                      slugify(item.label)
+                    }
+                    className="rounded-full border border-zinc-900 px-3 py-1.5 text-[10px] font-black text-zinc-600 hover:border-acid/30 hover:text-acid"
+                  >
+                    {item.label} in {city}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {results.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-dashed border-zinc-800 p-14 text-center">

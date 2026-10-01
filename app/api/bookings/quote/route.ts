@@ -9,6 +9,7 @@ import {
   consumeRateLimit,
   fingerprintFromRequest,
 } from "@/lib/rate-limit";
+import { trackMarketplaceEvent } from "@/lib/analytics";
 
 export const runtime = "nodejs";
 
@@ -103,6 +104,17 @@ export async function POST(request: Request) {
       durationMinutes,
       addons,
       promoCode,
+    });
+
+    await trackMarketplaceEvent({
+      eventType: "BOOKING_STARTED",
+      userId: user.id,
+      studioId: quote.studioId,
+      metadata: {
+        roomId: quote.roomId,
+        durationMinutes: quote.durationMinutes,
+        totalAmountMad: quote.totalAmountMad,
+      },
     });
 
     return NextResponse.json({ ok: true, quote });

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -9,6 +10,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { trackMarketplaceEvent } from "@/lib/analytics";
 import { db } from "@/lib/db";
 import { DAYS, categoryLabel } from "@/lib/studio";
+import {
+  getStudioTrustMetrics,
+  responseTimeLabel,
+} from "@/lib/trust";
 
 function safeDate(value?: string) {
   return /^\\d{4}-\\d{2}-\\d{2}$/.test(String(value || "")) ? String(value) : undefined;
@@ -17,6 +22,69 @@ function safeDate(value?: string) {
 function safeDuration(value?: string) {
   const number = Math.round(Number(value || "1"));
   return Number.isFinite(number) ? Math.max(1, Math.min(12, number)) : undefined;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+
+  const studio = await db.studio.findFirst({
+    where: { slug, status: "VERIFIED" },
+    select: {
+      name: true,
+      city: true,
+      neighborhood: true,
+      description: true,
+      photos: {
+        orderBy: { sortOrder: "asc" },
+        take: 1,
+        select: { url: true },
+      },
+      rooms: {
+        where: { active: true },
+        orderBy: { hourlyRateMad: "asc" },
+        take: 1,
+        select: { hourlyRateMad: true },
+      },
+    },
+  });
+
+  if (!studio) {
+    return {
+      title: "Studio not found",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const location = studio.neighborhood || studio.city;
+  const price = studio.rooms[0]?.hourlyRateMad;
+  const description =
+    studio.description.trim().slice(0, 155) ||
+    "Book " +
+      studio.name +
+      " in " +
+      studio.city +
+      (price ? " from " + price + " MAD/hour" : "") +
+      " on 36.";
+
+  return {
+    title: studio.name + " in " + location,
+    description,
+    alternates: {
+      canonical: "/studios/" + slug,
+    },
+    openGraph: {
+      title: studio.name + " · 36",
+      description,
+      type: "website",
+      images: studio.photos[0]?.url
+        ? [{ url: studio.photos[0].url }]
+        : undefined,
+    },
+  };
 }
 
 export default async function StudioDetailPage({
@@ -64,6 +132,11 @@ export default async function StudioDetailPage({
   const average = studio.reviews.length
     ? studio.reviews.reduce((sum, review) => sum + review.rating, 0) / studio.reviews.length
     : null;
+  const trust = await getStudioTrustMetrics(studio.id, studio.ownerId);
+  const responseLabel =
+    trust.responseSampleSize >= 3
+      ? responseTimeLabel(trust.typicalResponseMinutes)
+      : null;
 
   const mapPoints = studio.latitude != null && studio.longitude != null
     ? [{
@@ -96,6 +169,46 @@ export default async function StudioDetailPage({
             </form>
           )}
         </div>
+
+        <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-zinc-900 bg-zinc-950/60 p-4">
+            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-acid">
+              36 verified
+            </span>
+            <b className="mt-2 block text-sm">Identity & listing reviewed</b>
+          </div>
+          <div className="rounded-2xl border border-zinc-900 bg-zinc-950/60 p-4">
+            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+              Completed sessions
+            </span>
+            <b className="mt-2 block text-2xl">{trust.completedSessions}</b>
+          </div>
+          <div className="rounded-2xl border border-zinc-900 bg-zinc-950/60 p-4">
+            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+              Verified reviews
+            </span>
+            <b className="mt-2 block text-sm">
+              {trust.verifiedReviewCount > 0 && trust.averageRating != null
+                ? "★ " + trust.averageRating.toFixed(1) + " · " + trust.verifiedReviewCount
+                : "New on 36"}
+            </b>
+          </div>
+          <div className="rounded-2xl border border-zinc-900 bg-zinc-950/60 p-4">
+            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+              Studio response
+            </span>
+            <b className="mt-2 block text-sm">
+              {trust.responseSampleSize >= 3 && trust.responseRate != null
+                ? trust.responseRate + "% response rate"
+                : "Response history building"}
+            </b>
+            {responseLabel && (
+              <span className="mt-1 block text-[10px] text-zinc-600">
+                {responseLabel}
+              </span>
+            )}
+          </div>
+        </section>
 
         <div className="mt-8 grid gap-3 md:grid-cols-12">
           {(studio.photos.length ? studio.photos.slice(0, 5) : [null]).map((photo, index) => (
@@ -162,6 +275,22 @@ export default async function StudioDetailPage({
 
             <section>
               <div className="flex items-end justify-between gap-4"><div><span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">Verified stays</span><h2 className="mt-2 text-3xl font-black">Reviews</h2></div>{average && <b className="text-xl text-acid">★ {average.toFixed(1)}</b>}</div>
+              {trust.verifiedReviewCount > 0 && (
+                <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-xl border border-zinc-900 bg-black/20 p-3 text-xs">
+                    <span className="text-zinc-600">Accuracy</span>
+                    <b className="float-right">{trust.averageAccuracy?.toFixed(1) || "—"}</b>
+                  </div>
+                  <div className="rounded-xl border border-zinc-900 bg-black/20 p-3 text-xs">
+                    <span className="text-zinc-600">Equipment</span>
+                    <b className="float-right">{trust.averageEquipment?.toFixed(1) || "—"}</b>
+                  </div>
+                  <div className="rounded-xl border border-zinc-900 bg-black/20 p-3 text-xs">
+                    <span className="text-zinc-600">Communication</span>
+                    <b className="float-right">{trust.averageCommunication?.toFixed(1) || "—"}</b>
+                  </div>
+                </div>
+              )}
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 {studio.reviews.length === 0 ? <div className="panel text-sm text-zinc-600">No verified reviews yet.</div> : studio.reviews.map((review) => (
                   <article key={review.id} className="panel">

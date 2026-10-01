@@ -273,6 +273,7 @@ export type CreateBookingInput = {
 };
 
 export type BookingQuote = {
+  studioId: string;
   roomId: string;
   roomName: string;
   hourlyRateMad: number;
@@ -436,6 +437,7 @@ export async function getBookingQuote(input: {
   );
 
   return {
+    studioId: valid.room.studioId,
     roomId: valid.room.id,
     roomName: valid.room.name,
     hourlyRateMad: valid.room.hourlyRateMad,
