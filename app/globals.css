@@ -23,8 +23,8 @@ body {
 }
 
 ::selection {
-  background: #ff385c;
-  color: #ffffff;
+  background: #D9FF43;
+  color: #111111;
 }
 
 @layer components {
@@ -2661,7 +2661,7 @@ html {
 .air-theme .bg-acid.text-black,
 .air-theme button.bg-acid,
 .air-theme a.bg-acid {
-  color: #fff !important;
+  color: #111111 !important;
 }
 
 .air-header {
@@ -2689,7 +2689,7 @@ html {
   width: fit-content;
   align-items: baseline;
   gap: 7px;
-  color: #ff385c;
+  color: #D9FF43;
 }
 
 .air-logo-mark {
@@ -2783,8 +2783,8 @@ html {
   border: 2px solid white;
   border-radius: 999px;
   padding: 1px 4px;
-  background: #ff385c;
-  color: white;
+  background: #D9FF43;
+  color: #111111;
   font-size: 8px;
   font-weight: 900;
   text-align: center;
@@ -2916,8 +2916,8 @@ html {
   gap: 7px;
   border-radius: 999px;
   padding: 0 21px;
-  background: #ff385c;
-  color: white;
+  background: #D9FF43;
+  color: #111111;
   font-size: 12px;
   font-weight: 850;
   transition: transform .2s ease, filter .2s ease;
@@ -3042,7 +3042,7 @@ html {
   height: 100%;
   place-items: center;
   background: linear-gradient(145deg,#f2f2f2,#e3e3e3);
-  color: #ff385c;
+  color: #D9FF43;
   font-size: 42px;
   font-weight: 900;
 }
@@ -3288,7 +3288,7 @@ label.air-search-segment:hover {
 }
 
 .air-check-filter input {
-  accent-color: #ff385c;
+  accent-color: #D9FF43;
 }
 
 .air-filter-footer {
@@ -3430,7 +3430,7 @@ label.air-search-segment:hover {
   width: 4px;
   height: 4px;
   border-radius: 999px;
-  background: #ff385c;
+  background: #D9FF43;
 }
 
 .air-calendar-footer {
@@ -3460,7 +3460,7 @@ label.air-search-segment:hover {
   width: 5px;
   height: 5px;
   border-radius: 999px;
-  background: #ff385c;
+  background: #D9FF43;
 }
 
 .air-auth-page {
@@ -3490,7 +3490,7 @@ label.air-search-segment:hover {
 }
 
 .air-auth-card-head > span {
-  color: #ff385c;
+  color: #D9FF43;
   font-size: 10px;
   font-weight: 850;
   letter-spacing: .12em;
@@ -3578,8 +3578,8 @@ label.air-search-segment:hover {
   width: 100%;
   border-radius: 11px;
   padding: 13px 16px;
-  background: #ff385c;
-  color: white;
+  background: #D9FF43;
+  color: #111111;
   font-size: 12px;
   font-weight: 850;
   transition: filter .2s ease, transform .2s ease;
@@ -3699,7 +3699,7 @@ label.air-search-segment:hover {
   transform: translateY(-2px);
 }
 .air-theme .studio-map-marker--bookable {
-  border-color: rgba(255,56,92,.35);
+  border-color: rgba(217,255,67,.35);
   color: #222222;
 }
 .air-theme .studio-map-marker--contact {
@@ -3724,11 +3724,11 @@ label.air-search-segment:hover {
   color: #717171;
 }
 .air-theme .studio-map-popup a {
-  color: #ff385c;
+  color: #D9FF43;
 }
 .air-theme [data-directory-card][data-map-active="true"] {
-  border-color: rgba(255,56,92,.45);
-  box-shadow: 0 0 0 1px rgba(255,56,92,.08), 0 16px 38px rgba(0,0,0,.08);
+  border-color: rgba(217,255,67,.45);
+  box-shadow: 0 0 0 1px rgba(217,255,67,.08), 0 16px 38px rgba(0,0,0,.08);
   background: #fff7f8;
 }
 .air-theme [data-directory-card][data-map-active="true"] h2 {
