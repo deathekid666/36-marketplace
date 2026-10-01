@@ -216,7 +216,7 @@ export default async function CompareStudiosPage({
     eventType: "STUDIO_COMPARE_VIEW",
     userId: user?.id,
     metadata: {
-      studioIds: studios.map((studio) => studio.id),
+      studioIds: studios.map((studio) => studio.id).join(","),
       date: date || null,
       durationHours,
     },
