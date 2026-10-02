@@ -1,5 +1,6 @@
 "use server";
 
+import { geocodeAddress } from "@/lib/geocoding";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { StudioCategory } from "@prisma/client";
@@ -11,7 +12,10 @@ import { notifyUser } from "@/lib/notifications";
 import { scheduleBookingReminders } from "@/lib/reminders";
 import { trackMarketplaceEvent } from "@/lib/analytics";
 import { STUDIO_CATEGORIES } from "@/lib/studio";
-import { casablancaDateTimeLocalToUtc } from "@/lib/time";
+import {
+  marketplaceDateTimeLocalToUtc,
+  timeZoneForCoordinates,
+} from "@/lib/time";
 
 function text(form: FormData, name: string, max = 1500) {
   return String(form.get(name) ?? "").trim().slice(0, max);
@@ -25,15 +29,40 @@ function parseCategory(value: unknown): StudioCategory {
 export async function createStudioRequestAction(form: FormData) {
   const user = await requireVerifiedRole("CREATOR");
   const category = parseCategory(form.get("category"));
-  const city = text(form, "city", 80) || "Casablanca";
+  const city = text(form, "city", 80);
   const neighborhood = text(form, "neighborhood", 100);
-  const desiredStartAt = casablancaDateTimeLocalToUtc(text(form, "desiredStartAt", 32));
+  const desiredStartValue = text(form, "desiredStartAt", 32);
   const durationMinutes = Math.round(Number(form.get("durationHours")) * 60);
   const budgetMad = Math.round(Number(form.get("budgetMad")));
   const engineerRequired = form.get("engineerRequired") === "on";
   const details = text(form, "details", 2000);
 
-  if (!desiredStartAt || desiredStartAt <= new Date() || !Number.isFinite(durationMinutes) || durationMinutes < 60 || durationMinutes > 12 * 60 || !Number.isFinite(budgetMad) || budgetMad < 50) {
+  if (!city || !Number.isFinite(durationMinutes) || durationMinutes < 60 || durationMinutes > 12 * 60 || !Number.isFinite(budgetMad) || budgetMad < 50) {
+    redirect("/creator/requests?error=invalid");
+  }
+
+  const matchingStudio = await db.studio.findFirst({
+    where: {
+      status: "VERIFIED",
+      city: { equals: city, mode: "insensitive" },
+      latitude: { not: null },
+      longitude: { not: null },
+    },
+    select: { latitude: true, longitude: true },
+  });
+  const geocoded = matchingStudio
+    ? null
+    : (await geocodeAddress(city))[0] || null;
+  const timeZone = timeZoneForCoordinates(
+    matchingStudio?.latitude ?? geocoded?.latitude,
+    matchingStudio?.longitude ?? geocoded?.longitude,
+  );
+  const desiredStartAt = marketplaceDateTimeLocalToUtc(
+    desiredStartValue,
+    timeZone,
+  );
+
+  if (!desiredStartAt || desiredStartAt <= new Date()) {
     redirect("/creator/requests?error=invalid");
   }
 

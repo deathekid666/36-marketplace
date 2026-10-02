@@ -8,7 +8,10 @@ import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/notifications";
 import { trackMarketplaceEvent } from "@/lib/analytics";
 import { validateRoomInterval } from "@/lib/booking";
-import { casablancaDateTimeLocalToUtc } from "@/lib/time";
+import {
+  marketplaceDateTimeLocalToUtc,
+  studioTimeZone,
+} from "@/lib/time";
 
 function text(form: FormData, name: string, max = 1500) {
   return String(form.get(name) ?? "").trim().slice(0, max);
@@ -18,7 +21,7 @@ export async function submitRequestOfferAction(form: FormData) {
   const user = await requireRole("STUDIO_OWNER");
   const requestId = text(form, "requestId", 80);
   const roomId = text(form, "roomId", 80);
-  const offeredStartAt = casablancaDateTimeLocalToUtc(text(form, "offeredStartAt", 32));
+  const offeredStartValue = text(form, "offeredStartAt", 32);
   const durationMinutes = Math.round(Number(form.get("durationHours")) * 60);
   const totalAmountMad = Math.round(Number(form.get("totalAmountMad")));
   const message = text(form, "message", 1000);
@@ -27,7 +30,15 @@ export async function submitRequestOfferAction(form: FormData) {
     db.studioRequest.findFirst({ where: { id: requestId, status: "OPEN", expiresAt: { gt: new Date() } } }),
     db.room.findFirst({ where: { id: roomId, active: true, studio: { ownerId: user.id, status: "VERIFIED" } }, include: { studio: true } }),
   ]);
-  if (!request || !room || !offeredStartAt || !Number.isFinite(durationMinutes) || durationMinutes < room.minimumHours * 60 || !Number.isFinite(totalAmountMad) || totalAmountMad < 1) {
+  if (!request || !room || !Number.isFinite(durationMinutes) || durationMinutes < room.minimumHours * 60 || !Number.isFinite(totalAmountMad) || totalAmountMad < 1) {
+    redirect("/owner/requests?error=invalid");
+  }
+
+  const offeredStartAt = marketplaceDateTimeLocalToUtc(
+    offeredStartValue,
+    studioTimeZone(room.studio),
+  );
+  if (!offeredStartAt || offeredStartAt <= new Date()) {
     redirect("/owner/requests?error=invalid");
   }
   if (request.category !== room.category && request.category !== room.studio.primaryCategory) redirect("/owner/requests?error=category");

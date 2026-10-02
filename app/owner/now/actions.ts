@@ -6,7 +6,10 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { validateRoomInterval } from "@/lib/booking";
-import { casablancaDateTimeLocalToUtc } from "@/lib/time";
+import {
+  marketplaceDateTimeLocalToUtc,
+  studioTimeZone,
+} from "@/lib/time";
 
 function text(form: FormData, name: string, max = 500) {
   return String(form.get(name) ?? "").trim().slice(0, max);
@@ -15,8 +18,8 @@ function text(form: FormData, name: string, max = 500) {
 export async function createFlashSlotAction(form: FormData) {
   const user = await requireRole("STUDIO_OWNER");
   const roomId = text(form, "roomId", 80);
-  const startAt = casablancaDateTimeLocalToUtc(text(form, "startAt", 32));
-  const endAt = casablancaDateTimeLocalToUtc(text(form, "endAt", 32));
+  const startValue = text(form, "startAt", 32);
+  const endValue = text(form, "endAt", 32);
   const flashRateMad = Math.round(Number(form.get("flashRateMad")));
 
   const room = await db.room.findFirst({
@@ -24,7 +27,21 @@ export async function createFlashSlotAction(form: FormData) {
     include: { studio: true },
   });
 
-  if (!room || !startAt || !endAt || endAt <= startAt || startAt <= new Date()) {
+  if (!room) {
+    redirect("/owner/now?error=invalid");
+  }
+
+  const timeZone = studioTimeZone(room.studio);
+  const startAt = marketplaceDateTimeLocalToUtc(
+    startValue,
+    timeZone,
+  );
+  const endAt = marketplaceDateTimeLocalToUtc(
+    endValue,
+    timeZone,
+  );
+
+  if (!startAt || !endAt || endAt <= startAt || startAt <= new Date()) {
     redirect("/owner/now?error=invalid");
   }
   if (!Number.isFinite(flashRateMad) || flashRateMad < 1 || flashRateMad > room.hourlyRateMad) {
