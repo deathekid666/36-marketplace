@@ -6,7 +6,7 @@ import { rejectStudioAction, setStudioCommissionAction, verifyStudioAction } fro
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/commerce";
-import { categoryLabel, DAYS, studioCompletion } from "@/lib/studio";
+import { categoryLabel, DAYS, studioCompletion, studioOnboardingChecklist } from "@/lib/studio";
 
 export default async function AdminStudioReviewPage({
   params,
@@ -30,6 +30,8 @@ export default async function AdminStudioReviewPage({
   });
   if (!studio) notFound();
   const completion = studioCompletion(studio);
+  const checklist = studioOnboardingChecklist(studio);
+  const canDecide = studio.status === "SUBMITTED" && completion >= 78 && checklist.ready;
 
   return (
     <main className="min-h-screen">
@@ -38,6 +40,9 @@ export default async function AdminStudioReviewPage({
         <Link href="/admin" className="text-xs font-bold text-zinc-500 hover:text-white">← Verification queue</Link>
         {query.review === "verified" && <div className="mt-6 rounded-xl border border-acid/30 bg-acid/[0.04] p-4 text-sm text-acid">Studio verified successfully.</div>}
         {query.review === "rejected" && <div className="mt-6 rounded-xl border border-red-900/60 bg-red-950/20 p-4 text-sm text-red-300">Changes requested from the owner.</div>}
+        {query.review === "not-ready" && <div className="mt-6 rounded-xl border border-amber-800/50 bg-amber-950/20 p-4 text-sm text-amber-200">Verification was blocked because the listing no longer meets the required onboarding checklist.</div>}
+        {query.review === "state-changed" && <div className="mt-6 rounded-xl border border-amber-800/50 bg-amber-950/20 p-4 text-sm text-amber-200">The listing changed while this decision was being processed. Reload and review the current state.</div>}
+        {query.review === "not-submitted" && <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">This listing is no longer waiting for verification.</div>}
         <div className="mt-7 flex flex-wrap items-start justify-between gap-5">
           <div><div className="flex items-center gap-3"><StudioStatusBadge status={studio.status} /><span className="text-xs text-zinc-600">{completion}% listing readiness</span></div><h1 className="mt-4 text-4xl font-black tracking-[-0.045em]">{studio.name}</h1><p className="mt-2 text-sm text-zinc-500">{categoryLabel(studio.primaryCategory)} · {studio.neighborhood}, {studio.city}</p></div>
           <div className="rounded-2xl border border-zinc-900 bg-zinc-950 p-5 text-sm"><span className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-600">Owner</span><b className="mt-2 block">{studio.owner.name}</b><span className="text-zinc-500">{studio.owner.email}</span></div>
@@ -58,8 +63,28 @@ export default async function AdminStudioReviewPage({
             <section className="sticky top-6 rounded-2xl border border-acid/20 bg-zinc-950 p-6">
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">Admin decision</span><h2 className="mt-2 text-2xl font-black">Verify supply</h2><p className="mt-3 text-sm leading-6 text-zinc-500">Verify only if the listing is complete enough to represent a real bookable studio. Rejection sends a concrete change request back to the owner.</p>
               <form action={setStudioCommissionAction} className="mt-5 rounded-xl border border-zinc-900 p-4"><input type="hidden" name="studioId" value={studio.id}/><label><span className="label">36 commission %</span><input className="field" name="commissionPercent" type="number" min="0" max="50" step="0.1" defaultValue={(studio.commissionBps/100).toFixed(1)}/></label><button className="button-dark mt-3 w-full">Save commission</button></form>
-              <form action={verifyStudioAction} className="mt-6"><input type="hidden" name="studioId" value={studio.id} /><button className="w-full rounded-xl bg-acid px-5 py-3.5 text-sm font-black text-black">✓ Verify studio</button></form>
-              <form action={rejectStudioAction} className="mt-5 space-y-3"><input type="hidden" name="studioId" value={studio.id} /><label><span className="label">Request changes</span><textarea className="field min-h-28" name="note" placeholder="What must the owner fix before approval?" /></label><button className="w-full rounded-xl border border-red-900/70 px-5 py-3 text-sm font-black text-red-300 hover:bg-red-950/30">Return for changes</button></form>
+              {studio.status === "SUBMITTED" ? (
+                <>
+                  {!canDecide && (
+                    <div className="mt-5 rounded-xl border border-amber-900/50 bg-amber-950/20 p-4 text-xs leading-5 text-amber-200">
+                      This listing is still submitted but no longer meets the full launch checklist. Verification will be blocked until the owner fixes it and resubmits.
+                    </div>
+                  )}
+                  <form action={verifyStudioAction} className="mt-6">
+                    <input type="hidden" name="studioId" value={studio.id} />
+                    <button disabled={!canDecide} className="w-full rounded-xl bg-acid px-5 py-3.5 text-sm font-black text-black disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600">✓ Verify studio</button>
+                  </form>
+                  <form action={rejectStudioAction} className="mt-5 space-y-3">
+                    <input type="hidden" name="studioId" value={studio.id} />
+                    <label><span className="label">Request changes</span><textarea className="field min-h-28" name="note" placeholder="What must the owner fix before approval?" /></label>
+                    <button className="w-full rounded-xl border border-red-900/70 px-5 py-3 text-sm font-black text-red-300 hover:bg-red-950/30">Return for changes</button>
+                  </form>
+                </>
+              ) : (
+                <div className="mt-5 rounded-xl border border-zinc-900 p-4 text-xs leading-5 text-zinc-500">
+                  This studio is <b className="text-zinc-300">{studio.status}</b>, so there is no pending verification decision.
+                </div>
+              )}
               {studio.verificationNote && <div className="mt-5 rounded-xl border border-zinc-900 p-4 text-xs leading-5 text-zinc-500"><b className="block text-zinc-300">Previous note</b>{studio.verificationNote}</div>}
             </section>
           </aside>

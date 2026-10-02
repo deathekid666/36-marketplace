@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AppHeader } from "@/components/AppHeader";
 import { StudioOnboardingWizard } from "@/components/StudioOnboardingWizard";
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedRole } from "@/lib/auth";
 import { STUDIO_CATEGORIES } from "@/lib/studio";
 
 export default async function NewStudioPage({
@@ -10,7 +10,7 @@ export default async function NewStudioPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const user = await requireRole("STUDIO_OWNER");
+  const user = await requireVerifiedRole("STUDIO_OWNER");
   const query = await searchParams;
 
   return (

@@ -119,6 +119,11 @@ export default async function StudioBuilderPage({
             Finish every required onboarding item below before submitting for verification.
           </div>
         )}
+        {query.submit === "state-changed" && (
+          <div className="mt-6 rounded-xl border border-amber-800/50 bg-amber-950/20 p-4 text-sm text-amber-200">
+            This listing changed while the submission was being processed. Review the current draft and submit it again.
+          </div>
+        )}
         {query.submit === "ok" && <div className="mt-6 rounded-xl border border-acid/30 bg-acid/[0.04] p-4 text-sm text-acid">Submitted to 36 for verification.</div>}
         {studio.verificationNote && <div className="mt-6 rounded-xl border border-red-900/60 bg-red-950/20 p-4"><b className="text-sm text-red-300">Verification note</b><p className="mt-1 text-sm leading-6 text-red-200/70">{studio.verificationNote}</p></div>}
 

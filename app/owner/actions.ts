@@ -6,6 +6,7 @@ import type { StudioCategory } from "@prisma/client";
 
 import { requireRole, requireVerifiedRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notifyUser } from "@/lib/notifications";
 import {
   currencyForCountry,
   normalizeCountryCode,
@@ -30,6 +31,12 @@ import {
 
 function text(form: FormData, name: string, max = 1000) {
   return String(form.get(name) ?? "").trim().slice(0, max);
+}
+
+function validUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 function positiveInt(value: FormDataEntryValue | null, fallback = 1) {
@@ -77,7 +84,7 @@ async function uniqueSlug(name: string) {
 }
 
 export async function createStudioAction(form: FormData) {
-  const user = await requireRole("STUDIO_OWNER");
+  const user = await requireVerifiedRole("STUDIO_OWNER");
   const name = text(form, "name", 120);
   if (name.length < 3) return;
   const slug = await uniqueSlug(name);
@@ -96,7 +103,7 @@ export async function createStudioAction(form: FormData) {
 
 
 export async function createStudioWizardAction(form: FormData) {
-  const user = await requireRole("STUDIO_OWNER");
+  const user = await requireVerifiedRole("STUDIO_OWNER");
 
   const name = text(form, "name", 120);
   const description = text(form, "description", 5000);
@@ -659,21 +666,106 @@ export async function removeBlockedSlotAction(form: FormData) {
 export async function submitStudioAction(form: FormData) {
   const user = await requireVerifiedRole("STUDIO_OWNER");
   const studioId = text(form, "studioId", 80);
-  const studio = await db.studio.findFirst({
-    where: { id: studioId, ownerId: user.id },
-    include: { rooms: true, photos: true, openingHours: true },
-  });
-  if (!studio || studio.status === "SUSPENDED") return;
-  const completion = studioCompletion(studio);
-  const checklist = studioOnboardingChecklist(studio);
-  if (completion < 78 || !checklist.ready) {
-    redirect(`/owner/studios/${studioId}?submit=incomplete`);
+
+  if (!validUuid(studioId)) {
+    redirect("/owner/studios");
   }
-  await db.studio.update({
-    where: { id: studioId },
-    data: { status: "SUBMITTED", submittedAt: new Date(), verificationNote: "" },
+
+  const result = await db.$transaction(async (tx) => {
+    await tx.$queryRaw`
+      SELECT id
+      FROM "Studio"
+      WHERE id = ${studioId}::uuid
+      FOR UPDATE
+    `;
+
+    const studio = await tx.studio.findFirst({
+      where: {
+        id: studioId,
+        ownerId: user.id,
+        status: { in: ["DRAFT", "REJECTED"] },
+      },
+      include: {
+        rooms: true,
+        photos: true,
+        openingHours: true,
+      },
+    });
+
+    if (!studio) {
+      return { ok: false as const, reason: "STATE" as const };
+    }
+
+    const completion = studioCompletion(studio);
+    const checklist = studioOnboardingChecklist(studio);
+    if (completion < 78 || !checklist.ready) {
+      return { ok: false as const, reason: "INCOMPLETE" as const };
+    }
+
+    const changed = await tx.studio.updateMany({
+      where: {
+        id: studio.id,
+        ownerId: user.id,
+        status: { in: ["DRAFT", "REJECTED"] },
+      },
+      data: {
+        status: "SUBMITTED",
+        submittedAt: new Date(),
+        verifiedAt: null,
+        verificationNote: "",
+      },
+    });
+
+    if (!changed.count) {
+      return { ok: false as const, reason: "STATE" as const };
+    }
+
+    return {
+      ok: true as const,
+      studio: {
+        id: studio.id,
+        name: studio.name,
+        slug: studio.slug,
+      },
+    };
   });
-  redirect(`/owner/studios/${studioId}?submit=ok`);
+
+  if (!result.ok) {
+    redirect(
+      "/owner/studios/" +
+        studioId +
+        "?submit=" +
+        (result.reason === "INCOMPLETE" ? "incomplete" : "state-changed"),
+    );
+  }
+
+  const admins = await db.user.findMany({
+    where: {
+      role: "ADMIN",
+      status: "ACTIVE",
+    },
+    select: { id: true },
+  });
+
+  await Promise.all(
+    admins.map((admin) =>
+      notifyUser({
+        userId: admin.id,
+        type: "STUDIO_SUBMITTED",
+        title: result.studio.name + " is ready for review",
+        body: "A studio owner submitted a listing for verification.",
+        href: "/admin/studios/" + result.studio.id,
+        email: true,
+      }).catch(() => undefined),
+    ),
+  );
+
+  revalidatePath("/admin");
+  revalidatePath("/owner");
+  revalidatePath("/owner/studios");
+  revalidatePath("/owner/studios/" + result.studio.id);
+
+  redirect("/owner/studios/" + result.studio.id + "?submit=ok");
 }
 
 
