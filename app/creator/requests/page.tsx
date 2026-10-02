@@ -2,10 +2,12 @@ import { AppHeader } from "@/components/AppHeader";
 import { acceptOfferAction, createStudioRequestAction } from "@/app/creator/actions";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { geocodeAddress } from "@/lib/geocoding";
 import { categoryLabel, STUDIO_CATEGORIES } from "@/lib/studio";
 import {
   formatMarketplaceDateTime,
   studioTimeZone,
+  timeZoneForCoordinates,
 } from "@/lib/time";
 
 export default async function CreatorRequestsPage({ searchParams }: { searchParams: Promise<{ created?: string; error?: string }> }) {
@@ -16,6 +18,46 @@ export default async function CreatorRequestsPage({ searchParams }: { searchPara
     orderBy: { createdAt: "desc" },
     include: { offers: { include: { studio: true, room: true }, orderBy: { totalAmountMad: "asc" } } },
   });
+
+  const cityTimeZones = new Map<string, string>();
+  await Promise.all(
+    [...new Set(requests.map((request) => request.city.trim()).filter(Boolean))].map(
+      async (city) => {
+        const fromOffer = requests
+          .flatMap((request) => request.offers)
+          .find(
+            (offer) =>
+              offer.studio.city.toLowerCase() === city.toLowerCase() &&
+              offer.studio.latitude != null &&
+              offer.studio.longitude != null,
+          )?.studio;
+
+        const fromStudio =
+          fromOffer ||
+          (await db.studio.findFirst({
+            where: {
+              status: "VERIFIED",
+              city: { equals: city, mode: "insensitive" },
+              latitude: { not: null },
+              longitude: { not: null },
+            },
+            select: { latitude: true, longitude: true },
+          }));
+
+        const geocoded = fromStudio
+          ? null
+          : (await geocodeAddress(city))[0] || null;
+
+        cityTimeZones.set(
+          city.toLowerCase(),
+          timeZoneForCoordinates(
+            fromStudio?.latitude ?? geocoded?.latitude,
+            fromStudio?.longitude ?? geocoded?.longitude,
+          ),
+        );
+      },
+    ),
+  );
 
   return <main className="min-h-screen"><AppHeader user={user} /><section className="mx-auto max-w-7xl px-5 py-12">
     <span className="text-xs font-bold uppercase tracking-[0.18em] text-acid">Reverse marketplace</span><h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">36 Request</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">Tell studios what you need. Verified studios can answer with a room, time and price.</p>
@@ -31,12 +73,17 @@ export default async function CreatorRequestsPage({ searchParams }: { searchPara
         <label><span className="label">Details</span><textarea className="field min-h-28" name="details" placeholder="Example: vocal recording, Auto-Tune monitoring, condenser mic…" /></label>
         <button className="w-full rounded-xl bg-acid px-5 py-3.5 text-sm font-black text-black">Publish request</button>
       </form></section>
-      <section className="space-y-4">{requests.length === 0 ? <div className="panel text-center text-sm text-zinc-600">Your requests will appear here.</div> : requests.map((request) => <article key={request.id} className="panel"><div className="flex flex-wrap items-start justify-between gap-4"><div><span className="text-[10px] font-bold uppercase tracking-[0.14em] text-acid">{categoryLabel(request.category)} · {request.status.replaceAll("_", " ")}</span><h2 className="mt-2 text-xl font-black">{request.city}{request.neighborhood ? ` · ${request.neighborhood}` : ""}</h2><p className="mt-1 text-xs text-zinc-500">{formatMarketplaceDateTime(request.desiredStartAt)} · {request.durationMinutes/60}h · budget ≤ {request.budgetMad} MAD{request.engineerRequired ? " · engineer required" : ""}</p></div><b className="text-sm text-zinc-500">{request.offers.length} offer{request.offers.length === 1 ? "" : "s"}</b></div>{request.details && <p className="mt-4 text-sm leading-6 text-zinc-500">{request.details}</p>}
+      <section className="space-y-4">{requests.length === 0 ? <div className="panel text-center text-sm text-zinc-600">Your requests will appear here.</div> : requests.map((request) => {
+        const requestTimeZone =
+          cityTimeZones.get(request.city.toLowerCase()) ||
+          undefined;
+        return <article key={request.id} className="panel"><div className="flex flex-wrap items-start justify-between gap-4"><div><span className="text-[10px] font-bold uppercase tracking-[0.14em] text-acid">{categoryLabel(request.category)} · {request.status.replaceAll("_", " ")}</span><h2 className="mt-2 text-xl font-black">{request.city}{request.neighborhood ? ` · ${request.neighborhood}` : ""}</h2><p className="mt-1 text-xs text-zinc-500">{formatMarketplaceDateTime(request.desiredStartAt, requestTimeZone)} · {request.durationMinutes/60}h · budget ≤ {request.budgetMad} MAD{request.engineerRequired ? " · engineer required" : ""}</p></div><b className="text-sm text-zinc-500">{request.offers.length} offer{request.offers.length === 1 ? "" : "s"}</b></div>{request.details && <p className="mt-4 text-sm leading-6 text-zinc-500">{request.details}</p>}
         <div className="mt-5 space-y-3">{request.offers.map((offer) => <div key={offer.id} className={`rounded-xl border p-4 ${offer.status === "ACCEPTED" ? "border-acid/40 bg-acid/[0.03]" : "border-zinc-900 bg-black/25"}`}><div className="flex flex-wrap items-start justify-between gap-4"><div><b>{offer.studio.name}</b><span className="mt-1 block text-xs text-zinc-500">{offer.room.name} · {formatMarketplaceDateTime(
           offer.offeredStartAt,
           studioTimeZone(offer.studio),
         )} · {offer.durationMinutes/60}h</span></div><div className="text-right"><b className="text-lg">{offer.totalAmountMad} MAD</b><span className={`block text-[10px] ${offer.totalAmountMad <= request.budgetMad ? "text-acid" : "text-amber-400"}`}>{offer.totalAmountMad <= request.budgetMad ? "within budget" : "over budget"}</span></div></div>{offer.message && <p className="mt-3 text-xs leading-5 text-zinc-500">{offer.message}</p>}{request.status === "OPEN" && offer.status === "ACTIVE" && offer.expiresAt > new Date() && <form action={acceptOfferAction} className="mt-4"><input type="hidden" name="offerId" value={offer.id} /><button className="rounded-lg bg-acid px-4 py-2 text-xs font-black text-black">Accept & reserve</button></form>}</div>)}</div>
-      </article>)}</section>
+      </article>;
+      })}</section>
     </div>
   </section></main>;
 }
