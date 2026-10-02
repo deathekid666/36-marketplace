@@ -55,6 +55,22 @@ mustNotInclude(
   "/studios must not silently force Casablanca as the default city",
 );
 
+mustNotInclude(
+  MAP_PAGE,
+  "{discoveryResults.map((candidate)",
+  "/studios must not render directory cards; those belong in /discover",
+);
+mustInclude(
+  MAP_PAGE,
+  "Directory only",
+  "/studios must clearly distinguish directory-only map coverage from bookable inventory",
+);
+mustInclude(
+  MAP_PAGE,
+  "Explore in Discover",
+  "an empty bookable search must hand directory exploration off to /discover",
+);
+
 // Browser map must keep using the dedicated map API and worldwide initial view.
 mustInclude(
   MAP_COMPONENT,
