@@ -15,7 +15,7 @@ export default async function OwnerRequestsPage({ searchParams }: { searchParams
   const query = await searchParams;
   const studios = await db.studio.findMany({ where: { ownerId: user.id, status: "VERIFIED" }, include: { rooms: { where: { active: true } } } });
   const cities = [...new Set(studios.map((s) => s.city))];
-  const requests = cities.length ? await db.studioRequest.findMany({ where: { status: "OPEN", expiresAt: { gt: new Date() }, OR: cities.map((city) => ({ city: { equals: city, mode: "insensitive" as const } })) }, orderBy: { desiredStartAt: "asc" }, include: { creator: { select: { name: true } }, offers: { where: { studio: { ownerId: user.id } }, include: { studio: true, room: true } } } }) : [];
+  const requests = cities.length ? await db.studioRequest.findMany({ where: { creatorId: { not: user.id }, status: "OPEN", expiresAt: { gt: new Date() }, OR: cities.map((city) => ({ city: { equals: city, mode: "insensitive" as const } })) }, orderBy: { desiredStartAt: "asc" }, include: { creator: { select: { name: true } }, offers: { where: { studio: { ownerId: user.id } }, include: { studio: true, room: true } } } }) : [];
   const eligibleRooms = studios.flatMap((s) => s.rooms.map((r) => ({ ...r, studio: s })));
 
   return <main className="min-h-screen"><AppHeader user={user} /><section className="mx-auto max-w-7xl px-5 py-12"><span className="text-xs font-bold uppercase tracking-[0.18em] text-acid">Demand inbox</span><h1 className="mt-3 text-4xl font-black tracking-[-0.045em]">36 Requests</h1><p className="mt-3 max-w-xl text-sm leading-6 text-zinc-500">Respond to creator demand using only verified, available inventory.</p>
