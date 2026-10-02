@@ -158,6 +158,7 @@ export default async function AdminPayoutsPage() {
                           name="reference"
                           className="field py-2"
                           placeholder="Transfer ref"
+                          required
                         />
                         <button className="rounded-lg bg-acid px-3 py-2 font-black text-black">
                           Mark paid
