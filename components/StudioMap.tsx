@@ -7,6 +7,8 @@ import {
 } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { formatMoney } from "@/lib/commerce";
+
 export type StudioMapPoint = {
   id: string;
   name: string;
@@ -14,6 +16,7 @@ export type StudioMapPoint = {
   lng: number;
   href: string;
   price?: number | null;
+  currency?: string | null;
   kind?: "BOOKABLE" | "CONTACT";
   category?: string | null;
   categoryKey?: string | null;
@@ -168,7 +171,7 @@ export function StudioMap({
       const meta = metaFor(point);
       const isBookable = point.kind === "BOOKABLE";
       const label = isBookable && point.price
-        ? point.price + " MAD"
+        ? formatMoney(point.price, point.currency || "USD")
         : meta.icon + " " + compactName(point.name);
       const width = Math.max(76, Math.min(170, 34 + label.length * 6.2));
 
@@ -207,7 +210,7 @@ export function StudioMap({
             ? '<span class="creative-map-rating">★ ' + point.rating.toFixed(1) + "</span>"
             : "") +
           (isBookable && point.price
-            ? '<b>' + point.price + " MAD <small>/ hour</small></b>"
+            ? '<b>' + escapeHtml(formatMoney(point.price, point.currency || "USD")) + " <small>/ hour</small></b>"
             : '<em>Contact only</em>') +
           '<div class="studio-map-popup-actions">' +
           '<a href="' + escapeHtml(point.href) + '">View details</a>' +

@@ -260,6 +260,7 @@ export default async function StudioDetailPage({
             href: "/studios/" + studio.slug,
             price:
               studio.rooms[0]?.hourlyRateMad || null,
+            currency: studio.currency,
             kind: "BOOKABLE" as const,
             category: categoryLabel(
               studio.primaryCategory,
