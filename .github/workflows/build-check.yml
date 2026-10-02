@@ -2,7 +2,7 @@ name: Build check
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/global-commerce]
   workflow_dispatch:
 
 jobs:
@@ -62,5 +62,10 @@ jobs:
           rm -rf .tmp-timezone-tests
           npx tsc scripts/test-timezones.ts lib/time.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-timezone-tests --noEmit false
           node .tmp-timezone-tests/scripts/test-timezones.js
+      - name: Test global commerce fixtures
+        run: |
+          rm -rf .tmp-commerce-tests
+          npx tsc scripts/test-global-commerce.ts lib/commerce.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-commerce-tests --noEmit false
+          node .tmp-commerce-tests/scripts/test-global-commerce.js
       - name: Build Next.js
         run: npm run build
