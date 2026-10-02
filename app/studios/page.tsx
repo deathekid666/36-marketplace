@@ -371,7 +371,7 @@ export default async function StudiosPage({
   });
 
   const favoriteIds =
-    Boolean(user && hasCreatorAccess(user.role))
+    user && hasCreatorAccess(user.role)
       ? new Set(
           (
             await db.favorite.findMany({
