@@ -144,9 +144,16 @@ export async function resolveDisputeAction(form: FormData) {
       dispute.booking.totalAmountMad,
       paidAmount,
     );
+    const committedRefund = Math.min(
+      existingRefundAmount,
+      maxRefundable,
+    );
     const refundAmount =
       status === "RESOLVED"
-        ? Math.min(requestedRefund, maxRefundable)
+        ? Math.max(
+            committedRefund,
+            Math.min(requestedRefund, maxRefundable),
+          )
         : 0;
     const additionalRefund = Math.max(
       0,
@@ -198,7 +205,18 @@ export async function resolveDisputeAction(form: FormData) {
       data: { status: nextBookingStatus },
     });
 
-    if (status === "REJECTED" || refundAmount === 0) {
+    const pendingRefunds = await tx.payment.count({
+      where: {
+        bookingId: dispute.bookingId,
+        kind: "REFUND",
+        status: "PENDING",
+      },
+    });
+
+    if (
+      (status === "REJECTED" || refundAmount === 0) &&
+      pendingRefunds === 0
+    ) {
       await tx.payout.updateMany({
         where: {
           bookingId: dispute.bookingId,
