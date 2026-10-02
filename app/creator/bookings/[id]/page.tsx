@@ -6,7 +6,7 @@ import { BookingFileUploader } from "@/components/BookingFileUploader";
 import { BookingHoldCountdown } from "@/components/BookingHoldCountdown";
 import { VerifiedReviewForm } from "@/components/VerifiedReviewForm";
 import { openDisputeAction } from "@/app/disputes/actions";
-import { cancelBookingAction, sendBookingMessageAction } from "@/app/bookings/actions";
+import { cancelBookingAction } from "@/app/bookings/actions";
 import { requireCreatorAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/commerce";
@@ -50,7 +50,6 @@ export default async function CreatorBookingDetailPage({
       studio: true,
       room: true,
       payments: { orderBy: { createdAt: "desc" } },
-      conversation: { include: { messages: { include: { sender: true }, orderBy: { createdAt: "asc" } } } },
       review: true,
       dispute: true,
       flashSlot: true,
@@ -78,19 +77,42 @@ export default async function CreatorBookingDetailPage({
     offlinePayment?.provider,
   );
 
+  const messagesHref = "/messages?booking=" + booking.id;
+  const bookingCode =
+    "36-" + booking.id.replaceAll("-", "").slice(0, 8).toUpperCase();
+  const nextStep =
+    effectiveStatus === "PENDING_DEPOSIT"
+      ? "Complete the required payment step before the hold expires."
+      : effectiveStatus === "CONFIRMED"
+        ? "Your reservation is confirmed. Keep access and setup details in the booking conversation."
+        : effectiveStatus === "COMPLETED"
+          ? booking.review
+            ? "This session is complete and your verified review is published."
+            : "This session is complete. Leave your verified review when you are ready."
+          : effectiveStatus === "CANCELLED"
+            ? "This reservation was cancelled. You can return to the studio and choose another time."
+            : effectiveStatus === "EXPIRED"
+              ? "The hold expired and the time was released. Choose another available slot."
+              : "Everything for this reservation is collected here.";
+
   return (
     <main className="min-h-screen">
       <AppHeader user={user} />
       <section className="mx-auto max-w-5xl px-5 py-10">
-        <Link href="/creator/bookings" className="text-xs font-bold text-zinc-500 hover:text-white">← Your bookings</Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link href="/creator/bookings" className="text-xs font-bold text-zinc-500 hover:text-white">
+            ← Your bookings
+          </Link>
+          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
+            Reservation hub · {bookingCode}
+          </span>
+        </div>
         <div className="mt-7 flex flex-wrap items-start justify-between gap-5">
           <div>
             <span className="text-xs font-bold uppercase tracking-[0.15em] text-acid">{effectiveStatus.replaceAll("_", " ")}</span>
             <h1 className="mt-2 text-4xl font-black tracking-[-0.045em]">{booking.studio.name}</h1>
             <p className="mt-2 text-sm text-zinc-500">{booking.room.name} · {formatMarketplaceDateTime(booking.startAt, timeZone)} → {formatMarketplaceDateTime(booking.endAt, timeZone)}</p>
-            <p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-700">
-              36-{booking.id.replaceAll("-", "").slice(0, 8).toUpperCase()}
-            </p>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">{nextStep}</p>
           </div>
           <div className="text-right">
             <b className="text-3xl">{formatMoney(booking.totalAmountMad, booking.currency)}</b>
@@ -99,22 +121,55 @@ export default async function CreatorBookingDetailPage({
           </div>
         </div>
 
-        {!["CANCELLED", "EXPIRED"].includes(effectiveStatus) && (
-          <div className="mt-5 flex flex-wrap gap-2">
-            <a
-              href={"/api/bookings/" + booking.id + "/calendar"}
-              className="button-dark"
+        <section className="mt-6 rounded-3xl border border-zinc-800 bg-zinc-950/40 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+                Reservation controls
+              </span>
+              <p className="mt-1 text-sm font-bold text-zinc-200">
+                {effectiveStatus === "COMPLETED" && !booking.review
+                  ? "Your session is finished — review or message the studio."
+                  : "Messages, calendar and studio details stay attached to this reservation."}
+              </p>
+            </div>
+            <Link
+              href={messagesHref}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-acid px-5 py-3 text-xs font-black text-black"
             >
-              Add to calendar
-            </a>
+              Message studio
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            {!["CANCELLED", "EXPIRED"].includes(effectiveStatus) ? (
+              <a
+                href={"/api/bookings/" + booking.id + "/calendar"}
+                className="rounded-xl border border-zinc-800 px-4 py-3 text-center text-xs font-black text-zinc-300 hover:border-zinc-600"
+              >
+                Add to calendar
+              </a>
+            ) : (
+              <Link
+                href={"/studios/" + booking.studio.slug}
+                className="rounded-xl border border-zinc-800 px-4 py-3 text-center text-xs font-black text-zinc-300 hover:border-zinc-600"
+              >
+                Book this studio again
+              </Link>
+            )}
             <Link
               href={"/studios/" + booking.studio.slug}
-              className="button-dark"
+              className="rounded-xl border border-zinc-800 px-4 py-3 text-center text-xs font-black text-zinc-300 hover:border-zinc-600"
             >
               Studio profile
             </Link>
+            <Link
+              href={"/bookings/" + booking.id + "/invoice"}
+              className="rounded-xl border border-zinc-800 px-4 py-3 text-center text-xs font-black text-zinc-300 hover:border-zinc-600"
+            >
+              View invoice
+            </Link>
           </div>
-        )}
+        </section>
 
         {query.booked === "1" && offlinePaymentMethod && (
           <div className="mt-6 rounded-2xl border border-emerald-800/40 bg-emerald-950/15 p-5">
@@ -263,13 +318,27 @@ export default async function CreatorBookingDetailPage({
             <section className="panel"><div className="flex items-center justify-between"><div><span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">Shared workspace</span><h2 className="mt-2 text-xl font-black">Project files</h2></div><span className="text-xs text-zinc-600">{booking.storedFiles.length} files</span></div><div className="mt-4 space-y-2">{booking.storedFiles.map((f)=><a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="flex justify-between rounded-xl border border-zinc-900 p-3 text-xs hover:border-zinc-700"><span className="text-zinc-300">{f.mimeType}</span><span className="text-zinc-600">{Math.round(Number(f.sizeBytes)/1024)} KB ↗</span></a>)}</div><BookingFileUploader bookingId={booking.id}/></section>
 
             <section className="panel">
-              <div className="flex items-center justify-between"><div><span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">Private booking chat</span><h2 className="mt-2 text-xl font-black">Message the studio</h2></div><span className="text-xs text-zinc-600">{booking.conversation?.messages.length || 0} messages</span></div>
-              <div className="mt-5 max-h-96 space-y-3 overflow-y-auto pr-1">{booking.conversation?.messages.length ? booking.conversation.messages.map((message) => <div key={message.id} className={`rounded-xl p-3 ${message.senderId === user.id ? "ml-10 bg-acid/[0.08]" : "mr-10 bg-zinc-900"}`}><div className="flex justify-between gap-3 text-[10px] text-zinc-600"><b className="text-zinc-400">{message.sender.name}</b><span>{formatMarketplaceDateTime(message.createdAt, timeZone)}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{message.body}</p></div>) : <p className="text-sm text-zinc-600">No messages yet.</p>}</div>
-              <form action={sendBookingMessageAction} className="mt-5 flex gap-2"><input type="hidden" name="bookingId" value={booking.id} /><input className="field" name="body" maxLength={2000} placeholder="Ask about access, setup, equipment…" required /><button className="rounded-xl bg-acid px-4 text-xs font-black text-black">Send</button></form>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">
+                    Booking conversation
+                  </span>
+                  <h2 className="mt-2 text-xl font-black">Keep every message in one place</h2>
+                  <p className="mt-2 max-w-xl text-xs leading-5 text-zinc-500">
+                    Access instructions, setup questions and booking updates use the same conversation in your 36 Inbox.
+                  </p>
+                </div>
+                <Link
+                  href={messagesHref}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-acid px-5 py-3 text-xs font-black text-black"
+                >
+                  Open conversation →
+                </Link>
+              </div>
             </section>
 
             {effectiveStatus === "COMPLETED" && !booking.review && (
-              <section className="panel">
+              <section id="review" className="panel scroll-mt-28">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">
@@ -288,7 +357,7 @@ export default async function CreatorBookingDetailPage({
           </div>
 
           <aside className="space-y-5">
-            <Link href={`/bookings/${booking.id}/invoice`} className="block rounded-2xl border border-zinc-800 p-4 text-center text-xs font-black text-zinc-300 hover:border-acid/40 hover:text-acid">View invoice</Link><section className="panel"><h2 className="text-lg font-black">Session summary</h2><dl className="mt-4 space-y-3 text-xs"><div><dt className="text-zinc-600">Room</dt><dd className="mt-1 font-bold">{booking.room.name}</dd></div><div><dt className="text-zinc-600">Status</dt><dd className="mt-1 font-bold">{booking.status}</dd></div><div><dt className="text-zinc-600">Source</dt><dd className="mt-1 font-bold">{booking.flashSlotId ? "36 NOW" : booking.notes.includes("36 Request") ? "36 Request" : "Marketplace"}</dd></div></dl></section>
+            <section className="panel"><h2 className="text-lg font-black">Session summary</h2><dl className="mt-4 space-y-3 text-xs"><div><dt className="text-zinc-600">Room</dt><dd className="mt-1 font-bold">{booking.room.name}</dd></div><div><dt className="text-zinc-600">Status</dt><dd className="mt-1 font-bold">{booking.status}</dd></div><div><dt className="text-zinc-600">Source</dt><dd className="mt-1 font-bold">{booking.flashSlotId ? "36 NOW" : booking.notes.includes("36 Request") ? "36 Request" : "Marketplace"}</dd></div></dl></section>
             <section className="panel"><h2 className="text-lg font-black">Support & dispute</h2>{booking.dispute ? <div className="mt-3 rounded-xl border border-amber-800/40 p-4 text-xs text-amber-200">Dispute status: <b>{booking.dispute.status}</b>{booking.dispute.resolution && <p className="mt-2 text-zinc-400">{booking.dispute.resolution}</p>}</div> : <form action={openDisputeAction} className="mt-4 space-y-3"><input type="hidden" name="bookingId" value={booking.id}/><input className="field" name="reason" placeholder="Reason" required maxLength={160}/><textarea className="field" name="details" placeholder="Explain what happened" maxLength={3000}/><button className="button-dark">Open a dispute</button></form>}</section>
             {canCancel && <section className="rounded-2xl border border-red-950 bg-red-950/10 p-5"><h2 className="font-black text-red-200">Cancel booking</h2><p className="mt-2 text-xs leading-5 text-red-200/60">Full paid deposit refund is requested automatically when cancellation happens at least {booking.studio.freeCancellationHours} hours before the session. Refund execution depends on the payment provider.</p><form action={cancelBookingAction} className="mt-4 space-y-3"><input type="hidden" name="bookingId" value={booking.id} /><textarea className="field" name="reason" placeholder="Reason (optional)" /><button className="text-xs font-black text-red-300">Cancel this booking</button></form></section>}
           </aside>

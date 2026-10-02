@@ -147,6 +147,9 @@ const BOOKING = "lib/booking.ts";
 const BOOKING_MESSAGES = "app/api/messages/[bookingId]/route.ts";
 const INQUIRY_MESSAGES = "app/api/messages/inquiry/[conversationId]/route.ts";
 
+const CREATOR_BOOKING_PAGE = "app/creator/bookings/[id]/page.tsx";
+const OWNER_BOOKING_PAGE = "app/owner/bookings/[id]/page.tsx";
+
 mustInclude(
   AUTH,
   'return role === "CREATOR" || role === "STUDIO_OWNER";',
@@ -209,9 +212,43 @@ mustInclude(
   "inquiry message recipient is derived from conversation relationship",
 );
 
+
+// Reservation pages must hand messaging to the canonical inbox instead of duplicating chat UIs.
+mustInclude(
+  CREATOR_BOOKING_PAGE,
+  'const messagesHref = "/messages?booking=" + booking.id;',
+  "creator reservation hub links to the canonical booking conversation",
+);
+mustInclude(
+  OWNER_BOOKING_PAGE,
+  'const messagesHref = "/messages?booking=" + booking.id;',
+  "host reservation hub links to the canonical booking conversation",
+);
+mustNotInclude(
+  CREATOR_BOOKING_PAGE,
+  "sendBookingMessageAction",
+  "creator booking detail must not maintain a second chat composer",
+);
+mustNotInclude(
+  OWNER_BOOKING_PAGE,
+  "sendBookingMessageAction",
+  "host booking detail must not maintain a second chat composer",
+);
+mustInclude(
+  CREATOR_BOOKING_PAGE,
+  "Reservation controls",
+  "creator booking detail remains a reservation control center",
+);
+mustInclude(
+  OWNER_BOOKING_PAGE,
+  "Reservation controls",
+  "host booking detail remains a reservation control center",
+);
+
 console.log("Critical regression guards passed:");
 console.log("- global map data/API and zoom hierarchy");
 console.log("- /studios global map integration");
 console.log("- Creator + Host single-account capability");
 console.log("- self-booking protection");
 console.log("- relationship-based messaging");
+console.log("- unified reservation hub messaging handoff");
