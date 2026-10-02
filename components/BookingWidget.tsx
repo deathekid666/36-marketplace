@@ -279,20 +279,6 @@ export function BookingWidget({
     );
   }
 
-  async function switchToCreatorAccount() {
-    setMessage("");
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch {
-      // Continue to login even if the session endpoint has a transient error.
-    }
-    router.push(
-      "/auth/login?next=" +
-        encodeURIComponent(bookingReturnPath()),
-    );
-    router.refresh();
-  }
-
   async function reviewCheckout() {
     if (!selected) {
       setCalendarOpen(true);
@@ -309,13 +295,6 @@ export function BookingWidget({
 
     if (userRole === "ADMIN") {
       router.push("/admin/test-marketplace");
-      return;
-    }
-
-    if (userRole !== "CREATOR") {
-      setMessage(
-        "You are signed in as a Studio Owner. Booking requires a Creator account.",
-      );
       return;
     }
 
@@ -745,15 +724,6 @@ export function BookingWidget({
           className="mt-4 rounded-xl border border-[#f3d59b] bg-[#fff8e8] p-4 text-xs leading-5 text-[#7a5514]"
         >
           <p>{message}</p>
-          {userRole === "STUDIO_OWNER" && (
-            <button
-              type="button"
-              onClick={switchToCreatorAccount}
-              className="mt-3 font-black text-[#222222] underline decoration-zinc-600 underline-offset-4"
-            >
-              Sign out and use a Creator account →
-            </button>
-          )}
         </div>
       )}
 
@@ -771,17 +741,13 @@ export function BookingWidget({
               ? "Log in to reserve"
               : userRole === "ADMIN"
                 ? "Open Creator test setup"
-                : userRole === "STUDIO_OWNER"
-                  ? "Creator account required"
-                  : "Review & reserve"}
+                : "Review & reserve"}
       </button>
 
       <p className="mt-3 text-center text-[10px] text-[#8a8a8a]">
         {userRole === "ADMIN"
           ? "Admin accounts do not create marketplace bookings. Use the controlled Creator test account."
-          : userRole === "STUDIO_OWNER"
-            ? "Studio Owner accounts manage inventory; Creator accounts make bookings."
-            : "Exact price and availability are verified by 36 before confirmation. No online payment is required."}
+          : "Exact price and availability are verified by 36 before confirmation. No online payment is required."}
       </p>
 
       {checkoutOpen && quote && (
