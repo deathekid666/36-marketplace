@@ -112,6 +112,7 @@ export function BookingWidget({
   rooms,
   addons = [],
   userRole,
+  isOwnStudio = false,
   depositPercent,
   initialDate,
   initialDurationHours,
@@ -125,6 +126,7 @@ export function BookingWidget({
   rooms: RoomOption[];
   addons?: AddonOption[];
   userRole?: "CREATOR" | "STUDIO_OWNER" | "ADMIN" | null;
+  isOwnStudio?: boolean;
   depositPercent: number;
   initialDate?: string;
   initialDurationHours?: number;
@@ -295,6 +297,13 @@ export function BookingWidget({
 
     if (userRole === "ADMIN") {
       router.push("/admin/test-marketplace");
+      return;
+    }
+
+    if (isOwnStudio) {
+      setMessage(
+        "This is your studio. Use the owner calendar to manage availability instead of booking it as a customer.",
+      );
       return;
     }
 
@@ -729,7 +738,7 @@ export function BookingWidget({
 
       <button
         type="button"
-        disabled={booking || quoteLoading}
+        disabled={booking || quoteLoading || isOwnStudio}
         onClick={reviewCheckout}
         className="mt-4 w-full rounded-xl bg-acid px-5 py-4 text-sm font-black text-[#111] transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-[#e6e6e6] disabled:text-[#9a9a9a]"
       >
@@ -741,13 +750,17 @@ export function BookingWidget({
               ? "Log in to reserve"
               : userRole === "ADMIN"
                 ? "Open Creator test setup"
-                : "Review & reserve"}
+                : isOwnStudio
+                  ? "Your studio"
+                  : "Review & reserve"}
       </button>
 
       <p className="mt-3 text-center text-[10px] text-[#8a8a8a]">
         {userRole === "ADMIN"
           ? "Admin accounts do not create marketplace bookings. Use the controlled Creator test account."
-          : "Exact price and availability are verified by 36 before confirmation. No online payment is required."}
+          : isOwnStudio
+            ? "Manage this listing and its availability from your host dashboard."
+            : "Exact price and availability are verified by 36 before confirmation. No online payment is required."}
       </p>
 
       {checkoutOpen && quote && (
