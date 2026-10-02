@@ -25,13 +25,19 @@ export function StudioLocationFields(props: {
   address: string;
   latitude: string;
   longitude: string;
+  countryCode?: string;
   required?: boolean;
+  onCountryCodeChange?: (countryCode: string) => void;
 }) {
   const [city, setCity] = useState(props.city);
   const [neighborhood, setNeighborhood] = useState(props.neighborhood);
   const [address, setAddress] = useState(props.address);
   const [lat, setLat] = useState(props.latitude);
   const [lng, setLng] = useState(props.longitude);
+  const [countryCode, setCountryCode] = useState(
+    String(props.countryCode || "").toUpperCase(),
+  );
+  const [country, setCountry] = useState("");
   const [results, setResults] = useState<Result[]>([]);
   const [loading, setLoading] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -190,6 +196,10 @@ export function StudioLocationFields(props: {
     setLng(String(result.longitude));
     if (result.city) setCity(result.city);
     if (result.neighborhood) setNeighborhood(result.neighborhood);
+    const nextCountryCode = String(result.countryCode || "").toUpperCase();
+    setCountryCode(nextCountryCode);
+    setCountry(String(result.country || ""));
+    props.onCountryCodeChange?.(nextCountryCode);
     setResults([]);
 
     const map = mapRef.current;
@@ -220,6 +230,19 @@ export function StudioLocationFields(props: {
 
   return (
     <>
+      <input type="hidden" name="countryCode" value={countryCode} />
+      {(countryCode || country) && (
+        <div className="flex items-center gap-2 rounded-2xl border border-[#e5e5e5] bg-[#f7f7f7] px-4 py-3 text-xs">
+          <span className="text-[#8a8a8a]">Country</span>
+          <b>{country || countryCode}</b>
+          {countryCode && (
+            <span className="rounded-full bg-white px-2 py-1 text-[9px] font-black text-[#717171]">
+              {countryCode}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <label>
           <span className="label">City</span>

@@ -75,9 +75,20 @@ export function timeZoneForCoordinates(
 }
 
 export function studioTimeZone(studio: {
+  timeZone?: string | null;
   latitude?: unknown | null;
   longitude?: unknown | null;
 }) {
+  const stored = String(studio.timeZone || "").trim();
+  if (stored) {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: stored }).format(new Date());
+      return stored;
+    } catch {
+      // Fall back to coordinate lookup below.
+    }
+  }
+
   return timeZoneForCoordinates(
     studio.latitude,
     studio.longitude,

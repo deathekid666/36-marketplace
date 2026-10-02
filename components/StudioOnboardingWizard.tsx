@@ -4,6 +4,12 @@ import { useMemo, useRef, useState } from "react";
 
 import { createStudioWizardAction } from "@/app/owner/actions";
 import { StudioLocationFields } from "@/components/StudioLocationFields";
+import {
+  currencyForCountry,
+  currencyLabel,
+  formatMoney,
+  SUPPORTED_CURRENCIES,
+} from "@/lib/commerce";
 
 type Category = { value: string; label: string };
 
@@ -49,6 +55,8 @@ export function StudioOnboardingWizard({
   const [deposit, setDeposit] = useState(30);
   const [cancellation, setCancellation] = useState(24);
   const [schedule, setSchedule] = useState("MON_SAT");
+  const [countryCode, setCountryCode] = useState("");
+  const [currency, setCurrency] = useState("USD");
 
   const progress = Math.round(((step + 1) / STEPS.length) * 100);
 
@@ -258,6 +266,11 @@ export function StudioOnboardingWizard({
                 address=""
                 latitude=""
                 longitude=""
+                countryCode={countryCode}
+                onCountryCodeChange={(nextCountryCode) => {
+                  setCountryCode(nextCountryCode);
+                  setCurrency(currencyForCountry(nextCountryCode));
+                }}
                 required
               />
               <div className="grid gap-4 sm:grid-cols-3">
@@ -276,6 +289,7 @@ export function StudioOnboardingWizard({
               </div>
               <div className="rounded-2xl bg-[#f7f7f7] p-4 text-xs leading-5 text-[#717171]">
                 The public page can show the neighborhood/city while the exact address remains part of the booking and verification workflow.
+                Country, currency and local timezone are stored with the studio so future bookings stay globally consistent.
               </div>
             </div>
           </section>
@@ -327,9 +341,25 @@ export function StudioOnboardingWizard({
                 />
               </label>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-4">
                 <label>
-                  <span className="label">MAD / hour</span>
+                  <span className="label">Currency</span>
+                  <select
+                    className="field"
+                    name="currency"
+                    value={currency}
+                    onChange={(event) => setCurrency(event.target.value)}
+                    required
+                  >
+                    {SUPPORTED_CURRENCIES.map((item) => (
+                      <option key={item} value={item}>
+                        {currencyLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="label">{currency} / hour</span>
                   <input
                     className="field"
                     name="hourlyRateMad"
@@ -509,7 +539,8 @@ export function StudioOnboardingWizard({
                   <div><span className="text-[#8a8a8a]">Studio</span><b className="mt-1 block">{name || "Untitled"}</b></div>
                   <div><span className="text-[#8a8a8a]">Category</span><b className="mt-1 block">{categories.find((item) => item.value === category)?.label || category}</b></div>
                   <div><span className="text-[#8a8a8a]">First room</span><b className="mt-1 block">{roomName}</b></div>
-                  <div><span className="text-[#8a8a8a]">Starting price</span><b className="mt-1 block">{hourlyRate} MAD/hour</b></div>
+                  <div><span className="text-[#8a8a8a]">Starting price</span><b className="mt-1 block">{formatMoney(hourlyRate, currency)}/hour</b></div>
+                  <div><span className="text-[#8a8a8a]">Currency</span><b className="mt-1 block">{currency}</b></div>
                   <div><span className="text-[#8a8a8a]">Minimum booking</span><b className="mt-1 block">{minimumHours}h</b></div>
                   <div><span className="text-[#8a8a8a]">Capacity</span><b className="mt-1 block">{capacity}</b></div>
                 </div>

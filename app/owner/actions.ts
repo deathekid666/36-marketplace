@@ -7,6 +7,11 @@ import type { StudioCategory } from "@prisma/client";
 import { requireRole, requireVerifiedRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
+  currencyForCountry,
+  normalizeCountryCode,
+  normalizeCurrency,
+} from "@/lib/commerce";
+import {
   DAYS,
   STUDIO_CATEGORIES,
   slugify,
@@ -16,6 +21,7 @@ import {
 import {
   marketplaceDateTimeLocalToUtc,
   studioTimeZone,
+  timeZoneForCoordinates,
 } from "@/lib/time";
 import {
   deleteManagedMarketplaceStudioPhotos,
@@ -81,7 +87,7 @@ export async function createStudioAction(form: FormData) {
       name,
       slug,
       primaryCategory: parseCategory(form.get("primaryCategory")),
-      city: text(form, "city", 80) || "Casablanca",
+      city: text(form, "city", 80) || studio.city,
       neighborhood: text(form, "neighborhood", 100),
     },
   });
@@ -103,6 +109,11 @@ export async function createStudioWizardAction(form: FormData) {
   const website = text(form, "website", 300);
   const latitude = optionalNumber(form.get("latitude"), -90, 90);
   const longitude = optionalNumber(form.get("longitude"), -180, 180);
+  const countryCode = normalizeCountryCode(form.get("countryCode"));
+  const requestedCurrency = normalizeCurrency(
+    form.get("currency"),
+    currencyForCountry(countryCode),
+  );
 
   const roomName = text(form, "roomName", 120);
   const roomDescription = text(form, "roomDescription", 1500);
@@ -129,6 +140,7 @@ export async function createStudioWizardAction(form: FormData) {
     !phone ||
     latitude == null ||
     longitude == null ||
+    !countryCode ||
     roomName.length < 2 ||
     hourlyRateMad < 1 ||
     minimumHours < 1 ||
@@ -194,6 +206,8 @@ export async function createStudioWizardAction(form: FormData) {
           }));
 
   const slug = await uniqueSlug(name);
+  const currency = requestedCurrency;
+  const timeZone = timeZoneForCoordinates(latitude, longitude);
 
   const studio = await db.$transaction(async (tx) => {
     const created = await tx.studio.create({
@@ -206,6 +220,9 @@ export async function createStudioWizardAction(form: FormData) {
         city,
         neighborhood,
         address,
+        countryCode,
+        currency,
+        timeZone,
         phone,
         instagram,
         website,
@@ -272,6 +289,13 @@ export async function updateStudioAction(form: FormData) {
   const studio = await ownerStudio(studioId, user.id);
   if (!studio) return;
 
+  const nextLatitude = optionalNumber(form.get("latitude"), -90, 90);
+  const nextLongitude = optionalNumber(form.get("longitude"), -180, 180);
+  const nextCountryCode =
+    normalizeCountryCode(form.get("countryCode"), studio.countryCode || "MA") ||
+    studio.countryCode ||
+    "MA";
+
   await db.studio.update({
     where: { id: studio.id },
     data: {
@@ -284,8 +308,14 @@ export async function updateStudioAction(form: FormData) {
       phone: text(form, "phone", 40),
       instagram: text(form, "instagram", 200),
       website: text(form, "website", 300),
-      latitude: optionalNumber(form.get("latitude"), -90, 90),
-      longitude: optionalNumber(form.get("longitude"), -180, 180),
+      countryCode: nextCountryCode,
+      latitude: nextLatitude,
+      longitude: nextLongitude,
+      timeZone: timeZoneForCoordinates(
+        nextLatitude,
+        nextLongitude,
+        studio.timeZone,
+      ),
       depositPercent: Math.max(0, Math.min(100, Math.round(Number(form.get("depositPercent")) || 0))),
       freeCancellationHours: Math.max(0, Math.min(336, Math.round(Number(form.get("freeCancellationHours")) || 24))),
       legalName: text(form, "legalName", 180),
