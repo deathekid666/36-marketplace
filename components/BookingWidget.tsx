@@ -583,7 +583,7 @@ export function BookingWidget({
                   <span className="text-[10px] text-[#8a8a8a]">
                     {calendarLoading
                       ? "Loading live dates…"
-                      : "120-day booking window · studio local time · {timeZone}"}
+                      : "120-day booking window · " + timeZone}
                   </span>
                 }
               />
@@ -820,7 +820,7 @@ export function BookingWidget({
               <div className="rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] p-4">
                 <span className="label">Session</span>
                 <b className="text-sm">
-                  {friendlyDate(date)} · {friendlyStartTime(quote.startAt)}
+                  {friendlyDate(date)} · {friendlyStartTime(quote.startAt, timeZone)}
                 </b>
                 <span className="mt-1 block text-[10px] text-[#8a8a8a]">
                   {quote.durationMinutes / 60}h · studio local time · {timeZone}
