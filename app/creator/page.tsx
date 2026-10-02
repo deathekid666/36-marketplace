@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
-import { requireRole } from "@/lib/auth";
+import { requireCreatorAccess } from "@/lib/auth";
 
 export default async function Page() {
-  const user = await requireRole("CREATOR");
+  const user = await requireCreatorAccess();
 
   return (
     <main className="min-h-screen bg-white text-[#222]">
