@@ -10,13 +10,14 @@ import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  casablancaDateTimeLocalToUtc,
   formatMarketplaceDateTime,
+  marketplaceDateTimeLocalToUtc,
+  studioTimeZone,
 } from "@/lib/time";
 
-function localMonthKey(date: Date) {
+function localMonthKey(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en", {
-    timeZone: "Africa/Casablanca",
+    timeZone,
     year: "numeric",
     month: "2-digit",
   }).formatToParts(date);
@@ -97,6 +98,8 @@ export default async function OwnerAvailabilityPage({
       id: true,
       name: true,
       status: true,
+      latitude: true,
+      longitude: true,
       rooms: {
         where: { active: true },
         orderBy: { name: "asc" },
@@ -127,18 +130,25 @@ export default async function OwnerAvailabilityPage({
 
   const studio =
     studios.find((item) => item.id === query.studioId) || studios[0];
+  const timeZone = studioTimeZone(studio);
   const roomId =
     query.roomId &&
     studio.rooms.some((room) => room.id === query.roomId)
       ? query.roomId
       : "ALL";
-  const month = parseMonth(query.month);
+  const month = parseMonth(query.month, timeZone);
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const firstKey = month + "-01";
   const nextMonthKey = nextMonth + "-01";
-  const rangeStart = casablancaDateTimeLocalToUtc(firstKey + "T00:00")!;
-  const rangeEnd = casablancaDateTimeLocalToUtc(nextMonthKey + "T00:00")!;
+  const rangeStart = marketplaceDateTimeLocalToUtc(
+    firstKey + "T00:00",
+    timeZone,
+  )!;
+  const rangeEnd = marketplaceDateTimeLocalToUtc(
+    nextMonthKey + "T00:00",
+    timeZone,
+  )!;
 
   const roomIds =
     roomId === "ALL"
@@ -178,8 +188,14 @@ export default async function OwnerAvailabilityPage({
   const cells = Array.from({ length: count }, (_, index) => {
     const day = index + 1;
     const key = dateKey(month, day);
-    const startAt = casablancaDateTimeLocalToUtc(key + "T00:00")!;
-    const endAt = casablancaDateTimeLocalToUtc(nextDateKey(key) + "T00:00")!;
+    const startAt = marketplaceDateTimeLocalToUtc(
+      key + "T00:00",
+      timeZone,
+    )!;
+    const endAt = marketplaceDateTimeLocalToUtc(
+      nextDateKey(key) + "T00:00",
+      timeZone,
+    )!;
     const dayBookings = bookings.filter(
       (booking) => booking.startAt < endAt && booking.endAt > startAt,
     );
@@ -220,7 +236,7 @@ export default async function OwnerAvailabilityPage({
               Availability
             </h1>
             <p className="mt-3 text-sm text-[#717171]">
-              Block dates and hours without changing your verified listing.
+              Block dates and hours in the studio’s local time without changing your verified listing.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -231,7 +247,7 @@ export default async function OwnerAvailabilityPage({
               Preview listing
             </Link>
             <Link
-              href={hrefFor({ month: localMonthKey(new Date()) })}
+              href={hrefFor({ month: localMonthKey(new Date(), timeZone) })}
               className="rounded-full border border-[#cfcfcf] px-5 py-3 text-xs font-black"
             >
               Today
@@ -332,6 +348,9 @@ export default async function OwnerAvailabilityPage({
                   <h2 className="mt-1 text-xl font-black">
                     {monthLabel(month)}
                   </h2>
+                  <span className="mt-1 block text-[9px] text-[#a3a3a3]">
+                    {timeZone}
+                  </span>
                 </div>
                 <Link
                   href={hrefFor({ month: nextMonth })}
@@ -546,8 +565,8 @@ export default async function OwnerAvailabilityPage({
                         <div>
                           <b className="text-xs">{slot.room.name}</b>
                           <span className="mt-1 block text-[10px] leading-4 text-[#8a8a8a]">
-                            {formatMarketplaceDateTime(slot.startAt)} →{" "}
-                            {formatMarketplaceDateTime(slot.endAt)}
+                            {formatMarketplaceDateTime(slot.startAt, timeZone)} →{" "}
+                            {formatMarketplaceDateTime(slot.endAt, timeZone)}
                           </span>
                           {slot.reason && (
                             <span className="mt-1 block text-[10px] text-[#a3a3a3]">

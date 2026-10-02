@@ -9,7 +9,10 @@ import { openDisputeAction } from "@/app/disputes/actions";
 import { cancelBookingAction, sendBookingMessageAction } from "@/app/bookings/actions";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { formatMarketplaceDateTime } from "@/lib/time";
+import {
+  formatMarketplaceDateTime,
+  studioTimeZone,
+} from "@/lib/time";
 import { offlinePaymentLabel } from "@/lib/offline-payment";
 import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
@@ -57,6 +60,7 @@ export default async function CreatorBookingDetailPage({
   if (!booking) notFound();
 
   const effectiveStatus = booking.status;
+  const timeZone = studioTimeZone(booking.studio);
   const deposit = booking.payments.find((p) => p.kind === "DEPOSIT");
   const balance = booking.payments.find((p) => p.kind === "BALANCE");
   const refund = booking.payments.find((p) => p.kind === "REFUND");
@@ -82,7 +86,7 @@ export default async function CreatorBookingDetailPage({
           <div>
             <span className="text-xs font-bold uppercase tracking-[0.15em] text-acid">{effectiveStatus.replaceAll("_", " ")}</span>
             <h1 className="mt-2 text-4xl font-black tracking-[-0.045em]">{booking.studio.name}</h1>
-            <p className="mt-2 text-sm text-zinc-500">{booking.room.name} · {formatMarketplaceDateTime(booking.startAt)} → {formatMarketplaceDateTime(booking.endAt)}</p>
+            <p className="mt-2 text-sm text-zinc-500">{booking.room.name} · {formatMarketplaceDateTime(booking.startAt, timeZone)} → {formatMarketplaceDateTime(booking.endAt, timeZone)}</p>
             <p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-700">
               36-{booking.id.replaceAll("-", "").slice(0, 8).toUpperCase()}
             </p>
@@ -259,7 +263,7 @@ export default async function CreatorBookingDetailPage({
 
             <section className="panel">
               <div className="flex items-center justify-between"><div><span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">Private booking chat</span><h2 className="mt-2 text-xl font-black">Message the studio</h2></div><span className="text-xs text-zinc-600">{booking.conversation?.messages.length || 0} messages</span></div>
-              <div className="mt-5 max-h-96 space-y-3 overflow-y-auto pr-1">{booking.conversation?.messages.length ? booking.conversation.messages.map((message) => <div key={message.id} className={`rounded-xl p-3 ${message.senderId === user.id ? "ml-10 bg-acid/[0.08]" : "mr-10 bg-zinc-900"}`}><div className="flex justify-between gap-3 text-[10px] text-zinc-600"><b className="text-zinc-400">{message.sender.name}</b><span>{formatMarketplaceDateTime(message.createdAt)}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{message.body}</p></div>) : <p className="text-sm text-zinc-600">No messages yet.</p>}</div>
+              <div className="mt-5 max-h-96 space-y-3 overflow-y-auto pr-1">{booking.conversation?.messages.length ? booking.conversation.messages.map((message) => <div key={message.id} className={`rounded-xl p-3 ${message.senderId === user.id ? "ml-10 bg-acid/[0.08]" : "mr-10 bg-zinc-900"}`}><div className="flex justify-between gap-3 text-[10px] text-zinc-600"><b className="text-zinc-400">{message.sender.name}</b><span>{formatMarketplaceDateTime(message.createdAt, timeZone)}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{message.body}</p></div>) : <p className="text-sm text-zinc-600">No messages yet.</p>}</div>
               <form action={sendBookingMessageAction} className="mt-5 flex gap-2"><input type="hidden" name="bookingId" value={booking.id} /><input className="field" name="body" maxLength={2000} placeholder="Ask about access, setup, equipment…" required /><button className="rounded-xl bg-acid px-4 text-xs font-black text-black">Send</button></form>
             </section>
 

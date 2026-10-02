@@ -5,7 +5,10 @@ import { releaseBookingHoldAction } from "@/app/creator/actions";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { offlinePaymentLabel } from "@/lib/offline-payment";
-import { formatMarketplaceDateTime } from "@/lib/time";
+import {
+  formatMarketplaceDateTime,
+  studioTimeZone,
+} from "@/lib/time";
 import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
 type View = "upcoming" | "past" | "cancelled" | "all";
@@ -171,7 +174,10 @@ export default async function CreatorBookingsPage({
                   {nextSession.studio.name}
                 </b>
                 <span className="mt-1 block text-xs text-[#8a8a8a]">
-                  {formatMarketplaceDateTime(nextSession.startAt)}
+                  {formatMarketplaceDateTime(
+                    nextSession.startAt,
+                    studioTimeZone(nextSession.studio),
+                  )}
                 </span>
               </>
             ) : (
@@ -275,8 +281,14 @@ export default async function CreatorBookingsPage({
                           </h2>
                           <p className="mt-1 text-sm text-[#717171]">
                             {booking.room.name} ·{" "}
-                            {formatMarketplaceDateTime(booking.startAt)} →{" "}
-                            {formatMarketplaceDateTime(booking.endAt)}
+                            {formatMarketplaceDateTime(
+                              booking.startAt,
+                              studioTimeZone(booking.studio),
+                            )} →{" "}
+                            {formatMarketplaceDateTime(
+                              booking.endAt,
+                              studioTimeZone(booking.studio),
+                            )}
                           </p>
                           {location && (
                             <p className="mt-2 text-xs text-[#8a8a8a]">

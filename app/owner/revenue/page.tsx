@@ -4,7 +4,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMad } from "@/lib/finance";
-import { formatMarketplaceDateTime } from "@/lib/time";
+import {
+  formatMarketplaceDateTime,
+  studioTimeZone,
+} from "@/lib/time";
 
 function payoutTone(status: string) {
   if (status === "PAID") return "border-emerald-200 bg-emerald-50 text-emerald-700";
@@ -32,7 +35,13 @@ export default async function OwnerRevenuePage() {
     db.payout.findMany({
       where: { studioId: { in: ids } },
       include: {
-        studio: { select: { name: true } },
+        studio: {
+          select: {
+            name: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
         booking: { select: { id: true, startAt: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -161,7 +170,10 @@ export default async function OwnerRevenuePage() {
                         </span>
                       </div>
                       <span className="mt-1 block text-[10px] text-[#8a8a8a]">
-                        Session {formatMarketplaceDateTime(payout.booking.startAt)}
+                        Session {formatMarketplaceDateTime(
+                          payout.booking.startAt,
+                          studioTimeZone(payout.studio),
+                        )}
                       </span>
                       {payout.reference && (
                         <span className="mt-1 block text-[10px] text-[#a3a3a3]">
