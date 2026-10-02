@@ -15,7 +15,6 @@ async function accessibleInquiry(
   const conversation = await db.conversation.findFirst({
     where: {
       id: conversationId,
-      bookingId: null,
       studioId: { not: null },
       creatorId: { not: null },
       ownerId: { not: null },
