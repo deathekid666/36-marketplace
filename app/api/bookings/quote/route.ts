@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, hasCreatorAccess } from "@/lib/auth";
 import {
   BookingConflictError,
   getBookingQuote,
@@ -24,9 +24,9 @@ export async function POST(request: Request) {
     );
   }
 
-  if (user.role !== "CREATOR") {
+  if (!hasCreatorAccess(user.role)) {
     return NextResponse.json(
-      { error: "Use a Creator account to book studios." },
+      { error: "This account cannot book studios." },
       { status: 403 },
     );
   }
