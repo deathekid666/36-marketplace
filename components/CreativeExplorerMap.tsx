@@ -7,6 +7,8 @@ import {
 } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { formatMoney } from "@/lib/commerce";
+
 type ExplorerFilters = {
   q?: string;
   country?: string;
@@ -44,6 +46,7 @@ type PlaceNode = {
   countryCode: string | null;
   city: string | null;
   price: number | null;
+  currency: string | null;
   rating: number | null;
   photoUrl: string | null;
 };
@@ -119,8 +122,8 @@ function popupHtml(node: PlaceNode) {
     "</p>" +
     (node.kind === "BOOKABLE" && node.price
       ? "<b>" +
-        node.price.toLocaleString("en") +
-        " MAD <small>/ hour</small></b>"
+        escapeHtml(formatMoney(node.price, node.currency || "USD")) +
+        " <small>/ hour</small></b>"
       : "<em>Contact only</em>") +
     '<div class="air-map-popup-actions">' +
     '<a href="' +
@@ -188,8 +191,8 @@ function markerSpec(L: any, node: MapNode) {
       className: "air-map-leaflet-icon",
       html:
         '<div class="air-map-price-pin"><b>' +
-        place.price.toLocaleString("en") +
-        " MAD</b></div>",
+        escapeHtml(formatMoney(place.price, place.currency || "USD")) +
+        "</b></div>",
       iconSize: [86, 34],
       iconAnchor: [43, 17],
     });

@@ -129,7 +129,7 @@ export default async function OwnerStudioPreviewPage({
                         </p>
                       </div>
                       <div className="text-right">
-                        <b className="text-xl">{room.hourlyRateMad} MAD</b>
+                        <b className="text-xl">{formatMoney(room.hourlyRateMad, studio.currency)}</b>
                         <span className="block text-[10px] text-[#8a8a8a]">/ hour</span>
                       </div>
                     </div>
@@ -174,10 +174,11 @@ export default async function OwnerStudioPreviewPage({
           <aside>
             <div className="sticky top-24 rounded-3xl border border-[#dddddd] bg-white p-6 shadow-[0_14px_40px_rgba(0,0,0,.08)]">
               <div className="flex items-baseline gap-1">
-                <b className="text-2xl">{minPrice ? minPrice + " MAD" : "No price yet"}</b>
+                <b className="text-2xl">{minPrice ? formatMoney(minPrice, studio.currency) : "No price yet"}</b>
                 {minPrice && <span className="text-xs text-[#8a8a8a]">/ hour</span>}
               </div>
               <p className="mt-2 text-xs text-[#717171]">This is how the booking card will appear around your public listing.</p>
+              <p className="mt-2 text-[10px] font-bold text-[#8a8a8a]">{studio.countryCode} · {studio.currency} · {studio.timeZone}</p>
 
               <div className="mt-5 space-y-3 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] p-4 text-xs">
                 <div className="flex justify-between gap-4"><span className="text-[#8a8a8a]">Deposit</span><b>{studio.depositPercent}%</b></div>

@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { getCurrentUser } from "@/lib/auth";
 import { getRoomAvailability } from "@/lib/booking";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import { categoryLabel } from "@/lib/studio";
 import {
   getStudioTrustMetrics,
@@ -234,7 +235,7 @@ export default async function CompareStudiosPage({
       label: "Starting price",
       render: (studio: (typeof studios)[number]) =>
         studio.rooms[0]
-          ? studio.rooms[0].hourlyRateMad + " MAD/h"
+          ? formatMoney(studio.rooms[0].hourlyRateMad, studio.currency) + "/h"
           : "—",
     },
     {

@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { formatMoney } from "@/lib/commerce";
 import type { StudioCategory } from "@prisma/client";
 
 import {
@@ -13,6 +15,7 @@ type StudioLandingItem = {
   slug: string;
   city: string;
   neighborhood: string;
+  currency: string;
   primaryCategory: StudioCategory;
   photos: Array<{ url: string; alt: string }>;
   rooms: Array<{
@@ -201,7 +204,7 @@ export function SeoStudioLanding({
                   </span>
                 </div>
                 <p className="mt-4 text-sm">
-                  <b>{minRate ? minRate + " MAD" : "—"}</b>
+                  <b>{minRate ? formatMoney(minRate, studio.currency) : "—"}</b>
                   <span className="text-zinc-600"> / hour</span>
                 </p>
               </div>

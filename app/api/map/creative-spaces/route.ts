@@ -27,6 +27,7 @@ type MapPlace = {
   countryCode: string | null;
   city: string | null;
   price: number | null;
+  currency: string | null;
   rating: number | null;
   photoUrl: string | null;
 };
@@ -392,6 +393,8 @@ export async function GET(request: Request) {
         longitude: true,
         city: true,
         address: true,
+        countryCode: true,
+        currency: true,
         rooms: {
           where: { active: true },
           orderBy: { hourlyRateMad: "asc" },
@@ -432,6 +435,7 @@ export async function GET(request: Request) {
         countryCode: candidate.countryCode,
         city: candidate.city,
         price: null,
+        currency: null,
         rating: null,
         photoUrl: null,
       };
@@ -462,9 +466,10 @@ export async function GET(request: Request) {
         kind: "BOOKABLE" as const,
         categoryKey: classification.key,
         category: creativeCategoryLabel(classification.key),
-        countryCode: inferBookableCountryCode(studio),
+        countryCode: studio.countryCode || inferBookableCountryCode(studio),
         city: studio.city,
         price: studio.rooms[0]?.hourlyRateMad || null,
+        currency: studio.currency,
         rating,
         photoUrl: studio.photos[0]?.url || null,
       };

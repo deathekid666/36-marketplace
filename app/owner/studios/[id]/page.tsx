@@ -4,6 +4,7 @@ import { StudioStatusBadge } from "@/components/StudioStatusBadge";
 import { StudioLocationFields } from "@/components/StudioLocationFields";
 import { StudioImageUploader } from "@/components/StudioImageUploader";
 import { requireOwnedStudio } from "@/lib/owner";
+import { formatMoney } from "@/lib/commerce";
 import { parseDirectoryProfileV2 } from "@/lib/discovery/profile-v2";
 import {
   categoryLabel,
@@ -183,7 +184,21 @@ export default async function StudioBuilderPage({
                   <label><span className="label">Primary category</span><select className="field" name="primaryCategory" defaultValue={studio.primaryCategory}>{STUDIO_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
                 </div>
                 <label><span className="label">Description</span><textarea className="field min-h-32 resize-y" name="description" defaultValue={studio.description} placeholder="Describe the space, sound, setup, ideal use cases and what makes it special…" /></label>
-                <StudioLocationFields city={studio.city} neighborhood={studio.neighborhood} address={studio.address} latitude={studio.latitude?.toString() || ""} longitude={studio.longitude?.toString() || ""} />
+                <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-zinc-900 bg-black/20 p-4">
+                  <span className="label">Country</span>
+                  <b className="mt-1 block text-sm">{studio.countryCode}</b>
+                </div>
+                <div className="rounded-xl border border-zinc-900 bg-black/20 p-4">
+                  <span className="label">Listing currency</span>
+                  <b className="mt-1 block text-sm">{studio.currency}</b>
+                </div>
+                <div className="rounded-xl border border-zinc-900 bg-black/20 p-4">
+                  <span className="label">Local timezone</span>
+                  <b className="mt-1 block text-sm">{studio.timeZone}</b>
+                </div>
+              </div>
+              <StudioLocationFields city={studio.city} neighborhood={studio.neighborhood} address={studio.address} latitude={studio.latitude?.toString() || ""} longitude={studio.longitude?.toString() || ""} />
                 <div className="grid gap-4 sm:grid-cols-3">
                   <label><span className="label">Phone</span><input className="field" name="phone" defaultValue={studio.phone} /></label>
                   <label><span className="label">Instagram</span><input className="field" name="instagram" defaultValue={studio.instagram} placeholder="@studio" /></label>
@@ -205,7 +220,7 @@ export default async function StudioBuilderPage({
                   <article key={room.id} className="rounded-2xl border border-zinc-900 bg-black/25 p-5">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div><span className="text-[10px] font-bold uppercase tracking-[0.14em] text-acid">{categoryLabel(room.category)}</span><h3 className="mt-1 text-xl font-black">{room.name}</h3><p className="mt-1 text-xs text-zinc-600">Capacity {room.capacity} · Minimum {room.minimumHours}h · Engineer {room.engineerIncluded ? "included" : "optional / not included"}</p></div>
-                      <div className="text-right"><b className="text-2xl font-black">{room.hourlyRateMad} MAD</b><span className="block text-[10px] uppercase tracking-[0.12em] text-zinc-600">per hour</span></div>
+                      <div className="text-right"><b className="text-2xl font-black">{formatMoney(room.hourlyRateMad, studio.currency)}</b><span className="block text-[10px] uppercase tracking-[0.12em] text-zinc-600">per hour</span></div>
                     </div>
                     {room.description && <p className="mt-4 text-sm leading-6 text-zinc-500">{room.description}</p>}
                     <div className="mt-4 flex flex-wrap gap-2">{room.equipment.length ? room.equipment.map((e) => <form key={e.id} action={removeEquipmentAction}><input type="hidden" name="studioId" value={studio.id} /><input type="hidden" name="equipmentId" value={e.id} /><button title="Remove equipment" className="rounded-full border border-zinc-800 px-3 py-1 text-[10px] text-zinc-400 hover:border-red-900 hover:text-red-300">{e.name}{e.quantity > 1 ? ` ×${e.quantity}` : ""} ×</button></form>) : <span className="text-xs text-zinc-700">No equipment added yet.</span>}</div>
@@ -235,7 +250,7 @@ export default async function StudioBuilderPage({
                   <input type="hidden" name="studioId" value={studio.id} />
                   <div className="grid gap-4 sm:grid-cols-2"><label><span className="label">Room name</span><input className="field" name="name" required placeholder="Vocal Booth A" /></label><label><span className="label">Category</span><select className="field" name="category">{STUDIO_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</select></label></div>
                   <label><span className="label">Description</span><textarea className="field" name="description" placeholder="Room acoustics, setup, ideal use…" /></label>
-                  <div className="grid gap-4 sm:grid-cols-3"><label><span className="label">MAD / hour</span><input className="field" name="hourlyRateMad" type="number" min="1" defaultValue="250" required /></label><label><span className="label">Minimum hours</span><input className="field" name="minimumHours" type="number" min="1" defaultValue="1" /></label><label><span className="label">Capacity</span><input className="field" name="capacity" type="number" min="1" defaultValue="2" /></label></div>
+                  <div className="grid gap-4 sm:grid-cols-3"><label><span className="label">{studio.currency} / hour</span><input className="field" name="hourlyRateMad" type="number" min="1" defaultValue="250" required /></label><label><span className="label">Minimum hours</span><input className="field" name="minimumHours" type="number" min="1" defaultValue="1" /></label><label><span className="label">Capacity</span><input className="field" name="capacity" type="number" min="1" defaultValue="2" /></label></div>
                   <label className="flex items-center gap-3 text-sm text-zinc-400"><input name="engineerIncluded" type="checkbox" className="h-4 w-4 accent-[#d9ff43]" /> Engineer included in the hourly rate</label>
                   <button className="button-dark">Create room</button>
                 </form>
@@ -378,8 +393,8 @@ export default async function StudioBuilderPage({
             <section className="panel">
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">04 · Add-ons</span><h2 className="mt-2 text-2xl font-black">Sell extras with the room</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-500">Examples: engineer, extra camera, lighting kit, vocal tuning, extra microphone or editing time.</p>
-              <div className="mt-5 space-y-2">{studio.addons.length === 0 ? <p className="rounded-xl border border-dashed border-zinc-800 p-4 text-xs text-zinc-600">No add-ons yet.</p> : studio.addons.map((addon) => <div key={addon.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-900 p-4"><div><b className="text-sm">{addon.name}</b><span className="mt-1 block text-xs text-zinc-600">{addon.roomId ? studio.rooms.find((r)=>r.id===addon.roomId)?.name || "Room" : "All rooms"} · {addon.unitPriceMad} MAD / {addon.unitLabel} · {addon.active ? "active" : "hidden"}</span>{addon.description && <p className="mt-1 text-xs text-zinc-500">{addon.description}</p>}</div><div className="flex gap-2"><form action={toggleStudioAddonAction}><input type="hidden" name="studioId" value={studio.id}/><input type="hidden" name="addonId" value={addon.id}/><button className="button-dark">{addon.active ? "Hide" : "Activate"}</button></form><form action={removeStudioAddonAction}><input type="hidden" name="studioId" value={studio.id}/><input type="hidden" name="addonId" value={addon.id}/><button className="rounded-lg border border-red-900/50 px-3 py-2 text-xs font-bold text-red-300">Delete</button></form></div></div>)}</div>
-              <form action={addStudioAddonAction} className="mt-5 space-y-3"><input type="hidden" name="studioId" value={studio.id}/><div className="grid gap-3 sm:grid-cols-2"><label><span className="label">Add-on name</span><input className="field" name="name" required placeholder="Recording engineer"/></label><label><span className="label">Room</span><select className="field" name="roomId"><option value="">All rooms</option>{studio.rooms.map((room)=><option key={room.id} value={room.id}>{room.name}</option>)}</select></label></div><label><span className="label">Description</span><input className="field" name="description" placeholder="What's included?"/></label><div className="grid gap-3 sm:grid-cols-2"><label><span className="label">Price MAD</span><input className="field" name="unitPriceMad" type="number" min="1" defaultValue="100" required/></label><label><span className="label">Unit</span><input className="field" name="unitLabel" defaultValue="item" placeholder="hour / item / session"/></label></div><button className="button-dark w-full">Add extra</button></form>
+              <div className="mt-5 space-y-2">{studio.addons.length === 0 ? <p className="rounded-xl border border-dashed border-zinc-800 p-4 text-xs text-zinc-600">No add-ons yet.</p> : studio.addons.map((addon) => <div key={addon.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-900 p-4"><div><b className="text-sm">{addon.name}</b><span className="mt-1 block text-xs text-zinc-600">{addon.roomId ? studio.rooms.find((r)=>r.id===addon.roomId)?.name || "Room" : "All rooms"} · {formatMoney(addon.unitPriceMad, studio.currency)} / {addon.unitLabel} · {addon.active ? "active" : "hidden"}</span>{addon.description && <p className="mt-1 text-xs text-zinc-500">{addon.description}</p>}</div><div className="flex gap-2"><form action={toggleStudioAddonAction}><input type="hidden" name="studioId" value={studio.id}/><input type="hidden" name="addonId" value={addon.id}/><button className="button-dark">{addon.active ? "Hide" : "Activate"}</button></form><form action={removeStudioAddonAction}><input type="hidden" name="studioId" value={studio.id}/><input type="hidden" name="addonId" value={addon.id}/><button className="rounded-lg border border-red-900/50 px-3 py-2 text-xs font-bold text-red-300">Delete</button></form></div></div>)}</div>
+              <form action={addStudioAddonAction} className="mt-5 space-y-3"><input type="hidden" name="studioId" value={studio.id}/><div className="grid gap-3 sm:grid-cols-2"><label><span className="label">Add-on name</span><input className="field" name="name" required placeholder="Recording engineer"/></label><label><span className="label">Room</span><select className="field" name="roomId"><option value="">All rooms</option>{studio.rooms.map((room)=><option key={room.id} value={room.id}>{room.name}</option>)}</select></label></div><label><span className="label">Description</span><input className="field" name="description" placeholder="What's included?"/></label><div className="grid gap-3 sm:grid-cols-2"><label><span className="label">Price {studio.currency}</span><input className="field" name="unitPriceMad" type="number" min="1" defaultValue="100" required/></label><label><span className="label">Unit</span><input className="field" name="unitLabel" defaultValue="item" placeholder="hour / item / session"/></label></div><button className="button-dark w-full">Add extra</button></form>
             </section>
 
             <section className="panel">
