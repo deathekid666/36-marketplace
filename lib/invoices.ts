@@ -19,6 +19,7 @@ export async function ensureInvoice(bookingId: string) {
     sellerIce: booking.studio.ice,
     buyerName: booking.creator.name,
     buyerEmail: booking.creator.email,
+    currency: booking.currency,
     subtotalMad, discountMad, taxBps, taxAmountMad, totalMad,
   }});
 }

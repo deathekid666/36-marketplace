@@ -119,7 +119,8 @@ export async function POST(request: Request) {
       metadata: {
         roomId: quote.roomId,
         durationMinutes: quote.durationMinutes,
-        totalAmountMad: quote.totalAmountMad,
+        totalAmount: quote.totalAmountMad,
+        currency: quote.currency,
       },
     });
 

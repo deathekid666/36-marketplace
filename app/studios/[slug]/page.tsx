@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { toggleFavoriteAction } from "@/app/favorites/actions";
 import { AppHeader } from "@/components/AppHeader";
 import { BookingWidget } from "@/components/BookingWidget";
+import { formatMoney } from "@/lib/commerce";
 import { StudioMap } from "@/components/StudioMap";
 import { StudioProfileGallery } from "@/components/StudioProfileGallery";
 import { StudioRecommendations } from "@/components/StudioRecommendations";
@@ -85,7 +86,7 @@ export async function generateMetadata({
       studio.name +
       " in " +
       studio.city +
-      (price ? " from " + price + " MAD/hour" : "") +
+      (price ? " from " + formatMoney(price, studio.currency) + "/hour" : "") +
       " on 36.";
 
   return {
@@ -547,7 +548,7 @@ export default async function StudioDetailPage({
                       </div>
 
                       <div className="studio-detail-room-price">
-                        <b>{room.hourlyRateMad} MAD</b>
+                        <b>{formatMoney(room.hourlyRateMad, studio.currency)}</b>
                         <span>/ hour</span>
                       </div>
                     </div>
@@ -849,7 +850,7 @@ export default async function StudioDetailPage({
                   <div className="flex items-baseline gap-1">
                     <b className="text-xl">
                       {minPrice
-                        ? minPrice + " MAD"
+                        ? formatMoney(minPrice, studio.currency)
                         : "Choose a room"}
                     </b>
                     {minPrice && (
@@ -894,6 +895,7 @@ export default async function StudioDetailPage({
                 freeCancellationHours={studio.freeCancellationHours}
                 taxRateBps={studio.taxRateBps}
                 timeZone={studioTimeZone(studio)}
+                currency={studio.currency}
                 initialDate={safeDate(query.date)}
                 initialDurationHours={safeDuration(
                   query.duration,
@@ -924,7 +926,7 @@ export default async function StudioDetailPage({
         <div className="fixed inset-x-0 bottom-[68px] z-[80] border-t border-[#ebebeb] bg-white/95 px-4 py-3 shadow-[0_-8px_28px_rgba(0,0,0,.08)] backdrop-blur lg:hidden">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div>
-              <b className="block text-sm">{minPrice ? minPrice + " MAD" : "Choose a room"}</b>
+              <b className="block text-sm">{minPrice ? formatMoney(minPrice, studio.currency) : "Choose a room"}</b>
               <span className="text-[9px] text-[#717171]">{average ? "★ " + average.toFixed(1) + " · " : ""}Verified studio</span>
             </div>
             <a href="#booking" className="rounded-xl bg-acid px-5 py-3 text-xs font-black text-[#111]">

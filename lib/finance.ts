@@ -1,3 +1,5 @@
+import { formatMoney } from "@/lib/commerce";
+
 export function bookingFinancials(totalAmountMad: number, commissionBps: number) {
   const gross = Math.max(0, Math.round(totalAmountMad));
   const bps = Math.max(0, Math.min(5000, Math.round(commissionBps)));
@@ -10,6 +12,8 @@ export function bookingFinancials(totalAmountMad: number, commissionBps: number)
   };
 }
 
+export { formatMoney };
+
 export function formatMad(value: number) {
-  return `${Math.round(value).toLocaleString("en-US")} MAD`;
+  return formatMoney(value, "MAD");
 }

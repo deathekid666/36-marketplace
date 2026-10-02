@@ -278,6 +278,7 @@ export type CreateBookingInput = {
 
 export type BookingQuote = {
   studioId: string;
+  currency: string;
   roomId: string;
   roomName: string;
   hourlyRateMad: number;
@@ -392,6 +393,7 @@ export async function getBookingQuote(input: {
 
     if (
       !candidate ||
+      candidate.currency !== valid.room.studio.currency ||
       subtotalBeforeDiscount < candidate.minBookingMad ||
       (candidate.maxUses != null &&
         candidate._count.redemptions >= candidate.maxUses)
@@ -442,6 +444,7 @@ export async function getBookingQuote(input: {
 
   return {
     studioId: valid.room.studioId,
+    currency: valid.room.studio.currency,
     roomId: valid.room.id,
     roomName: valid.room.name,
     hourlyRateMad: valid.room.hourlyRateMad,
@@ -516,7 +519,7 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
       },
       include: { _count: { select: { redemptions: true } } },
     });
-    if (!candidate || subtotalBeforeDiscount < candidate.minBookingMad || (candidate.maxUses != null && candidate._count.redemptions >= candidate.maxUses)) {
+    if (!candidate || candidate.currency !== valid.room.studio.currency || subtotalBeforeDiscount < candidate.minBookingMad || (candidate.maxUses != null && candidate._count.redemptions >= candidate.maxUses)) {
       throw new BookingConflictError("Promo code is invalid or unavailable.");
     }
     const userUses = await tx.promoRedemption.count({ where: { promoId: candidate.id, userId: input.creatorId } });
@@ -580,6 +583,9 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
           ? "CONFIRMED"
           : "PENDING_DEPOSIT",
       paymentStatus: fullyPaidAtCreation ? "PAID" : "PENDING",
+      currency: valid.room.studio.currency,
+      countryCode: valid.room.studio.countryCode,
+      timeZone: valid.room.studio.timeZone,
       startAt: input.startAt,
       endAt,
       durationMinutes: input.durationMinutes,
@@ -604,6 +610,7 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
           commissionBps: finance.commissionBps,
           commissionAmountMad,
           netAmountMad: studioNetAmountMad,
+          currency: valid.room.studio.currency,
           status: "PENDING",
         },
       },
@@ -613,12 +620,14 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
           ...(depositAmountMad > 0 ? [{
             kind: "DEPOSIT" as const,
             amountMad: depositAmountMad,
+            currency: valid.room.studio.currency,
             status: "PENDING" as const,
             provider: paymentProvider,
           }] : []),
           ...(balanceAmountMad > 0 ? [{
             kind: "BALANCE" as const,
             amountMad: balanceAmountMad,
+            currency: valid.room.studio.currency,
             status: "PENDING" as const,
             provider: paymentProvider,
           }] : []),

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { DateCalendar } from "@/components/DateCalendar";
+import { formatMoney } from "@/lib/commerce";
 import {
   OFFLINE_PAYMENT_METHODS,
   type OfflinePaymentMethod,
@@ -29,6 +30,7 @@ type AddonOption = {
 type Slot = { startAt: string; endAt: string; label: string };
 
 type BookingQuote = {
+  currency: string;
   roomId: string;
   roomName: string;
   hourlyRateMad: number;
@@ -118,6 +120,7 @@ export function BookingWidget({
   locationLabel,
   freeCancellationHours = 24,
   timeZone = "Africa/Casablanca",
+  currency = "MAD",
 }: {
   rooms: RoomOption[];
   addons?: AddonOption[];
@@ -130,6 +133,7 @@ export function BookingWidget({
   locationLabel?: string;
   freeCancellationHours?: number;
   timeZone?: string;
+  currency?: string;
 }) {
   const router = useRouter();
   const [roomId, setRoomId] = useState(rooms[0]?.id || "");
@@ -451,7 +455,7 @@ export function BookingWidget({
                     {item.engineerIncluded ? " · Engineer included" : ""}
                   </small>
                 </span>
-                <strong>{item.hourlyRateMad} MAD/h</strong>
+                <strong>{formatMoney(item.hourlyRateMad, currency)}/h</strong>
               </button>
             );
           })}
@@ -688,12 +692,12 @@ export function BookingWidget({
                         <b className="block text-xs">{addon.name}</b>
                         <span className="mt-1 block text-[10px] leading-4 text-[#8a8a8a]">
                           {addon.description ||
-                            addon.unitPriceMad + " MAD / " + addon.unitLabel}
+                            formatMoney(addon.unitPriceMad, currency) + " / " + addon.unitLabel}
                         </span>
                       </span>
                     </label>
                     <b className="text-xs text-acid">
-                      +{addon.unitPriceMad} MAD
+                      +{formatMoney(addon.unitPriceMad, currency)}
                     </b>
                   </div>
 
@@ -831,9 +835,9 @@ export function BookingWidget({
             <div className="mt-5 space-y-3 rounded-2xl border border-[#dddddd] bg-white p-4 text-sm">
               <div className="flex justify-between gap-4">
                 <span className="text-[#717171]">
-                  {quote.hourlyRateMad} MAD × {quote.durationMinutes / 60}h
+                  {formatMoney(quote.hourlyRateMad, quote.currency)} × {quote.durationMinutes / 60}h
                 </span>
-                <b>{quote.baseAmountMad} MAD</b>
+                <b>{formatMoney(quote.baseAmountMad, quote.currency)}</b>
               </div>
 
               {quote.addons.map((addon) => (
@@ -844,27 +848,27 @@ export function BookingWidget({
                   <span className="text-[#717171]">
                     {addon.name} × {addon.quantity}
                   </span>
-                  <b>{addon.totalMad} MAD</b>
+                  <b>{formatMoney(addon.totalMad, quote.currency)}</b>
                 </div>
               ))}
 
               {quote.promoDiscountMad > 0 && (
                 <div className="flex justify-between gap-4 text-emerald-600">
                   <span>Promo {quote.promoCode}</span>
-                  <b>-{quote.promoDiscountMad} MAD</b>
+                  <b>-{formatMoney(quote.promoDiscountMad, quote.currency)}</b>
                 </div>
               )}
 
               {quote.taxAmountMad > 0 && (
                 <div className="flex justify-between gap-4">
                   <span className="text-[#717171]">Tax</span>
-                  <b>{quote.taxAmountMad} MAD</b>
+                  <b>{formatMoney(quote.taxAmountMad, quote.currency)}</b>
                 </div>
               )}
 
               <div className="flex justify-between gap-4 border-t border-[#dddddd] pt-3 text-base font-black">
                 <span>Total</span>
-                <span>{quote.totalAmountMad} MAD</span>
+                <span>{formatMoney(quote.totalAmountMad, quote.currency)}</span>
               </div>
             </div>
 
@@ -935,7 +939,7 @@ export function BookingWidget({
                     Online payment due now
                   </span>
                   <b className="mt-1 block text-2xl text-acid">
-                    0 MAD
+                    {formatMoney(0, quote.currency)}
                   </b>
                 </div>
                 <div className="text-right">
@@ -943,7 +947,7 @@ export function BookingWidget({
                     Pay directly to studio
                   </span>
                   <b className="mt-1 block text-sm">
-                    {quote.totalAmountMad} MAD
+                    {formatMoney(quote.totalAmountMad, quote.currency)}
                   </b>
                 </div>
               </div>
@@ -1014,28 +1018,28 @@ export function BookingWidget({
         <div className="space-y-3 text-sm">
         <div className="flex justify-between">
           <span className="text-[#717171]">
-            {room.hourlyRateMad} MAD × {durationHours}h
+            {formatMoney(room.hourlyRateMad, currency)} × {durationHours}h
           </span>
-          <span>{roomTotal} MAD</span>
+          <span>{formatMoney(roomTotal, currency)}</span>
         </div>
 
         {addonTotal > 0 && (
           <div className="flex justify-between">
             <span className="text-[#717171]">Add-ons</span>
-            <span>{addonTotal} MAD</span>
+            <span>{formatMoney(addonTotal, currency)}</span>
           </div>
         )}
 
         {estimatedTax > 0 && (
           <div className="flex justify-between">
             <span className="text-[#717171]">Estimated tax</span>
-            <span>{estimatedTax} MAD</span>
+            <span>{formatMoney(estimatedTax, currency)}</span>
           </div>
         )}
 
         <div className="flex justify-between border-t border-[#dddddd] pt-3 font-black">
           <span>Total</span>
-          <span>{estimatedTotal} MAD</span>
+          <span>{formatMoney(estimatedTotal, currency)}</span>
         </div>
 
         <div className="flex justify-between text-xs">

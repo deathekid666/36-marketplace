@@ -14,6 +14,7 @@ import {
 } from "@/lib/rate-limit";
 import { scheduleBookingReminders } from "@/lib/reminders";
 import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
+import { formatMoney } from "@/lib/commerce";
 
 export const runtime = "nodejs";
 
@@ -148,8 +149,8 @@ export async function POST(request: Request) {
         body:
           booking.status === "PENDING_DEPOSIT"
             ? "Your slot is held while the " +
-              booking.depositAmountMad +
-              " MAD deposit is pending."
+              formatMoney(booking.depositAmountMad, booking.currency) +
+              " deposit is pending."
             : pendingProvider
               ? "Your booking is confirmed. Payment method: " +
                 pendingProvider.replaceAll("_", " ").toLowerCase() +
@@ -167,8 +168,8 @@ export async function POST(request: Request) {
           " requested " +
           booking.durationMinutes / 60 +
           "h. Total " +
-          booking.totalAmountMad +
-          " MAD.",
+          formatMoney(booking.totalAmountMad, booking.currency) +
+          "."
         href: "/owner/bookings/" + booking.id,
         email: true,
         whatsapp: true,
@@ -180,7 +181,8 @@ export async function POST(request: Request) {
         bookingId: booking.id,
         metadata: {
           source: flashSlotId ? "36_NOW" : "DIRECT",
-          totalMad: booking.totalAmountMad,
+          totalAmount: booking.totalAmountMad,
+          currency: booking.currency,
           paymentMethod: pendingProvider,
         },
       }),
@@ -193,6 +195,7 @@ export async function POST(request: Request) {
         status: booking.status,
         depositAmountMad: booking.depositAmountMad,
         totalAmountMad: booking.totalAmountMad,
+        currency: booking.currency,
         paymentStatus: booking.paymentStatus,
         paymentProvider: pendingProvider,
         expiresAt: booking.expiresAt,
