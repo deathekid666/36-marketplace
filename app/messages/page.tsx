@@ -17,7 +17,7 @@ export const metadata = {
 export default async function MessagesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ booking?: string }>;
+  searchParams: Promise<{ booking?: string; thread?: string }>;
 }) {
   const user = await requireUser();
   if (!["CREATOR", "STUDIO_OWNER"].includes(user.role)) {
@@ -26,100 +26,241 @@ export default async function MessagesPage({
 
   const query = await searchParams;
 
-  const bookings = await db.booking.findMany({
-    where:
-      user.role === "CREATOR"
-        ? { creatorId: user.id }
-        : { studio: { ownerId: user.id } },
-    include: {
-      creator: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      studio: {
-        include: {
-          owner: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          photos: {
-            orderBy: { sortOrder: "asc" },
-            take: 1,
+  const [bookings, inquiries] = await Promise.all([
+    db.booking.findMany({
+      where:
+        user.role === "CREATOR"
+          ? { creatorId: user.id }
+          : { studio: { ownerId: user.id } },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
           },
         },
-      },
-      room: true,
-      conversation: {
-        include: {
-          messages: {
-            include: {
-              sender: {
-                select: {
-                  id: true,
-                  name: true,
-                },
+        studio: {
+          include: {
+            owner: {
+              select: {
+                id: true,
+                name: true,
               },
             },
-            orderBy: { createdAt: "desc" },
-            take: 1,
+            photos: {
+              orderBy: { sortOrder: "asc" },
+              take: 1,
+            },
+          },
+        },
+        room: true,
+        conversation: {
+          include: {
+            messages: {
+              include: {
+                sender: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
           },
         },
       },
-    },
-    orderBy: { updatedAt: "desc" },
-    take: 120,
+      orderBy: { updatedAt: "desc" },
+      take: 120,
+    }),
+    db.conversation.findMany({
+      where:
+        user.role === "CREATOR"
+          ? {
+              bookingId: null,
+              creatorId: user.id,
+              studioId: { not: null },
+            }
+          : {
+              bookingId: null,
+              ownerId: user.id,
+              studioId: { not: null },
+            },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        owner: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        studio: {
+          include: {
+            photos: {
+              orderBy: { sortOrder: "asc" },
+              take: 1,
+            },
+          },
+        },
+        messages: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 120,
+    }),
+  ]);
+
+  const bookingThreads: InboxThread[] = bookings.map((booking) => {
+    const last = booking.conversation?.messages[0] || null;
+    return {
+      id: "booking:" + booking.id,
+      kind: "BOOKING",
+      bookingId: booking.id,
+      conversationId: booking.conversation?.id || null,
+      messageEndpoint: "/api/messages/" + booking.id,
+      counterpartName:
+        user.role === "CREATOR"
+          ? booking.studio.owner.name
+          : booking.creator.name,
+      studioName: booking.studio.name,
+      studioSlug: booking.studio.slug,
+      roomName: booking.room.name,
+      startAt: booking.startAt.toISOString(),
+      endAt: booking.endAt.toISOString(),
+      status: booking.status,
+      totalAmountMad: booking.totalAmountMad,
+      currency: booking.currency,
+      timeZone: studioTimeZone(booking.studio),
+      photoUrl: booking.studio.photos[0]?.url || null,
+      lastMessage: last?.body || "",
+      lastMessageAt: last?.createdAt.toISOString() || null,
+      needsReply: Boolean(last && last.senderId !== user.id),
+    };
   });
 
-  const threads: InboxThread[] = bookings
-    .map((booking) => {
-      const last = booking.conversation?.messages[0] || null;
-      return {
-        bookingId: booking.id,
+  const inquiryThreads: InboxThread[] = inquiries.flatMap((conversation) => {
+    if (!conversation.studio || !conversation.creator || !conversation.owner) {
+      return [];
+    }
+
+    const last = conversation.messages[0] || null;
+    return [
+      {
+        id: "inquiry:" + conversation.id,
+        kind: "INQUIRY" as const,
+        bookingId: null,
+        conversationId: conversation.id,
+        messageEndpoint:
+          "/api/messages/inquiry/" + conversation.id,
         counterpartName:
           user.role === "CREATOR"
-            ? booking.studio.owner.name
-            : booking.creator.name,
-        studioName: booking.studio.name,
-        studioSlug: booking.studio.slug,
-        roomName: booking.room.name,
-        startAt: booking.startAt.toISOString(),
-        endAt: booking.endAt.toISOString(),
-        status: booking.status,
-        totalAmountMad: booking.totalAmountMad,
-        currency: booking.currency,
-        timeZone: studioTimeZone(booking.studio),
-        photoUrl: booking.studio.photos[0]?.url || null,
+            ? conversation.owner.name
+            : conversation.creator.name,
+        studioName: conversation.studio.name,
+        studioSlug: conversation.studio.slug,
+        roomName: "Pre-booking inquiry",
+        startAt: null,
+        endAt: null,
+        status: "INQUIRY",
+        totalAmountMad: null,
+        currency: conversation.studio.currency,
+        timeZone: studioTimeZone(conversation.studio),
+        photoUrl: conversation.studio.photos[0]?.url || null,
         lastMessage: last?.body || "",
-        lastMessageAt: last?.createdAt.toISOString() || null,
+        lastMessageAt:
+          last?.createdAt.toISOString() ||
+          conversation.createdAt.toISOString(),
         needsReply: Boolean(last && last.senderId !== user.id),
-      };
-    })
-    .sort((a, b) => {
-      const aTime = a.lastMessageAt
-        ? new Date(a.lastMessageAt).getTime()
-        : new Date(a.startAt).getTime();
-      const bTime = b.lastMessageAt
-        ? new Date(b.lastMessageAt).getTime()
-        : new Date(b.startAt).getTime();
-      return bTime - aTime;
-    });
+      },
+    ];
+  });
 
-  const requested =
-    query.booking &&
-    threads.some((thread) => thread.bookingId === query.booking)
-      ? query.booking
+  const threads = [...bookingThreads, ...inquiryThreads].sort((a, b) => {
+    const aValue =
+      a.lastMessageAt || a.startAt || "1970-01-01T00:00:00.000Z";
+    const bValue =
+      b.lastMessageAt || b.startAt || "1970-01-01T00:00:00.000Z";
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+
+  const requestedThread =
+    query.thread && threads.some((thread) => thread.id === query.thread)
+      ? query.thread
       : null;
 
-  const initialBookingId = requested || threads[0]?.bookingId || null;
+  const legacyBookingThread =
+    query.booking &&
+    threads.some(
+      (thread) =>
+        thread.kind === "BOOKING" &&
+        thread.bookingId === query.booking,
+    )
+      ? "booking:" + query.booking
+      : null;
+
+  const initialThreadId =
+    requestedThread || legacyBookingThread || threads[0]?.id || null;
 
   let initialMessages: InboxMessage[] = [];
-  if (initialBookingId) {
+  const initialThread =
+    threads.find((thread) => thread.id === initialThreadId) || null;
+
+  if (initialThread?.kind === "BOOKING" && initialThread.bookingId) {
     const conversation = await db.conversation.findUnique({
-      where: { bookingId: initialBookingId },
+      where: { bookingId: initialThread.bookingId },
+      include: {
+        messages: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+          take: 200,
+        },
+      },
+    });
+
+    initialMessages =
+      conversation?.messages.map((message) => ({
+        id: message.id,
+        senderId: message.senderId,
+        senderName: message.sender.name,
+        body: message.body,
+        createdAt: message.createdAt.toISOString(),
+      })) || [];
+  } else if (
+    initialThread?.kind === "INQUIRY" &&
+    initialThread.conversationId
+  ) {
+    const conversation = await db.conversation.findFirst({
+      where: {
+        id: initialThread.conversationId,
+        bookingId: null,
+        OR: [
+          { creatorId: user.id },
+          { ownerId: user.id },
+        ],
+      },
       include: {
         messages: {
           include: {
@@ -158,7 +299,7 @@ export default async function MessagesPage({
             </div>
             <h1 className="mt-5 text-3xl font-black">No messages yet</h1>
             <p className="mt-3 text-sm leading-6 text-[#8a8a8a]">
-              Your booking conversations will appear here.
+              Studio inquiries and booking conversations will appear here.
             </p>
           </div>
         ) : (
@@ -166,7 +307,7 @@ export default async function MessagesPage({
             userId={user.id}
             role={user.role as "CREATOR" | "STUDIO_OWNER"}
             threads={threads}
-            initialBookingId={initialBookingId}
+            initialBookingId={initialThreadId}
             initialMessages={initialMessages}
           />
         )}
