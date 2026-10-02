@@ -229,6 +229,9 @@ model Studio {
   city                  String         @default("Casablanca")
   neighborhood          String         @default("")
   address               String         @default("")
+  countryCode           String         @default("MA") @db.VarChar(2)
+  currency              String         @default("MAD") @db.VarChar(3)
+  timeZone              String         @default("Africa/Casablanca")
   latitude              Decimal?       @db.Decimal(9, 6)
   longitude             Decimal?       @db.Decimal(9, 6)
   phone                 String         @default("")
@@ -358,6 +361,9 @@ model Booking {
   roomId             String        @db.Uuid
   status               BookingStatus @default(PENDING_DEPOSIT)
   paymentStatus        PaymentStatus @default(PENDING)
+  currency             String        @default("MAD") @db.VarChar(3)
+  countryCode          String        @default("MA") @db.VarChar(2)
+  timeZone             String        @default("Africa/Casablanca")
   startAt               DateTime      @db.Timestamp(3)
   endAt                 DateTime      @db.Timestamp(3)
   durationMinutes       Int
@@ -409,6 +415,7 @@ model Payment {
   bookingId     String       @db.Uuid
   kind         PaymentKind
   amountMad    Int
+  currency     String        @default("MAD") @db.VarChar(3)
   status       PaymentStatus @default(PENDING)
   provider      String        @default("MANUAL")
   providerRef   String        @default("")
@@ -433,6 +440,7 @@ model StudioRequest {
   desiredStartAt    DateTime          @db.Timestamp(3)
   durationMinutes   Int
   budgetMad         Int
+  currency          String            @default("MAD") @db.VarChar(3)
   engineerRequired  Boolean          @default(false)
   details           String            @default("")
   status            StudioRequestStatus @default(OPEN)
@@ -455,6 +463,7 @@ model RequestOffer {
   offeredStartAt    DateTime            @db.Timestamp(3)
   durationMinutes   Int
   totalAmountMad    Int
+  currency          String             @default("MAD") @db.VarChar(3)
   message           String             @default("")
   status            RequestOfferStatus @default(ACTIVE)
   expiresAt         DateTime            @db.Timestamp(3)
@@ -477,6 +486,7 @@ model FlashSlot {
   endAt              DateTime        @db.Timestamp(3)
   originalRateMad    Int
   flashRateMad      Int
+  currency          String          @default("MAD") @db.VarChar(3)
   status            FlashSlotStatus @default(ACTIVE)
   expiresAt          DateTime        @db.Timestamp(3)
   createdAt         DateTime        @default(now()) @db.Timestamp(3)
@@ -617,6 +627,7 @@ model Payout {
   commissionBps       Int
   commissionAmountMad Int
   netAmountMad       Int
+  currency            String       @default("MAD") @db.VarChar(3)
   status              PayoutStatus @default(PENDING)
   availableAt         DateTime?      @db.Timestamp(3)
   paidAt              DateTime?      @db.Timestamp(3)
@@ -743,6 +754,7 @@ model PromoCode {
   code          String            @unique
   discountType  PromoDiscountType
   amount        Int
+  currency      String            @default("MAD") @db.VarChar(3)
   active        Boolean           @default(true)
   startsAt      DateTime?         @db.Timestamp(3)
   endsAt        DateTime?         @db.Timestamp(3)
@@ -808,6 +820,7 @@ model Invoice {
   taxBps       Int           @default(0)
   taxAmountMad Int           @default(0)
   totalMad     Int
+  currency     String        @default("MAD") @db.VarChar(3)
   issuedAt     DateTime      @default(now()) @db.Timestamp(3)
   createdAt    DateTime      @default(now()) @db.Timestamp(3)
   booking      Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
