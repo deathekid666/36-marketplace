@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import type { StudioCategory } from "@prisma/client";
 
 import { createBookingHoldInTransaction, BookingConflictError } from "@/lib/booking";
-import { requireRole, requireVerifiedRole } from "@/lib/auth";
+import { requireCreatorAccess, requireVerifiedCreatorAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { currencyForCountry, formatMoney } from "@/lib/commerce";
 import { notifyUser } from "@/lib/notifications";
@@ -28,7 +28,7 @@ function parseCategory(value: unknown): StudioCategory {
 }
 
 export async function createStudioRequestAction(form: FormData) {
-  const user = await requireVerifiedRole("CREATOR");
+  const user = await requireVerifiedCreatorAccess();
   const category = parseCategory(form.get("category"));
   const city = text(form, "city", 80);
   const neighborhood = text(form, "neighborhood", 100);
@@ -101,7 +101,7 @@ export async function createStudioRequestAction(form: FormData) {
 }
 
 export async function acceptOfferAction(form: FormData) {
-  const user = await requireVerifiedRole("CREATOR");
+  const user = await requireVerifiedCreatorAccess();
   const offerId = text(form, "offerId", 80);
   let bookingId = "";
 
@@ -159,7 +159,7 @@ export async function acceptOfferAction(form: FormData) {
 }
 
 export async function releaseBookingHoldAction(form: FormData) {
-  const user = await requireRole("CREATOR");
+  const user = await requireCreatorAccess();
   const bookingId = text(form, "bookingId", 80);
   const booking = await db.booking.findFirst({
     where: {
