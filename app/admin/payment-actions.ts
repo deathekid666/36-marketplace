@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/commerce";
 import { notifyUser } from "@/lib/notifications";
 import { scheduleBookingReminders } from "@/lib/reminders";
+import { reconcileConfirmedRefund } from "@/lib/refunds";
 
 function text(form: FormData, name: string, max = 1000) {
   return String(form.get(name) ?? "").trim().slice(0, max);
@@ -128,8 +129,8 @@ export async function confirmRefundAction(form: FormData) {
   });
   if (!refund) redirect("/admin/payments?error=missing");
 
-  await db.$transaction([
-    db.payment.update({
+  await db.$transaction(async (tx) => {
+    await tx.payment.update({
       where: { id: refund.id },
       data: {
         status: "REFUNDED",
@@ -137,15 +138,25 @@ export async function confirmRefundAction(form: FormData) {
         confirmedAt: new Date(),
         confirmedById: admin.id,
       },
-    }),
-    db.booking.update({
-      where: { id: refund.bookingId },
-      data: { paymentStatus: "REFUNDED" },
-    }),
-  ]);
+    });
 
-  await notifyUser({ userId: refund.booking.creatorId, type: "REFUND_CONFIRMED", title: "Refund confirmed", body: `${formatMoney(refund.amountMad, refund.currency)} refund for ${refund.booking.studio.name} has been marked completed.`, href: `/creator/bookings/${refund.bookingId}`, email: true, whatsapp: true });
+    await reconcileConfirmedRefund(tx, refund.booking);
+  });
+
+  await notifyUser({
+    userId: refund.booking.creatorId,
+    type: "REFUND_CONFIRMED",
+    title: "Refund confirmed",
+    body:
+      `${formatMoney(refund.amountMad, refund.currency)} refund for ${refund.booking.studio.name} has been marked completed.`,
+    href: `/creator/bookings/${refund.bookingId}`,
+    email: true,
+    whatsapp: true,
+  });
   revalidatePath("/admin/payments");
+  revalidatePath("/admin/payouts");
+  revalidatePath("/owner/revenue");
   revalidatePath(`/creator/bookings/${refund.bookingId}`);
+  revalidatePath(`/owner/bookings/${refund.bookingId}`);
   redirect("/admin/payments?refunded=1");
 }

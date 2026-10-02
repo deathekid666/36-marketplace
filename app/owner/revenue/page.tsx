@@ -28,17 +28,20 @@ type MoneyRow = {
 };
 
 function currencySummary(
-  bookings: Array<{
-    status: string;
+  bookingTotals: Array<{
     currency: string;
-    totalAmountMad: number;
-    commissionAmountMad: number;
-    studioNetAmountMad: number;
+    _sum: {
+      totalAmountMad: number | null;
+      commissionAmountMad: number | null;
+      studioNetAmountMad: number | null;
+    };
   }>,
-  payouts: Array<{
-    status: string;
+  payoutTotals: Array<{
     currency: string;
-    netAmountMad: number;
+    status: string;
+    _sum: {
+      netAmountMad: number | null;
+    };
   }>,
 ) {
   const rows = new Map<string, MoneyRow>();
@@ -61,20 +64,20 @@ function currencySummary(
     return created;
   };
 
-  for (const booking of bookings) {
-    if (!["CONFIRMED", "COMPLETED"].includes(booking.status)) continue;
+  for (const booking of bookingTotals) {
     const row = get(booking.currency);
-    row.gross += booking.totalAmountMad;
-    row.fee += booking.commissionAmountMad;
-    row.net += booking.studioNetAmountMad;
+    row.gross += booking._sum.totalAmountMad || 0;
+    row.fee += booking._sum.commissionAmountMad || 0;
+    row.net += booking._sum.studioNetAmountMad || 0;
   }
 
-  for (const payout of payouts) {
+  for (const payout of payoutTotals) {
     const row = get(payout.currency);
-    if (payout.status === "PENDING") row.pending += payout.netAmountMad;
-    if (payout.status === "ELIGIBLE") row.eligible += payout.netAmountMad;
-    if (payout.status === "PAID") row.paid += payout.netAmountMad;
-    if (payout.status === "HOLD") row.hold += payout.netAmountMad;
+    const value = payout._sum.netAmountMad || 0;
+    if (payout.status === "PENDING") row.pending += value;
+    if (payout.status === "ELIGIBLE") row.eligible += value;
+    if (payout.status === "PAID") row.paid += value;
+    if (payout.status === "HOLD") row.hold += value;
   }
 
   return [...rows.values()].sort((a, b) =>
@@ -91,7 +94,14 @@ export default async function OwnerRevenuePage() {
   });
   const ids = studios.map((studio) => studio.id);
 
-  const [bookings, payouts] = await Promise.all([
+  const [
+    bookings,
+    payouts,
+    bookingTotals,
+    payoutTotals,
+    unpaidBookingCount,
+    payoutCount,
+  ] = await Promise.all([
     db.booking.findMany({
       where: { studioId: { in: ids } },
       include: { studio: true, room: true },
@@ -114,14 +124,36 @@ export default async function OwnerRevenuePage() {
       orderBy: { createdAt: "desc" },
       take: 250,
     }),
+    db.booking.groupBy({
+      by: ["currency"],
+      where: {
+        studioId: { in: ids },
+        status: { in: ["CONFIRMED", "COMPLETED"] },
+      },
+      _sum: {
+        totalAmountMad: true,
+        commissionAmountMad: true,
+        studioNetAmountMad: true,
+      },
+    }),
+    db.payout.groupBy({
+      by: ["currency", "status"],
+      where: { studioId: { in: ids } },
+      _sum: { netAmountMad: true },
+    }),
+    db.booking.count({
+      where: {
+        studioId: { in: ids },
+        paymentStatus: { in: ["PENDING", "PARTIALLY_PAID"] },
+        status: { notIn: ["CANCELLED", "EXPIRED"] },
+      },
+    }),
+    db.payout.count({
+      where: { studioId: { in: ids } },
+    }),
   ]);
 
-  const summaries = currencySummary(bookings, payouts);
-  const unpaidBookings = bookings.filter(
-    (booking) =>
-      ["PENDING", "PARTIALLY_PAID"].includes(booking.paymentStatus) &&
-      !["CANCELLED", "EXPIRED"].includes(booking.status),
-  );
+  const summaries = currencySummary(bookingTotals, payoutTotals);
 
   return (
     <main className="min-h-screen bg-[#f7f7f7] text-[#222]">
@@ -221,7 +253,7 @@ export default async function OwnerRevenuePage() {
 
         <div className="mt-6 rounded-2xl border border-[#e7e7e7] bg-white p-5">
           <span className="label">Awaiting studio collection</span>
-          <b className="mt-2 block text-2xl">{unpaidBookings.length}</b>
+          <b className="mt-2 block text-2xl">{unpaidBookingCount}</b>
           <p className="mt-1 text-[10px] text-[#8a8a8a]">
             Offline or partially paid bookings needing payment completion.
           </p>
@@ -235,7 +267,7 @@ export default async function OwnerRevenuePage() {
                 <h2 className="text-xl font-black">Studio transfers</h2>
               </div>
               <span className="text-[10px] text-[#8a8a8a]">
-                {payouts.length} records
+                {Math.min(40, payouts.length)} shown · {payoutCount} total
               </span>
             </div>
 
@@ -330,6 +362,10 @@ export default async function OwnerRevenuePage() {
               )}
             </div>
           </section>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-[#e7e7e7] bg-white p-5 text-xs leading-6 text-[#717171]">
+          Dashboard totals and collection counts include the full booking and payout history. The detailed lists above intentionally show only the most recent records.
         </div>
 
         <div className="mt-6 rounded-2xl border border-[#e7e7e7] bg-white p-5 text-xs leading-6 text-[#717171]">

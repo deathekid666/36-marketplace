@@ -123,12 +123,17 @@ export async function cancelBookingAction(form: FormData) {
           where: { id: payout.id },
         });
       } else {
-        const commissionAmountMad = Math.min(
-          retainedGrossMad,
-          Math.round(
-            (retainedGrossMad * payout.commissionBps) / 10000,
-          ),
-        );
+        const commissionAmountMad =
+          booking.totalAmountMad > 0
+            ? Math.min(
+                retainedGrossMad,
+                Math.round(
+                  (booking.commissionAmountMad *
+                    retainedGrossMad) /
+                    booking.totalAmountMad,
+                ),
+              )
+            : 0;
         await tx.payout.update({
           where: { id: payout.id },
           data: {
@@ -146,10 +151,20 @@ export async function cancelBookingAction(form: FormData) {
     }
 
     if (refundAmountMad > 0) {
-      const existing = await tx.payment.findFirst({
-        where: { bookingId: booking.id, kind: "REFUND", status: { in: ["PENDING", "REFUNDED"] } },
+      const existingRefunds = await tx.payment.aggregate({
+        where: {
+          bookingId: booking.id,
+          kind: "REFUND",
+          status: { in: ["PENDING", "REFUNDED"] },
+        },
+        _sum: { amountMad: true },
       });
-      if (!existing) {
+      const additionalRefund = Math.max(
+        0,
+        refundAmountMad - (existingRefunds._sum.amountMad || 0),
+      );
+
+      if (additionalRefund > 0) {
         const paidCharge =
           paidCharges.find((payment) => payment.kind === "DEPOSIT") ||
           paidCharges[0];
@@ -157,7 +172,7 @@ export async function cancelBookingAction(form: FormData) {
           data: {
             bookingId: booking.id,
             kind: "REFUND",
-            amountMad: refundAmountMad,
+            amountMad: additionalRefund,
             currency: booking.currency,
             status: "PENDING",
             provider:
