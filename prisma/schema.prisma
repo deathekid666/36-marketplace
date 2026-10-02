@@ -187,6 +187,8 @@ model User {
   confirmedPayments       Payment[]       @relation("PaymentConfirmedBy")
   cancelledBookings       Booking[]       @relation("BookingCancelledBy")
   messages                Message[]
+  creatorConversations    Conversation[] @relation("ConversationCreator")
+  ownerConversations      Conversation[] @relation("ConversationOwner")
   reviews                 Review[]
   favorites               Favorite[]
   notifications           Notification[]
@@ -264,6 +266,7 @@ model Studio {
   marketplaceEvents     MarketplaceEvent[]
   storedFiles           StoredFile[]
   promoCodes            PromoCode[]
+  conversations         Conversation[] @relation("ConversationStudio")
   discoveryCandidate    CandidateStudio?
 
   @@index([ownerId])
@@ -501,10 +504,21 @@ model FlashSlot {
 
 model Conversation {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  bookingId String    @unique @db.Uuid
+  bookingId String?   @unique @db.Uuid
+  studioId  String?   @db.Uuid
+  creatorId String?   @db.Uuid
+  ownerId   String?   @db.Uuid
   createdAt DateTime  @default(now()) @db.Timestamp(3)
-  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  updatedAt DateTime  @updatedAt @db.Timestamp(3)
+  booking   Booking?  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  studio    Studio?   @relation("ConversationStudio", fields: [studioId], references: [id], onDelete: Cascade)
+  creator   User?     @relation("ConversationCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  owner     User?     @relation("ConversationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   messages  Message[]
+
+  @@index([studioId, updatedAt])
+  @@index([creatorId, updatedAt])
+  @@index([ownerId, updatedAt])
 }
 
 model Message {
