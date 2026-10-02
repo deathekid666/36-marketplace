@@ -372,12 +372,16 @@ export async function replyToReviewAction(form: FormData) {
     where: { id: reviewId, studio: { ownerId: user.id } },
     include: { studio: { select: { slug: true, name: true } } },
   });
-  if (!review || review.ownerReply.trim() || !reply) return;
+  if (!review || !reply) return;
 
-  await db.review.update({
-    where: { id: review.id },
+  const published = await db.review.updateMany({
+    where: {
+      id: review.id,
+      ownerReply: "",
+    },
     data: { ownerReply: reply },
   });
+  if (!published.count) return;
 
   await notifyUser({
     userId: review.creatorId,
