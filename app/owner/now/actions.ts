@@ -64,6 +64,7 @@ export async function createFlashSlotAction(form: FormData) {
         endAt,
         originalRateMad: room.hourlyRateMad,
         flashRateMad,
+        currency: room.studio.currency,
         expiresAt: startAt,
       },
     });

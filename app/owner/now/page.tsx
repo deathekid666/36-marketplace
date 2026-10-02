@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import {
   formatMarketplaceDateTime,
   studioTimeZone,
@@ -51,10 +52,10 @@ export default async function OwnerNowPage({
             <p className="mt-3 text-sm text-zinc-600">You need at least one active room in a verified studio before publishing 36 NOW inventory.</p>
           ) : (
             <form action={createFlashSlotAction} className="mt-5 grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr_160px_auto]">
-              <label><span className="label">Room</span><select className="field" name="roomId">{rooms.map((room) => <option key={room.id} value={room.id}>{room.studio.name} · {room.name} · {room.hourlyRateMad} MAD/h</option>)}</select></label>
+              <label><span className="label">Room</span><select className="field" name="roomId">{rooms.map((room) => <option key={room.id} value={room.id}>{room.studio.name} · {room.name} · {formatMoney(room.hourlyRateMad, room.studio.currency)}/h</option>)}</select></label>
               <label><span className="label">Starts · studio local time</span><input className="field" type="datetime-local" name="startAt" required /></label>
               <label><span className="label">Ends · studio local time</span><input className="field" type="datetime-local" name="endAt" required /></label>
-              <label><span className="label">Flash MAD/h</span><input className="field" type="number" min="1" name="flashRateMad" placeholder="180" required /></label>
+              <label><span className="label">Flash price / hour</span><input className="field" type="number" min="1" name="flashRateMad" placeholder="Uses selected studio currency" required /></label>
               <button className="self-end rounded-xl bg-acid px-4 py-3.5 text-xs font-black text-black">Publish</button>
             </form>
           )}
@@ -65,7 +66,7 @@ export default async function OwnerNowPage({
           <div className="mt-4 space-y-3">
             {slots.length === 0 ? <div className="panel text-sm text-zinc-600">No 36 NOW slots yet.</div> : slots.map((slot) => {
               const effective = slot.status === "ACTIVE" && slot.expiresAt <= new Date() ? "EXPIRED" : slot.status;
-              return <article key={slot.id} className="panel"><div className="flex flex-wrap items-center justify-between gap-4"><div><span className="text-[10px] font-bold uppercase tracking-[0.14em] text-acid">{effective}</span><h3 className="mt-2 font-black">{slot.room.studio.name} · {slot.room.name}</h3><p className="mt-1 text-xs text-zinc-500">{formatMarketplaceDateTime(slot.startAt, studioTimeZone(slot.room.studio))} → {formatMarketplaceDateTime(slot.endAt, studioTimeZone(slot.room.studio))}</p><span className="mt-1 block text-[9px] text-zinc-700">{studioTimeZone(slot.room.studio)}</span></div><div className="text-right"><b className="text-xl text-acid">{slot.flashRateMad} MAD/h</b><span className="block text-xs text-zinc-600 line-through">{slot.originalRateMad} MAD/h</span></div></div>{effective === "ACTIVE" && <form action={cancelFlashSlotAction} className="mt-4"><input type="hidden" name="flashSlotId" value={slot.id} /><button className="text-xs font-bold text-zinc-500 hover:text-red-300">Cancel NOW slot</button></form>}</article>;
+              return <article key={slot.id} className="panel"><div className="flex flex-wrap items-center justify-between gap-4"><div><span className="text-[10px] font-bold uppercase tracking-[0.14em] text-acid">{effective}</span><h3 className="mt-2 font-black">{slot.room.studio.name} · {slot.room.name}</h3><p className="mt-1 text-xs text-zinc-500">{formatMarketplaceDateTime(slot.startAt, studioTimeZone(slot.room.studio))} → {formatMarketplaceDateTime(slot.endAt, studioTimeZone(slot.room.studio))}</p><span className="mt-1 block text-[9px] text-zinc-700">{studioTimeZone(slot.room.studio)}</span></div><div className="text-right"><b className="text-xl text-acid">{formatMoney(slot.flashRateMad, slot.currency)}/h</b><span className="block text-xs text-zinc-600 line-through">{formatMoney(slot.originalRateMad, slot.currency)}/h</span></div></div>{effective === "ACTIVE" && <form action={cancelFlashSlotAction} className="mt-4"><input type="hidden" name="flashSlotId" value={slot.id} /><button className="text-xs font-bold text-zinc-500 hover:text-red-300">Cancel NOW slot</button></form>}</article>;
             })}
           </div>
         </section>

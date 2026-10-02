@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import { notifyUser } from "@/lib/notifications";
 import { trackMarketplaceEvent } from "@/lib/analytics";
 import { validateRoomInterval } from "@/lib/booking";
@@ -41,6 +42,7 @@ export async function submitRequestOfferAction(form: FormData) {
   if (!offeredStartAt || offeredStartAt <= new Date()) {
     redirect("/owner/requests?error=invalid");
   }
+  if (request.currency !== room.studio.currency) redirect("/owner/requests?error=currency");
   if (request.category !== room.category && request.category !== room.studio.primaryCategory) redirect("/owner/requests?error=category");
   if (request.engineerRequired && !room.engineerIncluded) redirect("/owner/requests?error=engineer");
   if (request.city.toLowerCase() !== room.studio.city.toLowerCase()) redirect("/owner/requests?error=city");
@@ -58,6 +60,7 @@ export async function submitRequestOfferAction(form: FormData) {
       offeredStartAt,
       durationMinutes,
       totalAmountMad,
+      currency: room.studio.currency,
       message,
       expiresAt: request.expiresAt,
     },
@@ -66,6 +69,7 @@ export async function submitRequestOfferAction(form: FormData) {
       offeredStartAt,
       durationMinutes,
       totalAmountMad,
+      currency: room.studio.currency,
       message,
       status: "ACTIVE",
       expiresAt: request.expiresAt,
@@ -73,8 +77,8 @@ export async function submitRequestOfferAction(form: FormData) {
   });
 
   await Promise.all([
-    notifyUser({ userId: request.creatorId, type: "NEW_OFFER", title: `New studio offer`, body: `${room.studio.name} offered ${totalAmountMad} MAD for your 36 Request.`, href: "/creator/requests", email: true, whatsapp: true }),
-    trackMarketplaceEvent({ eventType: "OFFER_CREATED", userId: user.id, studioId: room.studioId, metadata: { requestId, totalMad: totalAmountMad } }),
+    notifyUser({ userId: request.creatorId, type: "NEW_OFFER", title: `New studio offer`, body: `${room.studio.name} offered ${formatMoney(totalAmountMad, room.studio.currency)} for your 36 Request.`, href: "/creator/requests", email: true, whatsapp: true }),
+    trackMarketplaceEvent({ eventType: "OFFER_CREATED", userId: user.id, studioId: room.studioId, metadata: { requestId, totalAmount: totalAmountMad, currency: room.studio.currency } }),
   ]);
   revalidatePath("/owner/requests");
   redirect(`/owner/requests?offered=${requestId}`);

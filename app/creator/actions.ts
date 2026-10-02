@@ -8,6 +8,7 @@ import type { StudioCategory } from "@prisma/client";
 import { createBookingHoldInTransaction, BookingConflictError } from "@/lib/booking";
 import { requireRole, requireVerifiedRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { currencyForCountry, formatMoney } from "@/lib/commerce";
 import { notifyUser } from "@/lib/notifications";
 import { scheduleBookingReminders } from "@/lib/reminders";
 import { trackMarketplaceEvent } from "@/lib/analytics";
@@ -37,7 +38,7 @@ export async function createStudioRequestAction(form: FormData) {
   const engineerRequired = form.get("engineerRequired") === "on";
   const details = text(form, "details", 2000);
 
-  if (!city || !Number.isFinite(durationMinutes) || durationMinutes < 60 || durationMinutes > 12 * 60 || !Number.isFinite(budgetMad) || budgetMad < 50) {
+  if (!city || !Number.isFinite(durationMinutes) || durationMinutes < 60 || durationMinutes > 12 * 60 || !Number.isFinite(budgetMad) || budgetMad < 1) {
     redirect("/creator/requests?error=invalid");
   }
 
@@ -48,15 +49,28 @@ export async function createStudioRequestAction(form: FormData) {
       latitude: { not: null },
       longitude: { not: null },
     },
-    select: { latitude: true, longitude: true },
+    select: {
+      latitude: true,
+      longitude: true,
+      currency: true,
+      countryCode: true,
+      timeZone: true,
+    },
   });
   const geocoded = matchingStudio
     ? null
     : (await geocodeAddress(city))[0] || null;
-  const timeZone = timeZoneForCoordinates(
-    matchingStudio?.latitude ?? geocoded?.latitude,
-    matchingStudio?.longitude ?? geocoded?.longitude,
-  );
+  const timeZone =
+    matchingStudio?.timeZone ||
+    timeZoneForCoordinates(
+      matchingStudio?.latitude ?? geocoded?.latitude,
+      matchingStudio?.longitude ?? geocoded?.longitude,
+    );
+  const currency =
+    matchingStudio?.currency ||
+    currencyForCountry(
+      matchingStudio?.countryCode || geocoded?.countryCode,
+    );
   const desiredStartAt = marketplaceDateTimeLocalToUtc(
     desiredStartValue,
     timeZone,
@@ -75,13 +89,14 @@ export async function createStudioRequestAction(form: FormData) {
       desiredStartAt,
       durationMinutes,
       budgetMad,
+      currency,
       engineerRequired,
       details,
       expiresAt: desiredStartAt,
     },
   });
 
-  await trackMarketplaceEvent({ eventType: "REQUEST_CREATED", userId: user.id, metadata: { city, category, budgetMad } });
+  await trackMarketplaceEvent({ eventType: "REQUEST_CREATED", userId: user.id, metadata: { city, category, budgetAmount: budgetMad, currency } });
   redirect(`/creator/requests?created=${request.id}`);
 }
 
@@ -103,6 +118,9 @@ export async function acceptOfferAction(form: FormData) {
         include: { request: true },
       });
       if (!offer) throw new BookingConflictError("Offer is no longer active.");
+      if (offer.currency !== offer.request.currency) {
+        throw new BookingConflictError("Offer currency no longer matches this request.");
+      }
 
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${offer.requestId}))`;
       const freshRequest = await tx.studioRequest.findUnique({ where: { id: offer.requestId } });
@@ -133,7 +151,7 @@ export async function acceptOfferAction(form: FormData) {
   if (accepted) {
     if (accepted.status === "CONFIRMED") await scheduleBookingReminders(accepted.id);
     await Promise.all([
-      notifyUser({ userId: user.id, type: "OFFER_ACCEPTED", title: `Offer accepted: ${accepted.studio.name}`, body: `Your booking for ${accepted.room.name} is now waiting for the deposit.`, href: `/creator/bookings/${bookingId}`, email: true }),
+      notifyUser({ userId: user.id, type: "OFFER_ACCEPTED", title: `Offer accepted: ${accepted.studio.name}`, body: `Your booking for ${accepted.room.name} is now reserved at ${formatMoney(accepted.totalAmountMad, accepted.currency)}.`, href: `/creator/bookings/${bookingId}`, email: true }),
       notifyUser({ userId: accepted.studio.ownerId, type: "OFFER_ACCEPTED", title: `36 Request offer accepted`, body: `${user.name} accepted your offer.`, href: `/owner/bookings/${bookingId}`, email: true, whatsapp: true }),
     ]);
   }
