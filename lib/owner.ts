@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedRole } from "@/lib/auth";
 
 export async function requireOwnedStudio(id: string) {
-  const user = await requireRole("STUDIO_OWNER");
+  const user = await requireVerifiedRole("STUDIO_OWNER");
   const studio = await db.studio.findFirst({
     where: { id, ownerId: user.id },
     include: {
