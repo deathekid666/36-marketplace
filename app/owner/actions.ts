@@ -672,7 +672,7 @@ export async function submitStudioAction(form: FormData) {
   }
 
   const result = await db.$transaction(async (tx) => {
-    await tx.$executeRaw`
+    await tx.$queryRaw`
       SELECT id
       FROM "Studio"
       WHERE id = ${studioId}::uuid
