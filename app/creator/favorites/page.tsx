@@ -14,7 +14,10 @@ export default async function FavoritesPage() {
   const favorites = await db.favorite.findMany({
     where: {
       userId: user.id,
-      studio: { status: "VERIFIED" },
+      studio: {
+        status: "VERIFIED",
+        ownerId: { not: user.id },
+      },
     },
     include: {
       studio: {
