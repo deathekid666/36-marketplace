@@ -19,29 +19,34 @@ type CurrencyTotal = {
 
 export default async function AdminPayoutsPage() {
   const user = await requireRole("ADMIN");
-  const payouts = await db.payout.findMany({
-    include: {
-      studio: true,
-      booking: { include: { creator: true, room: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  const [payouts, aggregateRows, payoutCount] = await Promise.all([
+    db.payout.findMany({
+      include: {
+        studio: true,
+        booking: { include: { creator: true, room: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    db.payout.groupBy({
+      by: ["currency"],
+      _sum: {
+        grossAmountMad: true,
+        commissionAmountMad: true,
+        netAmountMad: true,
+      },
+    }),
+    db.payout.count(),
+  ]);
 
-  const grouped = new Map<string, CurrencyTotal>();
-  for (const payout of payouts) {
-    const currency = payout.currency || "USD";
-    const row =
-      grouped.get(currency) ||
-      { currency, gross: 0, fee: 0, net: 0 };
-    row.gross += payout.grossAmountMad;
-    row.fee += payout.commissionAmountMad;
-    row.net += payout.netAmountMad;
-    grouped.set(currency, row);
-  }
-  const totals = [...grouped.values()].sort((a, b) =>
-    a.currency.localeCompare(b.currency),
-  );
+  const totals: CurrencyTotal[] = aggregateRows
+    .map((row) => ({
+      currency: row.currency || "USD",
+      gross: row._sum.grossAmountMad || 0,
+      fee: row._sum.commissionAmountMad || 0,
+      net: row._sum.netAmountMad || 0,
+    }))
+    .sort((a, b) => a.currency.localeCompare(b.currency));
 
   return (
     <main className="min-h-screen">
@@ -100,7 +105,11 @@ export default async function AdminPayoutsPage() {
           )}
         </div>
 
-        <div className="mt-8 overflow-x-auto rounded-2xl border border-zinc-900">
+        <p className="mt-8 text-[10px] text-zinc-600">
+          Showing the latest {payouts.length} of {payoutCount} payout records. Totals above include all records.
+        </p>
+
+        <div className="mt-3 overflow-x-auto rounded-2xl border border-zinc-900">
           <table className="w-full min-w-[960px] text-left text-xs">
             <thead className="bg-zinc-950 text-zinc-500">
               <tr>
