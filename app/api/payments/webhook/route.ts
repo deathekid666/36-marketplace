@@ -44,9 +44,8 @@ export async function POST(request: Request) {
 
   if (booking) {
     if (body.status === "PAID" && !disputed && !duplicate) {
-      await scheduleBookingReminders(booking.id);
-
       if (result.paymentKind === "DEPOSIT") {
+        await scheduleBookingReminders(booking.id);
         await Promise.all([
           notifyUser({
             userId: booking.creatorId,
