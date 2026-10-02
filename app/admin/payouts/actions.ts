@@ -16,13 +16,15 @@ function disputeBlocksPayout(
   dispute:
     | {
         status: string;
-        refundAmountMad: number;
       }
     | null,
+  hasPendingRefund: boolean,
 ) {
-  if (!dispute) return false;
-  if (["OPEN", "UNDER_REVIEW"].includes(dispute.status)) return true;
-  return dispute.status === "RESOLVED" && dispute.refundAmountMad > 0;
+  if (hasPendingRefund) return true;
+  return Boolean(
+    dispute &&
+      ["OPEN", "UNDER_REVIEW"].includes(dispute.status),
+  );
 }
 
 function payoutCanBeEligible(payout: {
@@ -33,17 +35,34 @@ function payoutCanBeEligible(payout: {
     dispute:
       | {
           status: string;
-          refundAmountMad: number;
         }
       | null;
+    payments: Array<{
+      kind: string;
+      status: string;
+    }>;
   };
 }) {
-  if (disputeBlocksPayout(payout.booking.dispute)) return false;
+  const hasPendingRefund = payout.booking.payments.some(
+    (payment) =>
+      payment.kind === "REFUND" &&
+      payment.status === "PENDING",
+  );
+  if (
+    disputeBlocksPayout(
+      payout.booking.dispute,
+      hasPendingRefund,
+    )
+  ) {
+    return false;
+  }
   if (payout.grossAmountMad <= 0) return false;
 
   if (
     payout.booking.status === "COMPLETED" &&
-    payout.booking.paymentStatus === "PAID"
+    ["PAID", "PARTIALLY_PAID"].includes(
+      payout.booking.paymentStatus,
+    )
   ) {
     return true;
   }
@@ -70,6 +89,16 @@ export async function markPayoutPaidAction(form: FormData) {
       booking: {
         include: {
           dispute: true,
+          payments: {
+            where: {
+              kind: "REFUND",
+              status: "PENDING",
+            },
+            select: {
+              kind: true,
+              status: true,
+            },
+          },
         },
       },
     },
@@ -145,6 +174,16 @@ export async function releasePayoutAction(form: FormData) {
       booking: {
         include: {
           dispute: true,
+          payments: {
+            where: {
+              kind: "REFUND",
+              status: "PENDING",
+            },
+            select: {
+              kind: true,
+              status: true,
+            },
+          },
         },
       },
     },
@@ -164,9 +203,16 @@ export async function releasePayoutAction(form: FormData) {
       },
     });
   } else if (
-    !disputeBlocksPayout(payout.booking.dispute) &&
-    !["CANCELLED", "DISPUTED"].includes(payout.booking.status) &&
-    !["REFUNDED", "FAILED"].includes(payout.booking.paymentStatus)
+    !disputeBlocksPayout(
+      payout.booking.dispute,
+      payout.booking.payments.length > 0,
+    ) &&
+    !["CANCELLED", "DISPUTED"].includes(
+      payout.booking.status,
+    ) &&
+    !["REFUNDED", "FAILED"].includes(
+      payout.booking.paymentStatus,
+    )
   ) {
     await db.payout.updateMany({
       where: {
