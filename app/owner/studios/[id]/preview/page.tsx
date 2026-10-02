@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { StudioProfileGallery } from "@/components/StudioProfileGallery";
 import { requireOwnedStudio } from "@/lib/owner";
+import { formatMoney } from "@/lib/commerce";
 import { DAYS, categoryLabel, studioCompletion } from "@/lib/studio";
 
 export default async function OwnerStudioPreviewPage({

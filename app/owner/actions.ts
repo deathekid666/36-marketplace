@@ -87,7 +87,7 @@ export async function createStudioAction(form: FormData) {
       name,
       slug,
       primaryCategory: parseCategory(form.get("primaryCategory")),
-      city: text(form, "city", 80) || studio.city,
+      city: text(form, "city", 80) || "Casablanca",
       neighborhood: text(form, "neighborhood", 100),
     },
   });

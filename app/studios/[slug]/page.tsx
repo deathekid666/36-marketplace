@@ -57,6 +57,7 @@ export async function generateMetadata({
       city: true,
       neighborhood: true,
       description: true,
+      currency: true,
       photos: {
         orderBy: { sortOrder: "asc" },
         take: 1,
