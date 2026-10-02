@@ -9,6 +9,7 @@ import { openDisputeAction } from "@/app/disputes/actions";
 import { cancelBookingAction, sendBookingMessageAction } from "@/app/bookings/actions";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import {
   formatMarketplaceDateTime,
   studioTimeZone,
@@ -92,8 +93,8 @@ export default async function CreatorBookingDetailPage({
             </p>
           </div>
           <div className="text-right">
-            <b className="text-3xl">{booking.totalAmountMad} MAD</b>
-            {booking.baseAmountMad > booking.totalAmountMad && <span className="ml-2 text-sm text-zinc-600 line-through">{booking.baseAmountMad} MAD</span>}
+            <b className="text-3xl">{formatMoney(booking.totalAmountMad, booking.currency)}</b>
+            {booking.baseAmountMad > booking.totalAmountMad && <span className="ml-2 text-sm text-zinc-600 line-through">{formatMoney(booking.baseAmountMad, booking.currency)}</span>}
             <span className="block text-xs text-zinc-600">total</span>
           </div>
         </div>
@@ -171,8 +172,8 @@ export default async function CreatorBookingDetailPage({
             <section className="panel">
               <h2 className="text-xl font-black">Booking & payment</h2>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl bg-black/30 p-4"><span className="label">{offlinePaymentMethod ? "Payment method" : "Deposit"}</span><b>{offlinePaymentMethod ? offlinePaymentMethod : booking.depositAmountMad + " MAD · " + (deposit?.status || (booking.depositAmountMad === 0 ? "NOT REQUIRED" : booking.paymentStatus))}</b></div>
-                <div className="rounded-xl bg-black/30 p-4"><span className="label">Balance</span><b>{balance ? `${balance.amountMad} MAD · ${balance.status}` : "0 MAD"}</b></div>
+                <div className="rounded-xl bg-black/30 p-4"><span className="label">{offlinePaymentMethod ? "Payment method" : "Deposit"}</span><b>{offlinePaymentMethod ? offlinePaymentMethod : formatMoney(booking.depositAmountMad, booking.currency) + " · " + (deposit?.status || (booking.depositAmountMad === 0 ? "NOT REQUIRED" : booking.paymentStatus))}</b></div>
+                <div className="rounded-xl bg-black/30 p-4"><span className="label">Balance</span><b>{balance ? `${formatMoney(balance.amountMad, balance.currency)} · ${balance.status}` : formatMoney(0, booking.currency)}</b></div>
                 <div className="rounded-xl bg-black/30 p-4"><span className="label">Payment status</span><b>{booking.paymentStatus}</b></div>
                 <div className="rounded-xl bg-black/30 p-4"><span className="label">Cancellation</span><b>{booking.studio.freeCancellationHours}h free-cancellation window</b></div>
               </div>
@@ -180,7 +181,7 @@ export default async function CreatorBookingDetailPage({
                 <div className="mt-4 rounded-xl border border-emerald-900/35 bg-emerald-950/10 p-4">
                   <b className="text-sm text-emerald-300">Pay directly to the studio</b>
                   <p className="mt-1 text-xs leading-5 text-zinc-500">
-                    {booking.totalAmountMad} MAD · {offlinePaymentMethod}. No card processor or paid gateway is used.
+                    {formatMoney(booking.totalAmountMad, booking.currency)} · {offlinePaymentMethod}. No card processor or paid gateway is used.
                   </p>
                 </div>
               )}
@@ -206,35 +207,35 @@ export default async function CreatorBookingDetailPage({
                   <div className="mt-4 space-y-2 border-t border-amber-900/25 pt-4 text-xs">
                     <div className="flex justify-between gap-3">
                       <span className="text-zinc-500">Room session</span>
-                      <b>{booking.baseAmountMad} MAD</b>
+                      <b>{formatMoney(booking.baseAmountMad, booking.currency)}</b>
                     </div>
                     {booking.addons.length > 0 && (
                       <div className="flex justify-between gap-3">
                         <span className="text-zinc-500">Add-ons</span>
                         <b>
-                          {booking.addons.reduce((sum, addon) => sum + addon.totalMad, 0)} MAD
+                          {formatMoney(booking.addons.reduce((sum, addon) => sum + addon.totalMad, 0), booking.currency)}
                         </b>
                       </div>
                     )}
                     {booking.promoDiscountMad > 0 && (
                       <div className="flex justify-between gap-3 text-emerald-300">
                         <span>Promo discount</span>
-                        <b>-{booking.promoDiscountMad} MAD</b>
+                        <b>-{formatMoney(booking.promoDiscountMad, booking.currency)}</b>
                       </div>
                     )}
                     {booking.taxAmountMad > 0 && (
                       <div className="flex justify-between gap-3">
                         <span className="text-zinc-500">Tax</span>
-                        <b>{booking.taxAmountMad} MAD</b>
+                        <b>{formatMoney(booking.taxAmountMad, booking.currency)}</b>
                       </div>
                     )}
                     <div className="flex justify-between gap-3 border-t border-amber-900/25 pt-2">
                       <span className="font-black text-zinc-300">Total</span>
-                      <b>{booking.totalAmountMad} MAD</b>
+                      <b>{formatMoney(booking.totalAmountMad, booking.currency)}</b>
                     </div>
                     <div className="flex justify-between gap-3 text-amber-200">
                       <span>Deposit due now</span>
-                      <b>{booking.depositAmountMad} MAD</b>
+                      <b>{formatMoney(booking.depositAmountMad, booking.currency)}</b>
                     </div>
                   </div>
 
@@ -254,9 +255,9 @@ export default async function CreatorBookingDetailPage({
                   )}
                 </div>
               )}
-              {effectiveStatus === "CONFIRMED" && balance?.status === "PENDING" && <div className="mt-4 rounded-xl border border-sky-800/40 bg-sky-950/15 p-4"><b className="text-sm text-sky-200">Balance due before the session is financially complete</b><p className="mt-1 text-xs leading-5 text-sky-100/70">Remaining balance: {balance.amountMad} MAD.</p>{balance.checkoutUrl ? <a href={balance.checkoutUrl} rel="noreferrer" className="mt-3 inline-flex rounded-lg bg-acid px-4 py-2 text-xs font-black text-black">Pay remaining balance</a> : <p className="mt-3 text-xs text-zinc-500">36 Admin can attach the secure balance checkout link.</p>}</div>}
-              {refund && <div className="mt-4 rounded-xl border border-zinc-800 p-4 text-xs"><span className="text-zinc-500">Refund</span><b className="ml-3">{refund.amountMad} MAD · {refund.status}</b></div>}
-              {booking.addons.length > 0 && <div className="mt-4 border-t border-zinc-900 pt-4"><span className="label">Add-ons</span><div className="space-y-2">{booking.addons.map((addon)=><div key={addon.id} className="flex justify-between text-xs"><span className="text-zinc-500">{addon.nameSnapshot} ×{addon.quantity}</span><b>{addon.totalMad} MAD</b></div>)}</div></div>}
+              {effectiveStatus === "CONFIRMED" && balance?.status === "PENDING" && <div className="mt-4 rounded-xl border border-sky-800/40 bg-sky-950/15 p-4"><b className="text-sm text-sky-200">Balance due before the session is financially complete</b><p className="mt-1 text-xs leading-5 text-sky-100/70">Remaining balance: {formatMoney(balance.amountMad, balance.currency)}.</p>{balance.checkoutUrl ? <a href={balance.checkoutUrl} rel="noreferrer" className="mt-3 inline-flex rounded-lg bg-acid px-4 py-2 text-xs font-black text-black">Pay remaining balance</a> : <p className="mt-3 text-xs text-zinc-500">36 Admin can attach the secure balance checkout link.</p>}</div>}
+              {refund && <div className="mt-4 rounded-xl border border-zinc-800 p-4 text-xs"><span className="text-zinc-500">Refund</span><b className="ml-3">{formatMoney(refund.amountMad, refund.currency)} · {refund.status}</b></div>}
+              {booking.addons.length > 0 && <div className="mt-4 border-t border-zinc-900 pt-4"><span className="label">Add-ons</span><div className="space-y-2">{booking.addons.map((addon)=><div key={addon.id} className="flex justify-between text-xs"><span className="text-zinc-500">{addon.nameSnapshot} ×{addon.quantity}</span><b>{formatMoney(addon.totalMad, booking.currency)}</b></div>)}</div></div>}
             </section>
 
             <section className="panel"><div className="flex items-center justify-between"><div><span className="text-xs font-bold uppercase tracking-[0.14em] text-acid">Shared workspace</span><h2 className="mt-2 text-xl font-black">Project files</h2></div><span className="text-xs text-zinc-600">{booking.storedFiles.length} files</span></div><div className="mt-4 space-y-2">{booking.storedFiles.map((f)=><a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="flex justify-between rounded-xl border border-zinc-900 p-3 text-xs hover:border-zinc-700"><span className="text-zinc-300">{f.mimeType}</span><span className="text-zinc-600">{Math.round(Number(f.sizeBytes)/1024)} KB ↗</span></a>)}</div><BookingFileUploader bookingId={booking.id}/></section>

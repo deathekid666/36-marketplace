@@ -1,13 +1,181 @@
 import Link from "next/link";
+
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
+import { formatMoney } from "@/lib/commerce";
 import { db } from "@/lib/db";
-import { formatMad } from "@/lib/finance";
-import { holdPayoutAction, markPayoutPaidAction, releasePayoutAction } from "./actions";
+import {
+  holdPayoutAction,
+  markPayoutPaidAction,
+  releasePayoutAction,
+} from "./actions";
 
-export default async function AdminPayoutsPage(){
-  const user=await requireRole("ADMIN");
-  const payouts=await db.payout.findMany({include:{studio:true,booking:{include:{creator:true,room:true}}},orderBy:{createdAt:"desc"},take:200});
-  const totals=payouts.reduce((a,p)=>({gross:a.gross+p.grossAmountMad,fee:a.fee+p.commissionAmountMad,net:a.net+p.netAmountMad}),{gross:0,fee:0,net:0});
-  return <main className="min-h-screen"><AppHeader user={user}/><section className="mx-auto max-w-7xl px-5 py-12"><Link href="/admin" className="text-xs font-bold text-zinc-500">← Admin</Link><div className="mt-5 flex flex-wrap items-end justify-between gap-4"><div><span className="text-xs font-bold uppercase tracking-[0.2em] text-acid">Money movement</span><h1 className="mt-2 text-4xl font-black">Payouts</h1></div><Link href="/admin/analytics" className="rounded-full border border-zinc-700 px-4 py-2 text-xs font-bold">Analytics</Link></div><div className="mt-8 grid gap-4 sm:grid-cols-3">{[["Gross booking value",totals.gross],["36 commission",totals.fee],["Studio net",totals.net]].map(([l,v])=><div className="panel" key={String(l)}><span className="label">{l}</span><b className="mt-3 block text-3xl">{formatMad(Number(v))}</b></div>)}</div><div className="mt-8 overflow-x-auto rounded-2xl border border-zinc-900"><table className="w-full min-w-[900px] text-left text-xs"><thead className="bg-zinc-950 text-zinc-500"><tr><th className="p-4">Studio</th><th>Booking</th><th>Gross</th><th>36 fee</th><th>Studio net</th><th>Status</th><th className="p-4">Action</th></tr></thead><tbody>{payouts.map(p=><tr key={p.id} className="border-t border-zinc-900"><td className="p-4"><b>{p.studio.name}</b><span className="block text-zinc-600">{p.booking.creator.name}</span></td><td>{p.booking.room.name}<span className="block text-zinc-600">{p.booking.status}</span></td><td>{formatMad(p.grossAmountMad)}</td><td>{formatMad(p.commissionAmountMad)}<span className="block text-zinc-600">{(p.commissionBps/100).toFixed(1)}%</span></td><td className="font-bold text-acid">{formatMad(p.netAmountMad)}</td><td>{p.status}</td><td className="p-4">{p.status==="ELIGIBLE"?<form action={markPayoutPaidAction} className="flex gap-2"><input type="hidden" name="payoutId" value={p.id}/><input name="reference" className="field py-2" placeholder="Transfer ref"/><button className="rounded-lg bg-acid px-3 py-2 font-black text-black">Mark paid</button></form>:p.status==="HOLD"?<form action={releasePayoutAction}><input type="hidden" name="payoutId" value={p.id}/><button className="text-acid">Release hold</button></form>:p.status==="PENDING"?<form action={holdPayoutAction}><input type="hidden" name="payoutId" value={p.id}/><button className="text-zinc-500">Place hold</button></form>:<span className="text-zinc-600">{p.reference||"—"}</span>}</td></tr>)}</tbody></table></div></section></main>;
+type CurrencyTotal = {
+  currency: string;
+  gross: number;
+  fee: number;
+  net: number;
+};
+
+export default async function AdminPayoutsPage() {
+  const user = await requireRole("ADMIN");
+  const payouts = await db.payout.findMany({
+    include: {
+      studio: true,
+      booking: { include: { creator: true, room: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+  });
+
+  const grouped = new Map<string, CurrencyTotal>();
+  for (const payout of payouts) {
+    const currency = payout.currency || "USD";
+    const row =
+      grouped.get(currency) ||
+      { currency, gross: 0, fee: 0, net: 0 };
+    row.gross += payout.grossAmountMad;
+    row.fee += payout.commissionAmountMad;
+    row.net += payout.netAmountMad;
+    grouped.set(currency, row);
+  }
+  const totals = [...grouped.values()].sort((a, b) =>
+    a.currency.localeCompare(b.currency),
+  );
+
+  return (
+    <main className="min-h-screen">
+      <AppHeader user={user} />
+      <section className="mx-auto max-w-7xl px-5 py-12">
+        <Link href="/admin" className="text-xs font-bold text-zinc-500">
+          ← Admin
+        </Link>
+
+        <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-acid">
+              Money movement
+            </span>
+            <h1 className="mt-2 text-4xl font-black">Payouts</h1>
+            <p className="mt-2 text-xs text-zinc-500">
+              Totals stay separated by currency so unlike currencies are never added together.
+            </p>
+          </div>
+          <Link
+            href="/admin/analytics"
+            className="rounded-full border border-zinc-700 px-4 py-2 text-xs font-bold"
+          >
+            Analytics
+          </Link>
+        </div>
+
+        <div className="mt-8 space-y-4">
+          {totals.length === 0 ? (
+            <div className="panel text-sm text-zinc-600">No payouts yet.</div>
+          ) : (
+            totals.map((row) => (
+              <section key={row.currency} className="panel">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-black">{row.currency}</h2>
+                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-600">
+                    Native currency
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {[
+                    ["Gross booking value", row.gross],
+                    ["36 commission", row.fee],
+                    ["Studio net", row.net],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="rounded-xl border border-zinc-900 p-4">
+                      <span className="label">{label}</span>
+                      <b className="mt-2 block text-2xl">
+                        {formatMoney(Number(value), row.currency)}
+                      </b>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))
+          )}
+        </div>
+
+        <div className="mt-8 overflow-x-auto rounded-2xl border border-zinc-900">
+          <table className="w-full min-w-[960px] text-left text-xs">
+            <thead className="bg-zinc-950 text-zinc-500">
+              <tr>
+                <th className="p-4">Studio</th>
+                <th>Booking</th>
+                <th>Gross</th>
+                <th>36 fee</th>
+                <th>Studio net</th>
+                <th>Currency</th>
+                <th>Status</th>
+                <th className="p-4">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payouts.map((payout) => (
+                <tr key={payout.id} className="border-t border-zinc-900">
+                  <td className="p-4">
+                    <b>{payout.studio.name}</b>
+                    <span className="block text-zinc-600">
+                      {payout.booking.creator.name}
+                    </span>
+                  </td>
+                  <td>
+                    {payout.booking.room.name}
+                    <span className="block text-zinc-600">
+                      {payout.booking.status}
+                    </span>
+                  </td>
+                  <td>{formatMoney(payout.grossAmountMad, payout.currency)}</td>
+                  <td>
+                    {formatMoney(payout.commissionAmountMad, payout.currency)}
+                    <span className="block text-zinc-600">
+                      {(payout.commissionBps / 100).toFixed(1)}%
+                    </span>
+                  </td>
+                  <td className="font-bold text-acid">
+                    {formatMoney(payout.netAmountMad, payout.currency)}
+                  </td>
+                  <td>{payout.currency}</td>
+                  <td>{payout.status}</td>
+                  <td className="p-4">
+                    {payout.status === "ELIGIBLE" ? (
+                      <form action={markPayoutPaidAction} className="flex gap-2">
+                        <input type="hidden" name="payoutId" value={payout.id} />
+                        <input
+                          name="reference"
+                          className="field py-2"
+                          placeholder="Transfer ref"
+                        />
+                        <button className="rounded-lg bg-acid px-3 py-2 font-black text-black">
+                          Mark paid
+                        </button>
+                      </form>
+                    ) : payout.status === "HOLD" ? (
+                      <form action={releasePayoutAction}>
+                        <input type="hidden" name="payoutId" value={payout.id} />
+                        <button className="text-acid">Release hold</button>
+                      </form>
+                    ) : payout.status === "PENDING" ? (
+                      <form action={holdPayoutAction}>
+                        <input type="hidden" name="payoutId" value={payout.id} />
+                        <button className="text-zinc-500">Place hold</button>
+                      </form>
+                    ) : (
+                      <span className="text-zinc-600">
+                        {payout.reference || "—"}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  );
 }

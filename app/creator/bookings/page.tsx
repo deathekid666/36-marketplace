@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { releaseBookingHoldAction } from "@/app/creator/actions";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import { offlinePaymentLabel } from "@/lib/offline-payment";
 import {
   formatMarketplaceDateTime,
@@ -299,7 +300,7 @@ export default async function CreatorBookingsPage({
 
                         <div className="text-right">
                           <b className="text-xl">
-                            {booking.totalAmountMad} MAD
+                            {formatMoney(booking.totalAmountMad, booking.currency)}
                           </b>
                           <span className="block text-[10px] uppercase tracking-[0.08em] text-[#8a8a8a]">
                             {booking.paymentStatus.replaceAll("_", " ")}
