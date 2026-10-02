@@ -35,10 +35,18 @@ export async function getStudioTrustMetrics(
       }),
       db.conversation.findMany({
         where: {
-          booking: {
-            studioId,
-            createdAt: { gte: since },
-          },
+          OR: [
+            {
+              studioId,
+              createdAt: { gte: since },
+            },
+            {
+              booking: {
+                studioId,
+                createdAt: { gte: since },
+              },
+            },
+          ],
         },
         include: {
           messages: {
