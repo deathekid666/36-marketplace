@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { db } from "@/lib/db";
+import { reconcileConfirmedRefund } from "@/lib/refunds";
 
 export type NormalizedPaymentEvent = {
   paymentId: string;
@@ -68,52 +69,7 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
         },
       });
 
-      const [paidCharges, completedRefunds] = await Promise.all([
-        tx.payment.aggregate({
-          where: {
-            bookingId: payment.bookingId,
-            kind: { in: ["DEPOSIT", "BALANCE"] },
-            status: "PAID",
-          },
-          _sum: { amountMad: true },
-        }),
-        tx.payment.aggregate({
-          where: {
-            bookingId: payment.bookingId,
-            kind: "REFUND",
-            status: "REFUNDED",
-          },
-          _sum: { amountMad: true },
-        }),
-      ]);
-
-      const netCollected = Math.max(
-        0,
-        (paidCharges._sum.amountMad || 0) -
-          (completedRefunds._sum.amountMad || 0),
-      );
-      const paymentStatus =
-        netCollected >= payment.booking.totalAmountMad
-          ? "PAID"
-          : netCollected > 0
-            ? "PARTIALLY_PAID"
-            : "REFUNDED";
-
-      await tx.booking.update({
-        where: { id: payment.bookingId },
-        data: { paymentStatus },
-      });
-
-      await tx.payout.updateMany({
-        where: {
-          bookingId: payment.bookingId,
-          status: { in: ["PENDING", "ELIGIBLE"] },
-        },
-        data: {
-          status: "HOLD",
-          availableAt: null,
-        },
-      });
+      await reconcileConfirmedRefund(tx, payment.booking);
     });
     return success;
   }
@@ -164,15 +120,7 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
         },
       });
 
-      const existingRefund = await tx.payment.findFirst({
-        where: {
-          bookingId: payment.bookingId,
-          kind: "REFUND",
-          status: "PENDING",
-        },
-      });
-
-      if (!existingRefund && payment.amountMad > 0) {
+      if (payment.amountMad > 0) {
         await tx.payment.create({
           data: {
             bookingId: payment.bookingId,
@@ -250,14 +198,7 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
         },
         data: { status: "HOLD", availableAt: null },
       });
-      const existingRefund = await tx.payment.findFirst({
-        where: {
-          bookingId: payment.bookingId,
-          kind: "REFUND",
-          status: "PENDING",
-        },
-      });
-      if (!existingRefund && payment.amountMad > 0) {
+      if (payment.amountMad > 0) {
         await tx.payment.create({
           data: {
             bookingId: payment.bookingId,
@@ -334,14 +275,7 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
         },
         data: { status: "HOLD", availableAt: null },
       });
-      const existingRefund = await tx.payment.findFirst({
-        where: {
-          bookingId: payment.bookingId,
-          kind: "REFUND",
-          status: "PENDING",
-        },
-      });
-      if (!existingRefund && payment.amountMad > 0) {
+      if (payment.amountMad > 0) {
         await tx.payment.create({
           data: {
             bookingId: payment.bookingId,
