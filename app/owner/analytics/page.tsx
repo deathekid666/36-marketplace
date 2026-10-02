@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import {
   getStudioTrustMetrics,
   responseTimeLabel,
@@ -97,6 +98,7 @@ export default async function OwnerAnalyticsPage() {
               studioId: true,
               status: true,
               totalAmountMad: true,
+              currency: true,
               createdAt: true,
             },
           })
@@ -150,9 +152,16 @@ export default async function OwnerAnalyticsPage() {
         booking.status,
       ),
   );
-  const activeValue = activeCurrentBookings.reduce(
-    (sum, booking) => sum + booking.totalAmountMad,
-    0,
+  const activeValueByCurrency = new Map<string, number>();
+  for (const booking of activeCurrentBookings) {
+    activeValueByCurrency.set(
+      booking.currency,
+      (activeValueByCurrency.get(booking.currency) || 0) +
+        booking.totalAmountMad,
+    );
+  }
+  const activeValues = [...activeValueByCurrency.entries()].sort(
+    ([a], [b]) => a.localeCompare(b),
   );
   const completedCurrent = completedBookings.filter(
     (booking) => booking.endAt >= currentStart,
@@ -246,8 +255,18 @@ export default async function OwnerAnalyticsPage() {
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <div className="panel">
             <span className="label">Active booking value</span>
-            <b className="mt-2 block text-2xl">{activeValue} MAD</b>
-            <span className="mt-1 block text-xs text-[#8a8a8a]">
+            <div className="mt-2 space-y-1">
+              {activeValues.length ? (
+                activeValues.map(([currency, amount]) => (
+                  <b key={currency} className="block text-xl">
+                    {formatMoney(amount, currency)}
+                  </b>
+                ))
+              ) : (
+                <b className="block text-xl text-[#a3a3a3]">—</b>
+              )}
+            </div>
+            <span className="mt-2 block text-xs text-[#8a8a8a]">
               bookings created in the last 30 days, excluding cancelled
             </span>
           </div>

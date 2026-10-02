@@ -10,6 +10,7 @@ import { CreativeExplorerMap } from "@/components/CreativeExplorerMap";
 import { MapFocusButton } from "@/components/MapFocusButton";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import {
   classifyCreativeSpace,
   creativeCategoryLabel,
@@ -704,7 +705,10 @@ export default async function DiscoverStudiosPage({
                     <div className="creative-space-card-bottom">
                       <strong>
                         {studio.rooms[0]?.hourlyRateMad
-                          ? studio.rooms[0].hourlyRateMad + " MAD"
+                          ? formatMoney(
+                              studio.rooms[0].hourlyRateMad,
+                              studio.currency,
+                            )
                           : "Price on request"}{" "}
                         <small>{studio.rooms[0]?.hourlyRateMad ? "/ hour" : ""}</small>
                       </strong>

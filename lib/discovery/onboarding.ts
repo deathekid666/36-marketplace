@@ -6,6 +6,11 @@ import {
 } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import {
+  currencyForCountry,
+  normalizeCountryCode,
+} from "@/lib/commerce";
+import { timeZoneForCoordinates } from "@/lib/time";
 import { notifyUser } from "@/lib/notifications";
 import { trackMarketplaceEvent } from "@/lib/analytics";
 import { isDiscoveryRolloutEnabled } from "@/lib/discovery/rollout";
@@ -113,11 +118,26 @@ export async function startClaimedStudioOnboarding(input: {
         throw new Error("ONBOARDING_CANDIDATE_NOT_AVAILABLE");
       }
 
-      // Conversion is allow-listed by D14 rollout scope. The current booking
-      // engine remains Morocco/Casablanca-time and MAD-based.
+      // Conversion is allow-listed by rollout scope and preserves the
+      // discovered market so the resulting studio is immediately global-safe.
       if (!isDiscoveryRolloutEnabled(candidate, "ONBOARDING")) {
         throw new Error("ONBOARDING_MARKET_NOT_SUPPORTED");
       }
+
+      const countryCode = normalizeCountryCode(candidate.countryCode);
+      const city = String(candidate.city || "").trim();
+      if (!countryCode) {
+        throw new Error("ONBOARDING_COUNTRY_UNRESOLVED");
+      }
+      if (!city) {
+        throw new Error("ONBOARDING_CITY_UNRESOLVED");
+      }
+      const currency = currencyForCountry(countryCode);
+      const timeZone = timeZoneForCoordinates(
+        candidate.latitude,
+        candidate.longitude,
+        "UTC",
+      );
 
       const createdStudio = await tx.studio.create({
         data: {
@@ -126,9 +146,12 @@ export async function startClaimedStudioOnboarding(input: {
           slug: studioSlug(candidate.slug, claim.id),
           description: directoryProfile.description,
           primaryCategory: studioCategory(candidate.category),
-          city: candidate.city || "Casablanca",
+          city,
           neighborhood: candidate.district || "",
           address: candidate.address || "",
+          countryCode,
+          currency,
+          timeZone,
           latitude: candidate.latitude,
           longitude: candidate.longitude,
           phone: candidate.phone || claim.businessPhone || "",

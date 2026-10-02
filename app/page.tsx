@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import { categoryLabel } from "@/lib/studio";
 
 const categories = [
@@ -45,7 +46,7 @@ export default async function HomePage() {
         <form action="/studios" method="GET" className="air-home-search">
           <label>
             <b>Where</b>
-            <input name="city" defaultValue="Casablanca" placeholder="Search city or neighborhood" />
+            <input name="city" placeholder="Search city or neighborhood" />
           </label>
           <label>
             <b>When</b>
@@ -74,7 +75,7 @@ export default async function HomePage() {
       <section className="air-category-strip">
         <div className="air-category-strip-inner">
           {categories.map((item) => (
-            <Link key={item.value} href={"/studios?category=" + item.value + "&city=Casablanca"}>
+            <Link key={item.value} href={"/studios?category=" + item.value}>
               <span>{item.glyph}</span>
               <b>{item.label}</b>
             </Link>
@@ -113,7 +114,7 @@ export default async function HomePage() {
                   </div>
                   <p>{studio.neighborhood || studio.city}, {studio.city}</p>
                   <p>{categoryLabel(studio.primaryCategory)}</p>
-                  <strong>{price ? price + " MAD" : "—"} <span>/ hour</span></strong>
+                  <strong>{price ? formatMoney(price, studio.currency) : "—"} <span>/ hour</span></strong>
                 </Link>
               );
             })}

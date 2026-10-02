@@ -90,6 +90,7 @@ export default async function MessagesPage({
         endAt: booking.endAt.toISOString(),
         status: booking.status,
         totalAmountMad: booking.totalAmountMad,
+        currency: booking.currency,
         timeZone: studioTimeZone(booking.studio),
         photoUrl: booking.studio.photos[0]?.url || null,
         lastMessage: last?.body || "",

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { formatMoney } from "@/lib/commerce";
+
 export type InboxMessage = {
   id: string;
   senderId: string;
@@ -23,6 +25,7 @@ export type InboxThread = {
   endAt: string;
   status: string;
   totalAmountMad: number;
+  currency: string;
   timeZone: string;
   photoUrl: string | null;
   lastMessage: string;
@@ -403,7 +406,7 @@ export function MessagingInbox({
                     {dayLabel(active.startAt, active.timeZone)} · {timeLabel(active.startAt, active.timeZone)}–{timeLabel(active.endAt, active.timeZone)}
                   </span>
                   <span className="text-[#717171]">
-                    {active.totalAmountMad} MAD
+                    {formatMoney(active.totalAmountMad, active.currency)}
                   </span>
                   <span className="text-[#a3a3a3]">
                     {active.timeZone}
