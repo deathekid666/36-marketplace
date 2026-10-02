@@ -184,6 +184,14 @@ export default async function StudioDetailPage({
           where: {
             creatorId: user.id,
             studioId: studio.id,
+            status: {
+              in: [
+                "PENDING_DEPOSIT",
+                "CONFIRMED",
+                "COMPLETED",
+                "DISPUTED",
+              ],
+            },
           },
           orderBy: { createdAt: "desc" },
           select: { id: true },
