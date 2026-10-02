@@ -180,7 +180,8 @@ export async function resolveDisputeAction(form: FormData) {
     }
 
     const restored =
-      dispute.booking.endAt <= new Date()
+      dispute.booking.endAt <= new Date() &&
+      dispute.booking.paymentStatus === "PAID"
         ? "COMPLETED"
         : "CONFIRMED";
     const fullyRefundingCollected =
