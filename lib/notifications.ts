@@ -81,8 +81,41 @@ export async function notifyUser(input: NotifyInput) {
   const notification = await db.notification.create({
     data: { userId: user.id, type: input.type.slice(0, 80), title: input.title.slice(0, 180), body: (input.body || "").slice(0, 1200), href: (input.href || "").slice(0, 500) },
   });
-  await db.notificationDelivery.create({ data: { notificationId: notification.id, channel: "IN_APP" as NotificationChannel, status: "SENT", provider: "36", sentAt: new Date() } });
-  if (input.email) await deliverEmail(notification.id, user.email, input.title, input.body || "", input.href || "");
-  if (input.whatsapp && user.phone) await deliverWhatsApp(notification.id, user.phone, input.title, input.body || "");
+  await db.notificationDelivery.create({
+    data: {
+      notificationId: notification.id,
+      channel: "IN_APP" as NotificationChannel,
+      status: "SENT",
+      provider: "36",
+      sentAt: new Date(),
+    },
+  });
+
+  const deliveries: Array<Promise<void>> = [];
+  if (input.email) {
+    deliveries.push(
+      deliverEmail(
+        notification.id,
+        user.email,
+        input.title,
+        input.body || "",
+        input.href || "",
+      ),
+    );
+  }
+  if (input.whatsapp && user.phone) {
+    deliveries.push(
+      deliverWhatsApp(
+        notification.id,
+        user.phone,
+        input.title,
+        input.body || "",
+      ),
+    );
+  }
+  if (deliveries.length) {
+    await Promise.all(deliveries);
+  }
+
   return notification;
 }
