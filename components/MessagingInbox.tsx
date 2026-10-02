@@ -16,15 +16,19 @@ export type InboxMessage = {
 };
 
 export type InboxThread = {
-  bookingId: string;
+  id: string;
+  kind: "BOOKING" | "INQUIRY";
+  bookingId: string | null;
+  conversationId: string | null;
+  messageEndpoint: string;
   counterpartName: string;
   studioName: string;
   studioSlug: string;
   roomName: string;
-  startAt: string;
-  endAt: string;
+  startAt: string | null;
+  endAt: string | null;
   status: string;
-  totalAmountMad: number;
+  totalAmountMad: number | null;
   currency: string;
   timeZone: string;
   photoUrl: string | null;
@@ -94,7 +98,8 @@ export function MessagingInbox({
   const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const active = threads.find((thread) => thread.bookingId === activeId) || null;
+  const active = threads.find((thread) => thread.id === activeId) || null;
+  const activeEndpoint = active?.messageEndpoint || "";
   const quickReplies = role === "CREATOR"
     ? [
         "Hi, can you confirm the access instructions?",
@@ -128,13 +133,13 @@ export function MessagingInbox({
   }, [messages, activeId]);
 
   useEffect(() => {
-    if (!activeId) return;
+    if (!activeEndpoint) return;
 
     let cancelled = false;
 
     async function refresh() {
       try {
-        const response = await fetch("/api/messages/" + activeId, {
+        const response = await fetch(activeEndpoint, {
           cache: "no-store",
         });
         if (!response.ok) return;
@@ -152,20 +157,21 @@ export function MessagingInbox({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [activeId]);
+  }, [activeEndpoint]);
 
-  async function openThread(bookingId: string) {
-    setActiveId(bookingId);
+  async function openThread(thread: InboxThread) {
+    setActiveId(thread.id);
     setMobileThread(true);
     setError("");
     setMessages([]);
 
     const params = new URLSearchParams(window.location.search);
-    params.set("booking", bookingId);
+    params.delete("booking");
+    params.set("thread", thread.id);
     window.history.replaceState(null, "", "/messages?" + params.toString());
 
     try {
-      const response = await fetch("/api/messages/" + bookingId, {
+      const response = await fetch(thread.messageEndpoint, {
         cache: "no-store",
       });
       const data = await response.json();
@@ -178,7 +184,7 @@ export function MessagingInbox({
   }
 
   async function send() {
-    if (!activeId || !body.trim() || sending) return;
+    if (!active || !body.trim() || sending) return;
 
     const text = body.trim();
     const tempId = "pending-" + Date.now();
@@ -197,7 +203,7 @@ export function MessagingInbox({
     setError("");
 
     try {
-      const response = await fetch("/api/messages/" + activeId, {
+      const response = await fetch(active.messageEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: text }),
@@ -269,12 +275,12 @@ export function MessagingInbox({
               </div>
             ) : (
               filtered.map((thread) => {
-                const selected = thread.bookingId === activeId;
+                const selected = thread.id === activeId;
                 return (
                   <button
-                    key={thread.bookingId}
+                    key={thread.id}
                     type="button"
-                    onClick={() => openThread(thread.bookingId)}
+                    onClick={() => openThread(thread)}
                     className={
                       "flex w-full gap-3 border-b border-[#ebebeb] p-4 text-left transition " +
                       (selected
@@ -307,7 +313,9 @@ export function MessagingInbox({
                         <span className="shrink-0 text-[9px] text-[#a3a3a3]">
                           {thread.lastMessageAt
                             ? shortDate(thread.lastMessageAt)
-                            : dayLabel(thread.startAt, thread.timeZone)}
+                            : thread.startAt
+                              ? dayLabel(thread.startAt, thread.timeZone)
+                              : "New"}
                         </span>
                       </div>
                       <p className="mt-1 truncate text-[11px] font-bold text-[#717171]">
@@ -384,30 +392,42 @@ export function MessagingInbox({
                   >
                     Studio
                   </Link>
-                  <Link
-                    href={
-                      role === "CREATOR"
-                        ? "/creator/bookings/" + active.bookingId
-                        : "/owner/bookings/" + active.bookingId
-                    }
-                    className="rounded-full border border-[#dddddd] px-3 py-2 text-[10px] font-black text-[#555555] hover:text-[#222222]"
-                  >
-                    Booking
-                  </Link>
+                  {active.bookingId && (
+                    <Link
+                      href={
+                        role === "CREATOR"
+                          ? "/creator/bookings/" + active.bookingId
+                          : "/owner/bookings/" + active.bookingId
+                      }
+                      className="rounded-full border border-[#dddddd] px-3 py-2 text-[10px] font-black text-[#555555] hover:text-[#222222]"
+                    >
+                      Booking
+                    </Link>
+                  )}
                 </div>
               </header>
 
               <div className="border-b border-[#ebebeb] bg-black/10 px-4 py-3 sm:px-5">
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px]">
                   <span className="font-black text-acid">
-                    {active.status.replaceAll("_", " ")}
+                    {active.kind === "INQUIRY"
+                      ? "PRE-BOOKING INQUIRY"
+                      : active.status.replaceAll("_", " ")}
                   </span>
-                  <span className="text-[#717171]">
-                    {dayLabel(active.startAt, active.timeZone)} · {timeLabel(active.startAt, active.timeZone)}–{timeLabel(active.endAt, active.timeZone)}
-                  </span>
-                  <span className="text-[#717171]">
-                    {formatMoney(active.totalAmountMad, active.currency)}
-                  </span>
+                  {active.startAt && active.endAt ? (
+                    <span className="text-[#717171]">
+                      {dayLabel(active.startAt, active.timeZone)} · {timeLabel(active.startAt, active.timeZone)}–{timeLabel(active.endAt, active.timeZone)}
+                    </span>
+                  ) : (
+                    <span className="text-[#717171]">
+                      Ask about availability, equipment and session details before booking.
+                    </span>
+                  )}
+                  {active.totalAmountMad != null && (
+                    <span className="text-[#717171]">
+                      {formatMoney(active.totalAmountMad, active.currency)}
+                    </span>
+                  )}
                   <span className="text-[#a3a3a3]">
                     {active.timeZone}
                   </span>
@@ -532,7 +552,7 @@ export function MessagingInbox({
                   </div>
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-2 text-[9px] text-[#a3a3a3]">
                     <span>Enter to send · Shift + Enter for a new line</span>
-                    <span>Booking chat · visible only to both booking parties</span>
+                    <span>Private chat · visible only to both parties</span>
                   </div>
                 </div>
               </footer>
