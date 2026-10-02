@@ -9,6 +9,7 @@ import {
 import {
   formatMarketplaceDateTime,
   localDateKey,
+  studioTimeZone,
 } from "@/lib/time";
 import { expireStaleBookingHolds } from "@/lib/booking-lifecycle";
 
@@ -22,27 +23,40 @@ function parseView(value: string | undefined): View {
     : "upcoming";
 }
 
-function groupByDate<T extends { startAt: Date }>(rows: T[]) {
+type BookingWithStudio = {
+  startAt: Date;
+  studio: {
+    latitude: unknown | null;
+    longitude: unknown | null;
+  };
+};
+
+function bookingDateKey(booking: BookingWithStudio) {
+  return localDateKey(
+    booking.startAt,
+    studioTimeZone(booking.studio),
+  );
+}
+
+function groupByDate<T extends BookingWithStudio>(rows: T[]) {
   const groups = new Map<string, T[]>();
   for (const row of rows) {
-    const key = localDateKey(row.startAt);
+    const key = bookingDateKey(row);
     groups.set(key, [...(groups.get(key) || []), row]);
   }
   return groups;
 }
 
-function shortDay(value: Date) {
-  return new Intl.DateTimeFormat("en", {
-    timeZone: "Africa/Casablanca",
-    weekday: "short",
-  }).format(value);
-}
-
-function dayNumber(value: Date) {
-  return new Intl.DateTimeFormat("en", {
-    timeZone: "Africa/Casablanca",
-    day: "numeric",
-  }).format(value);
+function datePartsFromKey(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return {
+    shortDay: new Intl.DateTimeFormat("en", {
+      timeZone: "UTC",
+      weekday: "short",
+    }).format(date),
+    dayNumber: String(day),
+  };
 }
 
 export default async function OwnerBookingsPage({
@@ -54,7 +68,6 @@ export default async function OwnerBookingsPage({
   const query = await searchParams;
   const view = parseView(query.view);
   const now = new Date();
-  const todayKey = localDateKey(now);
 
   await expireStaleBookingHolds({
     ownerId: user.id,
@@ -77,11 +90,14 @@ export default async function OwnerBookingsPage({
     },
   });
 
-  const today = bookings.filter(
-    (booking) =>
-      localDateKey(booking.startAt) === todayKey &&
-      !["CANCELLED", "EXPIRED"].includes(booking.status),
-  );
+  const today = bookings.filter((booking) => {
+    const timeZone = studioTimeZone(booking.studio);
+    return (
+      localDateKey(booking.startAt, timeZone) ===
+        localDateKey(now, timeZone) &&
+      !["CANCELLED", "EXPIRED"].includes(booking.status)
+    );
+  });
   const upcoming = bookings.filter(
     (booking) =>
       booking.startAt >= now &&
@@ -121,14 +137,23 @@ export default async function OwnerBookingsPage({
     0,
   );
 
-  const days = Array.from({ length: 14 }, (_, index) => {
-    const date = new Date(now.getTime() + index * 24 * 60 * 60 * 1000);
-    const key = localDateKey(date);
-    const count = upcoming.filter(
-      (booking) => localDateKey(booking.startAt) === key,
-    ).length;
-    return { date, key, count };
-  });
+  const upcomingDateCounts = upcoming.reduce(
+    (counts, booking) => {
+      const key = bookingDateKey(booking);
+      counts.set(key, (counts.get(key) || 0) + 1);
+      return counts;
+    },
+    new Map<string, number>(),
+  );
+
+  const days = Array.from(upcomingDateCounts.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(0, 14)
+    .map(([key, count]) => ({
+      key,
+      count,
+      ...datePartsFromKey(key),
+    }));
 
   const tabs: Array<{ value: View; label: string; count: number }> = [
     { value: "today", label: "Today", count: today.length },
@@ -214,13 +239,18 @@ export default async function OwnerBookingsPage({
         <section className="mt-6 rounded-2xl border border-[#ebebeb] bg-white p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <span className="label">Next 14 days</span>
+              <span className="label">Upcoming dates</span>
               <b className="text-sm">Session calendar</b>
             </div>
             <span className="text-[10px] text-[#a3a3a3]">
-              Casablanca time
+              Each session uses its studio’s local time
             </span>
           </div>
+          {days.length === 0 ? (
+            <p className="mt-4 text-xs text-[#8a8a8a]">
+              No upcoming sessions.
+            </p>
+          ) : (
           <div className="mt-4 grid grid-cols-7 gap-2 lg:grid-cols-14">
             {days.map((day) => (
               <div
@@ -233,9 +263,9 @@ export default async function OwnerBookingsPage({
                 }
               >
                 <span className="block text-[9px] font-black uppercase text-[#8a8a8a]">
-                  {shortDay(day.date)}
+                  {day.shortDay}
                 </span>
-                <b className="mt-1 block text-sm">{dayNumber(day.date)}</b>
+                <b className="mt-1 block text-sm">{day.dayNumber}</b>
                 <span
                   className={
                     "mt-1 block text-[9px] font-black " +
@@ -247,6 +277,7 @@ export default async function OwnerBookingsPage({
               </div>
             ))}
           </div>
+          )}
         </section>
 
         <nav className="mt-8 flex gap-2 overflow-x-auto pb-2">
@@ -335,8 +366,14 @@ export default async function OwnerBookingsPage({
                             </h3>
                             <p className="mt-1 text-xs text-[#717171]">
                               {booking.studio.name} ·{" "}
-                              {formatMarketplaceDateTime(booking.startAt)} →{" "}
-                              {formatMarketplaceDateTime(booking.endAt)}
+                              {formatMarketplaceDateTime(
+                                booking.startAt,
+                                studioTimeZone(booking.studio),
+                              )} →{" "}
+                              {formatMarketplaceDateTime(
+                                booking.endAt,
+                                studioTimeZone(booking.studio),
+                              )}
                             </p>
                             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#8a8a8a]">
                               <span>

@@ -6,7 +6,10 @@ import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMad } from "@/lib/finance";
 import { categoryLabel, studioCompletion } from "@/lib/studio";
-import { formatMarketplaceDateTime } from "@/lib/time";
+import {
+  formatMarketplaceDateTime,
+  studioTimeZone,
+} from "@/lib/time";
 
 export default async function OwnerDashboardPage() {
   const user = await requireRole("STUDIO_OWNER");
@@ -164,7 +167,10 @@ export default async function OwnerDashboardPage() {
                         </span>
                       </div>
                       <span className="mt-1 block text-xs text-[#717171]">{booking.room.name} · {booking.creator.name}</span>
-                      <span className="mt-1 block text-[10px] text-[#a3a3a3]">{formatMarketplaceDateTime(booking.startAt)}</span>
+                      <span className="mt-1 block text-[10px] text-[#a3a3a3]">{formatMarketplaceDateTime(
+                          booking.startAt,
+                          studioTimeZone(booking.studio),
+                        )}</span>
                     </div>
                     <div className="text-left sm:text-right">
                       <b>{formatMad(booking.totalAmountMad)}</b>

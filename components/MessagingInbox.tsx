@@ -23,6 +23,7 @@ export type InboxThread = {
   endAt: string;
   status: string;
   totalAmountMad: number;
+  timeZone: string;
   photoUrl: string | null;
   lastMessage: string;
   lastMessageAt: string | null;
@@ -39,18 +40,20 @@ function shortDate(value: string) {
   }).format(date);
 }
 
-function dayLabel(value: string) {
+function dayLabel(value: string, timeZone?: string) {
   const date = new Date(value);
   return new Intl.DateTimeFormat("en", {
+    ...(timeZone ? { timeZone } : {}),
     weekday: "short",
     month: "short",
     day: "numeric",
   }).format(date);
 }
 
-function timeLabel(value: string) {
+function timeLabel(value: string, timeZone?: string) {
   const date = new Date(value);
   return new Intl.DateTimeFormat("en", {
+    ...(timeZone ? { timeZone } : {}),
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
@@ -301,7 +304,7 @@ export function MessagingInbox({
                         <span className="shrink-0 text-[9px] text-[#a3a3a3]">
                           {thread.lastMessageAt
                             ? shortDate(thread.lastMessageAt)
-                            : dayLabel(thread.startAt)}
+                            : dayLabel(thread.startAt, thread.timeZone)}
                         </span>
                       </div>
                       <p className="mt-1 truncate text-[11px] font-bold text-[#717171]">
@@ -397,10 +400,13 @@ export function MessagingInbox({
                     {active.status.replaceAll("_", " ")}
                   </span>
                   <span className="text-[#717171]">
-                    {dayLabel(active.startAt)} · {timeLabel(active.startAt)}–{timeLabel(active.endAt)}
+                    {dayLabel(active.startAt, active.timeZone)} · {timeLabel(active.startAt, active.timeZone)}–{timeLabel(active.endAt, active.timeZone)}
                   </span>
                   <span className="text-[#717171]">
                     {active.totalAmountMad} MAD
+                  </span>
+                  <span className="text-[#a3a3a3]">
+                    {active.timeZone}
                   </span>
                 </div>
               </div>

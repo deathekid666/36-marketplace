@@ -8,6 +8,7 @@ import {
 } from "@/components/MessagingInbox";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { studioTimeZone } from "@/lib/time";
 
 export const metadata = {
   title: "Messages · 36",
@@ -89,6 +90,7 @@ export default async function MessagesPage({
         endAt: booking.endAt.toISOString(),
         status: booking.status,
         totalAmountMad: booking.totalAmountMad,
+        timeZone: studioTimeZone(booking.studio),
         photoUrl: booking.studio.photos[0]?.url || null,
         lastMessage: last?.body || "",
         lastMessageAt: last?.createdAt.toISOString() || null,
