@@ -101,10 +101,32 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
         },
       });
 
+      const paid = await tx.payment.aggregate({
+        where: {
+          bookingId: payment.bookingId,
+          kind: { in: ["DEPOSIT", "BALANCE"] },
+          status: "PAID",
+        },
+        _sum: { amountMad: true },
+      });
+      const paymentStatus =
+        (paid._sum.amountMad || 0) >=
+        payment.booking.totalAmountMad
+          ? "PAID"
+          : "PARTIALLY_PAID";
+      const preservedStatus = [
+        "CANCELLED",
+        "EXPIRED",
+        "DISPUTED",
+      ].includes(payment.booking.status)
+        ? payment.booking.status
+        : "DISPUTED";
+
       await tx.booking.update({
         where: { id: payment.bookingId },
         data: {
-          status: "DISPUTED",
+          status: preservedStatus,
+          paymentStatus,
           expiresAt: null,
         },
       });
@@ -183,11 +205,33 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
           confirmedAt: now,
         },
       });
+      const paid = await tx.payment.aggregate({
+        where: {
+          bookingId: payment.bookingId,
+          kind: { in: ["DEPOSIT", "BALANCE"] },
+          status: "PAID",
+        },
+        _sum: { amountMad: true },
+      });
+      const paymentStatus =
+        (paid._sum.amountMad || 0) >=
+        payment.booking.totalAmountMad
+          ? "PAID"
+          : "PARTIALLY_PAID";
+      const preservedStatus =
+        payment.booking.status === "PENDING_DEPOSIT"
+          ? "EXPIRED"
+          : ["CANCELLED", "EXPIRED", "DISPUTED"].includes(
+                payment.booking.status,
+              )
+            ? payment.booking.status
+            : "DISPUTED";
+
       await tx.booking.update({
         where: { id: payment.bookingId },
         data: {
-          status: "DISPUTED",
-          paymentStatus: "PAID",
+          status: preservedStatus,
+          paymentStatus,
           expiresAt: null,
         },
       });
@@ -260,11 +304,25 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
           confirmedAt: now,
         },
       });
+      const paid = await tx.payment.aggregate({
+        where: {
+          bookingId: payment.bookingId,
+          kind: { in: ["DEPOSIT", "BALANCE"] },
+          status: "PAID",
+        },
+        _sum: { amountMad: true },
+      });
+      const paymentStatus =
+        (paid._sum.amountMad || 0) >=
+        payment.booking.totalAmountMad
+          ? "PAID"
+          : "PARTIALLY_PAID";
+
       await tx.booking.update({
         where: { id: payment.bookingId },
         data: {
           status: "DISPUTED",
-          paymentStatus: "PAID",
+          paymentStatus,
           expiresAt: null,
         },
       });
