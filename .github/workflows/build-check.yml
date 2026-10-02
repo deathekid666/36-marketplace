@@ -69,5 +69,7 @@ jobs:
           rm -rf .tmp-commerce-tests
           npx tsc scripts/test-global-commerce.ts lib/commerce.ts --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck --outDir .tmp-commerce-tests --noEmit false
           node .tmp-commerce-tests/scripts/test-global-commerce.js
+      - name: Test critical marketplace regression guards
+        run: npm run test:critical-regressions
       - name: Build Next.js
         run: npm run build
