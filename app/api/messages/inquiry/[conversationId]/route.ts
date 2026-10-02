@@ -141,7 +141,7 @@ export async function POST(
 
   const recipientId =
     user.role === "CREATOR"
-      ? conversation.ownerId
+      ? conversation.studio.ownerId
       : conversation.creatorId;
 
   if (recipientId) {
