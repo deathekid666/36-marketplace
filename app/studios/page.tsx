@@ -11,10 +11,7 @@ import { getCurrentUser, hasCreatorAccess } from "@/lib/auth";
 import { getRoomAvailability } from "@/lib/booking";
 import { db } from "@/lib/db";
 import { trackMarketplaceEvent } from "@/lib/analytics";
-import {
-  discoveryCategoriesForStudioCategory,
-  discoveryCategoryLabel,
-} from "@/lib/discovery/search";
+import { discoveryCategoriesForStudioCategory } from "@/lib/discovery/search";
 import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
 import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
@@ -247,18 +244,11 @@ export default async function StudiosPage({
           ...(discoveryCategories ? [{ category: { in: discoveryCategories } }] : []),
         ],
       },
-      include: {
+      select: {
+        id: true,
+        normalizedName: true,
         convertedStudio: {
           select: { status: true },
-        },
-        sources: {
-          where: { active: true },
-          orderBy: { collectedAt: "desc" },
-          take: 2,
-          select: {
-            id: true,
-            provider: true,
-          },
         },
       },
       orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
@@ -427,6 +417,20 @@ export default async function StudiosPage({
   if (sort !== "recommended") returnParams.set("sort", sort);
   const returnTo = "/studios?" + returnParams.toString();
 
+  const discoverParams = new URLSearchParams();
+  if (city) discoverParams.set("city", city);
+  const discoverCategory = discoveryCategories?.[0];
+  if (
+    discoverCategory &&
+    ["RECORDING", "PODCAST", "PHOTO", "VIDEO", "REHEARSAL", "IMAGE_LAB", "VOICE_OVER", "OTHER"].includes(
+      discoverCategory,
+    )
+  ) {
+    discoverParams.set("category", discoverCategory);
+  }
+  const discoverHref =
+    "/discover" + (discoverParams.toString() ? "?" + discoverParams.toString() : "");
+
   return (
     <main className="min-h-screen bg-white text-[#222]">
       <AppHeader user={user} />
@@ -440,8 +444,13 @@ export default async function StudiosPage({
             <h1 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
               Find your next creative space
             </h1>
-            <p className="mt-3 text-sm text-[#717171]">
-              Search bookable studios or explore creative spaces worldwide on the map.
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#717171]">
+              Studios is the bookable 36 marketplace: owner-verified spaces with live
+              rooms, pricing and availability. For the wider global directory,{" "}
+              <Link href={discoverHref} className="font-bold text-[#222] underline underline-offset-4">
+                use Discover
+              </Link>
+              .
             </p>
           </div>
           <Link
@@ -471,17 +480,23 @@ export default async function StudiosPage({
         />
 
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-[#717171]">
-            <b className="text-[#222222]">{results.length}</b> bookable studio
-            {results.length === 1 ? "" : "s"}
-            {date ? ` available for ${durationHours}h` : ""}
-            {city ? ` in ${city}` : ""}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-[#717171]">
+            <span>
+              <b className="text-[#222222]">{results.length}</b> bookable studio
+              {results.length === 1 ? "" : "s"}
+              {date ? ` available for ${durationHours}h` : ""}
+              {city ? ` in ${city}` : ""}
+            </span>
             {discoveryResults.length > 0 ? (
-              <span className="ml-2 text-sky-600">
-                · {discoveryResults.length} discovered
-              </span>
+              <Link
+                href={discoverHref}
+                className="font-bold text-sky-600 underline underline-offset-4"
+              >
+                Explore {discoveryResults.length} directory match
+                {discoveryResults.length === 1 ? "" : "es"} in Discover →
+              </Link>
             ) : null}
-          </p>
+          </div>
           {Boolean(user && hasCreatorAccess(user.role)) && (
             <Link href="/creator/requests" className="text-xs font-black text-acid">
               Can&apos;t find it? Post a 36 Request →
@@ -528,10 +543,19 @@ export default async function StudiosPage({
 
         {results.length === 0 ? (
           <div className="mt-8 rounded-3xl border border-dashed border-[#dddddd] p-14 text-center">
-            <h2 className="text-xl font-black">No matching studios</h2>
+            <h2 className="text-xl font-black">No bookable studios match this search</h2>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#8a8a8a]">
-              Try another location, date, category or price ceiling.
+              Try another location, date, category or marketplace filter.
             </p>
+            {discoveryResults.length > 0 && (
+              <Link
+                href={discoverHref}
+                className="mt-5 inline-flex rounded-full border border-sky-200 bg-sky-50 px-5 py-3 text-xs font-black text-sky-700"
+              >
+                {discoveryResults.length} directory space
+                {discoveryResults.length === 1 ? "" : "s"} found · Explore in Discover →
+              </Link>
+            )}
           </div>
         ) : (
           <div className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.05fr)_minmax(460px,.95fr)]">
@@ -646,25 +670,23 @@ export default async function StudiosPage({
             <aside className="self-start xl:sticky xl:top-24">
               <div className="mb-3 flex items-center justify-between gap-4">
                 <div>
-                  <b className="block text-sm">Creative spaces map</b>
-                  <span className="mt-1 block text-[10px] text-[#8a8a8a]">
-                    Bookable + contact-only spaces
-                  </span>
+                  <b className="block text-sm">Worldwide creative spaces</b>
+                  <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-[#8a8a8a]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <i className="h-2 w-2 rounded-full bg-acid" />
+                      Bookable on 36
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <i className="h-2 w-2 rounded-full bg-[#b8b8b8]" />
+                      Directory only
+                    </span>
+                  </div>
                 </div>
                 <Link
-                  href={
-                    "/discover" +
-                    (city || category
-                      ? "?" +
-                        new URLSearchParams({
-                          ...(city ? { city } : {}),
-                          ...(category ? { category } : {}),
-                        }).toString()
-                      : "")
-                  }
+                  href={discoverHref}
                   className="text-[10px] font-black text-[#222] underline underline-offset-4"
                 >
-                  Open explorer
+                  Open Discover
                 </Link>
               </div>
 
@@ -676,70 +698,6 @@ export default async function StudiosPage({
               />
             </aside>
           </div>
-        )}
-
-        {advancedInventoryFilters && candidateRows.length > 0 && (
-          <div className="mt-10 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-xs leading-5 text-[#8a8a8a]">
-            Contact-only discovery listings are hidden while advanced inventory
-            filters are active because they do not have verified room pricing,
-            capacity, equipment or rating data.
-          </div>
-        )}
-
-        {discoveryResults.length > 0 && (
-          <section className="mt-12 border-t border-[#ebebeb] pt-9">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div className="max-w-2xl">
-                <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-600">
-                  36 Discovery
-                </span>
-                <h2 className="mt-2 text-2xl font-black">
-                  More studios found around this search
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-[#8a8a8a]">
-                  These studios match the location/category search, but they are not bookable on 36 yet.
-                  Date availability and maximum-price filters do not apply to discovery listings because no owner-verified inventory or pricing exists yet.
-                </p>
-              </div>
-              <Link href={"/discover?city=" + encodeURIComponent(city)} className="text-xs font-black text-sky-600">
-                Open discovery →
-              </Link>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {discoveryResults.map((candidate) => (
-                <Link
-                  key={candidate.id}
-                  href={"/discover/" + candidate.slug}
-                  className="rounded-2xl border border-sky-100 bg-sky-50 p-5 transition hover:border-sky-200"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="rounded-full border border-sky-200/50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-sky-600">
-                      {candidate.status === "CONVERTED" ? "Owner onboarding" : "Discovered"}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#a3a3a3]">
-                      {discoveryCategoryLabel(candidate.category)}
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-lg font-black">{candidate.name}</h3>
-                  <p className="mt-1 text-sm text-[#717171]">
-                    {[candidate.district, candidate.city].filter(Boolean).join(", ") || candidate.country || "Location available"}
-                  </p>
-                  {candidate.phone && (
-                    <p className="mt-3 text-sm font-bold text-sky-600">☎ {candidate.phone}</p>
-                  )}
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-amber-600">Contact only · not bookable</span>
-                    {candidate.sources.map((source) => (
-                      <span key={source.id} className="rounded-full border border-[#ebebeb] px-2 py-1 text-[9px] text-[#8a8a8a]">
-                        {source.provider}
-                      </span>
-                    ))}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
         )}
 
         <CompareTray date={date} durationHours={durationHours} />
