@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { submitDiscoveryContactReportAction } from "@/app/discover/[slug]/report-actions";
 import { AppHeader } from "@/components/AppHeader";
 import { StudioMap } from "@/components/StudioMap";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, hasCreatorAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   discoveryFreshness,
@@ -625,7 +625,7 @@ export default async function DiscoveryStudioPage({
                     </Link>
                   ) : null}
                 </div>
-              ) : claimsEnabled && user?.role === "STUDIO_OWNER" ? (
+              ) : claimsEnabled && Boolean(user && hasCreatorAccess(user.role)) ? (
                 <Link
                   href={claimHref}
                   className="button-dark mt-4 inline-flex w-full justify-center"
