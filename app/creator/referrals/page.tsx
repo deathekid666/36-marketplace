@@ -1,12 +1,12 @@
 import { AppHeader } from "@/components/AppHeader";
-import { requireRole } from "@/lib/auth";
+import { requireCreatorAccess } from "@/lib/auth";
 import { formatMoney } from "@/lib/commerce";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Referrals" };
 
 export default async function Page() {
-  const user = await requireRole("CREATOR");
+  const user = await requireCreatorAccess();
   const referrals = await db.referral.findMany({
     where: { inviterId: user.id },
     include: {
