@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 export function FlashBookingButton({
   flashSlotId,
   userRole,
+  isOwnStudio = false,
 }: {
   flashSlotId: string;
   userRole?: "CREATOR" | "STUDIO_OWNER" | "ADMIN" | null;
+  isOwnStudio?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -19,8 +21,12 @@ export function FlashBookingButton({
       router.push(`/auth/login?next=${encodeURIComponent("/now")}`);
       return;
     }
-    if (userRole !== "CREATOR") {
-      setError("Use a Creator account to book 36 NOW slots.");
+    if (userRole === "ADMIN") {
+      setError("Admin accounts do not create marketplace bookings.");
+      return;
+    }
+    if (isOwnStudio) {
+      setError("You cannot book your own studio.");
       return;
     }
     setBusy(true);
@@ -44,11 +50,17 @@ export function FlashBookingButton({
     <div>
       <button
         type="button"
-        disabled={busy}
+        disabled={busy || isOwnStudio}
         onClick={reserve}
         className="w-full rounded-xl bg-acid px-4 py-3 text-xs font-black text-white disabled:opacity-50"
       >
-        {busy ? "Reserving…" : !userRole ? "Log in to book" : "Book this NOW slot"}
+        {busy
+          ? "Reserving…"
+          : !userRole
+            ? "Log in to book"
+            : isOwnStudio
+              ? "Your studio"
+              : "Book this NOW slot"}
       </button>
       {error && <p className="mt-2 text-[11px] leading-5 text-red-300">{error}</p>}
     </div>
