@@ -33,9 +33,15 @@ function transform(data: NonNullable<Awaited<ReturnType<typeof loadPublicProfile
     createdAt: review.createdAt,
     studioName: review.studio.name,
     studioSlug: review.studio.slug,
-    personName: isOwner ? review.creator?.name || null : null,
-    personId: isOwner ? review.creator?.id || null : null,
-    direction: isOwner ? ("RECEIVED" as const) : ("WRITTEN" as const),
+    personName:
+      review.profileDirection === "RECEIVED"
+        ? review.creator?.name || null
+        : null,
+    personId:
+      review.profileDirection === "RECEIVED"
+        ? review.creator?.id || null
+        : null,
+    direction: review.profileDirection,
   }));
 
   return { studios, reviews };
@@ -67,9 +73,7 @@ export default async function ProfilePage({
             createdAt: data.user.createdAt,
             completedSessions: data.completedSessions,
             reviewCount:
-              data.user.role === "STUDIO_OWNER"
-                ? data.reviewsReceived
-                : data.reviewsWritten,
+              data.reviewsReceived + data.reviewsWritten,
             averageRating: data.averageRating,
             avatarUrl: data.user.avatarUrl,
             coverUrl: data.user.coverUrl,

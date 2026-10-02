@@ -7,7 +7,7 @@ import { MarketplaceSearchBar } from "@/components/MarketplaceSearchBar";
 import { CompareStudioButton } from "@/components/CompareStudioButton";
 import { CompareTray } from "@/components/CompareTray";
 import { toggleFavoriteAction } from "@/app/favorites/actions";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, hasCreatorAccess } from "@/lib/auth";
 import { getRoomAvailability } from "@/lib/booking";
 import { db } from "@/lib/db";
 import { trackMarketplaceEvent } from "@/lib/analytics";
@@ -371,7 +371,7 @@ export default async function StudiosPage({
   });
 
   const favoriteIds =
-    user?.role === "CREATOR"
+    user && hasCreatorAccess(user.role)
       ? new Set(
           (
             await db.favorite.findMany({
@@ -482,7 +482,7 @@ export default async function StudiosPage({
               </span>
             ) : null}
           </p>
-          {user?.role === "CREATOR" && (
+          {Boolean(user && hasCreatorAccess(user.role)) && (
             <Link href="/creator/requests" className="text-xs font-black text-acid">
               Can&apos;t find it? Post a 36 Request →
             </Link>
@@ -564,7 +564,11 @@ export default async function StudiosPage({
                         </div>
                       </Link>
 
-                      {user?.role === "CREATOR" && (
+                      {Boolean(
+                        user &&
+                          hasCreatorAccess(user.role) &&
+                          studio.ownerId !== user.id,
+                      ) && (
                         <form action={toggleFavoriteAction} className="absolute right-3 top-3">
                           <input type="hidden" name="studioId" value={studio.id} />
                           <input type="hidden" name="returnTo" value={returnTo} />

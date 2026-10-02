@@ -10,7 +10,6 @@ export const dynamic = "force-dynamic";
 async function accessibleBooking(
   bookingId: string,
   userId: string,
-  role: string,
 ) {
   const booking = await db.booking.findUnique({
     where: { id: bookingId },
@@ -36,8 +35,8 @@ async function accessibleBooking(
   });
 
   if (!booking) return null;
-  if (role === "CREATOR" && booking.creatorId === userId) return booking;
-  if (role === "STUDIO_OWNER" && booking.studio.ownerId === userId) return booking;
+  if (booking.creatorId === userId) return booking;
+  if (booking.studio.ownerId === userId) return booking;
   return null;
 }
 
@@ -51,7 +50,7 @@ export async function GET(
   }
 
   const { bookingId } = await params;
-  const booking = await accessibleBooking(bookingId, user.id, user.role);
+  const booking = await accessibleBooking(bookingId, user.id);
   if (!booking) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
@@ -94,7 +93,7 @@ export async function POST(
   }
 
   const { bookingId } = await params;
-  const booking = await accessibleBooking(bookingId, user.id, user.role);
+  const booking = await accessibleBooking(bookingId, user.id);
   if (!booking) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
@@ -125,7 +124,7 @@ export async function POST(
   });
 
   const recipientId =
-    user.role === "CREATOR"
+    booking.creatorId === user.id
       ? booking.studio.ownerId
       : booking.creatorId;
 

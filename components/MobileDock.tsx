@@ -11,10 +11,10 @@ const creator = [
 ];
 
 const owner = [
-  ["Home", "/owner", "⌂"],
-  ["Messages", "/messages", "◌"],
-  ["Bookings", "/owner/bookings", "▣"],
-  ["Profile", "/profile", "○"],
+  ["Explore", "/studios", "⌕"],
+  ["Trips", "/creator/bookings", "▣"],
+  ["Inbox", "/messages", "◌"],
+  ["Hosting", "/owner", "⌂"],
 ];
 
 const admin = [

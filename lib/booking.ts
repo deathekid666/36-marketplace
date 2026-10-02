@@ -324,6 +324,9 @@ export async function getBookingQuote(input: {
     endAt,
   );
   if (!valid.ok) throw new BookingConflictError(valid.reason);
+  if (valid.room.studio.ownerId === input.creatorId) {
+    throw new BookingConflictError("You cannot book your own studio.");
+  }
 
   const baseAmountMad = Math.round(
     (valid.room.hourlyRateMad * input.durationMinutes) / 60,
@@ -472,6 +475,9 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.roomId}))`;
   const valid = await validateRoomInterval(tx, input.roomId, input.startAt, endAt);
   if (!valid.ok) throw new BookingConflictError(valid.reason);
+  if (valid.room.studio.ownerId === input.creatorId) {
+    throw new BookingConflictError("You cannot book your own studio.");
+  }
 
   const baseAmountMad = Math.round((valid.room.hourlyRateMad * input.durationMinutes) / 60);
   const requestedAddons = (input.addons || [])

@@ -31,7 +31,15 @@ export async function submitRequestOfferAction(form: FormData) {
     db.studioRequest.findFirst({ where: { id: requestId, status: "OPEN", expiresAt: { gt: new Date() } } }),
     db.room.findFirst({ where: { id: roomId, active: true, studio: { ownerId: user.id, status: "VERIFIED" } }, include: { studio: true } }),
   ]);
-  if (!request || !room || !Number.isFinite(durationMinutes) || durationMinutes < room.minimumHours * 60 || !Number.isFinite(totalAmountMad) || totalAmountMad < 1) {
+  if (
+    !request ||
+    request.creatorId === user.id ||
+    !room ||
+    !Number.isFinite(durationMinutes) ||
+    durationMinutes < room.minimumHours * 60 ||
+    !Number.isFinite(totalAmountMad) ||
+    totalAmountMad < 1
+  ) {
     redirect("/owner/requests?error=invalid");
   }
 

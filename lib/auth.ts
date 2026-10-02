@@ -84,6 +84,20 @@ export async function requireVerifiedRole(...roles: UserRole[]): Promise<User> {
   return user;
 }
 
+export function hasCreatorAccess(role: UserRole): boolean {
+  return role === "CREATOR" || role === "STUDIO_OWNER";
+}
+
+export async function requireCreatorAccess(): Promise<User> {
+  return requireRole("CREATOR", "STUDIO_OWNER");
+}
+
+export async function requireVerifiedCreatorAccess(): Promise<User> {
+  const user = await requireCreatorAccess();
+  if (!user.emailVerifiedAt) redirect("/auth/verify-email");
+  return user;
+}
+
 export function roleHome(role: UserRole): string {
   if (role === "ADMIN") return "/admin";
   if (role === "STUDIO_OWNER") return "/owner";

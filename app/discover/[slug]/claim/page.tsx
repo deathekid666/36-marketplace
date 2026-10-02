@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { submitCandidateClaimAction } from "@/app/discover/[slug]/claim/actions";
+import { enableHostingAction } from "@/app/list-your-studio/actions";
 import { AppHeader } from "@/components/AppHeader";
 import { getCurrentUser } from "@/lib/auth";
 import { trackMarketplaceEvent } from "@/lib/analytics";
@@ -80,21 +81,42 @@ export default async function ClaimDiscoveryStudioPage({
     });
   }
 
-  if (user.role !== "STUDIO_OWNER") {
+  if (user.role === "ADMIN") {
+    redirect("/admin");
+  }
+
+  if (user.role === "CREATOR") {
     return (
       <main className="min-h-screen">
         <AppHeader user={user} />
         <section className="mx-auto max-w-2xl px-5 py-16">
           <div className="panel">
-            <span className="text-xs font-bold uppercase tracking-[0.16em] text-amber-300">
-              Studio owner account required
+            <span className="text-xs font-bold uppercase tracking-[0.16em] text-acid">
+              Use your same 36 account
             </span>
             <h1 className="mt-3 text-3xl font-black">Claim {candidate.name}</h1>
             <p className="mt-4 text-sm leading-7 text-zinc-500">
-              Ownership claims can only be submitted from a Studio Owner account. Your current account role is {user.role.replaceAll("_", " ").toLowerCase()}.
+              You do not need a second Studio Owner account. Enable hosting on this account, then continue directly with the ownership claim.
             </p>
-            <Link href={"/discover/" + candidate.slug} className="button-dark mt-6 inline-flex">
-              Back to discovery listing
+            {!user.emailVerifiedAt ? (
+              <>
+                <p className="mt-4 text-xs leading-5 text-amber-300">
+                  Verify your email first so ownership evidence is tied to a verified account.
+                </p>
+                <Link href="/auth/verify-email" className="button-dark mt-6 inline-flex">
+                  Verify email
+                </Link>
+              </>
+            ) : (
+              <form action={enableHostingAction} className="mt-6">
+                <input type="hidden" name="nextTo" value={claimPath} />
+                <button className="button-dark inline-flex">
+                  Enable hosting & continue
+                </button>
+              </form>
+            )}
+            <Link href={"/discover/" + candidate.slug} className="mt-4 block text-xs font-bold text-zinc-500">
+              ← Back to discovery listing
             </Link>
           </div>
         </section>

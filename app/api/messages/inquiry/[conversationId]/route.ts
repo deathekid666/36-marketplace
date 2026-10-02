@@ -10,7 +10,6 @@ export const dynamic = "force-dynamic";
 async function accessibleInquiry(
   conversationId: string,
   userId: string,
-  role: string,
 ) {
   const conversation = await db.conversation.findFirst({
     where: {
@@ -34,14 +33,10 @@ async function accessibleInquiry(
   });
 
   if (!conversation || !conversation.studio) return null;
-  if (
-    role === "CREATOR" &&
-    conversation.creatorId === userId
-  ) {
+  if (conversation.creatorId === userId) {
     return conversation;
   }
   if (
-    role === "STUDIO_OWNER" &&
     conversation.ownerId === userId &&
     conversation.studio.ownerId === userId
   ) {
@@ -63,7 +58,6 @@ export async function GET(
   const conversation = await accessibleInquiry(
     conversationId,
     user.id,
-    user.role,
   );
   if (!conversation) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
@@ -105,7 +99,6 @@ export async function POST(
   const conversation = await accessibleInquiry(
     conversationId,
     user.id,
-    user.role,
   );
   if (!conversation || !conversation.studio) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
@@ -140,7 +133,7 @@ export async function POST(
   });
 
   const recipientId =
-    user.role === "CREATOR"
+    conversation.creatorId === user.id
       ? conversation.studio.ownerId
       : conversation.creatorId;
 

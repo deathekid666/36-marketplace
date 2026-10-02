@@ -28,10 +28,12 @@ export default async function MessagesPage({
 
   const [bookings, inquiries] = await Promise.all([
     db.booking.findMany({
-      where:
-        user.role === "CREATOR"
-          ? { creatorId: user.id }
-          : { studio: { ownerId: user.id } },
+      where: {
+        OR: [
+          { creatorId: user.id },
+          { studio: { ownerId: user.id } },
+        ],
+      },
       include: {
         creator: {
           select: {
@@ -75,19 +77,17 @@ export default async function MessagesPage({
       take: 120,
     }),
     db.conversation.findMany({
-      where:
-        user.role === "CREATOR"
-          ? {
-              bookingId: null,
-              creatorId: user.id,
-              studioId: { not: null },
-            }
-          : {
-              bookingId: null,
-              ownerId: user.id,
-              studioId: { not: null },
-              studio: { ownerId: user.id },
-            },
+      where: {
+        bookingId: null,
+        studioId: { not: null },
+        OR: [
+          { creatorId: user.id },
+          {
+            ownerId: user.id,
+            studio: { ownerId: user.id },
+          },
+        ],
+      },
       include: {
         creator: {
           select: {
@@ -136,7 +136,7 @@ export default async function MessagesPage({
       conversationId: booking.conversation?.id || null,
       messageEndpoint: "/api/messages/" + booking.id,
       counterpartName:
-        user.role === "CREATOR"
+        booking.creatorId === user.id
           ? booking.studio.owner.name
           : booking.creator.name,
       studioName: booking.studio.name,
@@ -152,6 +152,8 @@ export default async function MessagesPage({
       lastMessage: last?.body || "",
       lastMessageAt: last?.createdAt.toISOString() || null,
       needsReply: Boolean(last && last.senderId !== user.id),
+      perspective:
+        booking.creatorId === user.id ? "CREATOR" : "OWNER",
     };
   });
 
@@ -170,7 +172,7 @@ export default async function MessagesPage({
         messageEndpoint:
           "/api/messages/inquiry/" + conversation.id,
         counterpartName:
-          user.role === "CREATOR"
+          conversation.creatorId === user.id
             ? conversation.owner.name
             : conversation.creator.name,
         studioName: conversation.studio.name,
@@ -188,6 +190,8 @@ export default async function MessagesPage({
           last?.createdAt.toISOString() ||
           conversation.createdAt.toISOString(),
         needsReply: Boolean(last && last.senderId !== user.id),
+        perspective:
+          conversation.creatorId === user.id ? "CREATOR" : "OWNER",
       },
     ];
   });
@@ -260,19 +264,17 @@ export default async function MessagesPage({
     initialThread.conversationId
   ) {
     const conversation = await db.conversation.findFirst({
-      where:
-        user.role === "CREATOR"
-          ? {
-              id: initialThread.conversationId,
-              bookingId: null,
-              creatorId: user.id,
-            }
-          : {
-              id: initialThread.conversationId,
-              bookingId: null,
-              ownerId: user.id,
-              studio: { ownerId: user.id },
-            },
+      where: {
+        id: initialThread.conversationId,
+        bookingId: null,
+        OR: [
+          { creatorId: user.id },
+          {
+            ownerId: user.id,
+            studio: { ownerId: user.id },
+          },
+        ],
+      },
       include: {
         messages: {
           include: {
@@ -317,7 +319,6 @@ export default async function MessagesPage({
         ) : (
           <MessagingInbox
             userId={user.id}
-            role={user.role as "CREATOR" | "STUDIO_OWNER"}
             threads={threads}
             initialBookingId={initialThreadId}
             initialMessages={initialMessages}

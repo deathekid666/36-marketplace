@@ -27,10 +27,8 @@ export async function openDisputeAction(form: FormData) {
 
   const allowed =
     user.role === "ADMIN" ||
-    (user.role === "CREATOR" &&
-      booking.creatorId === user.id) ||
-    (user.role === "STUDIO_OWNER" &&
-      booking.studio.ownerId === user.id);
+    booking.creatorId === user.id ||
+    booking.studio.ownerId === user.id;
   if (!allowed) return;
 
   await db.$transaction([
@@ -81,7 +79,8 @@ export async function openDisputeAction(form: FormData) {
   revalidatePath("/admin/disputes");
 
   redirect(
-    user.role === "STUDIO_OWNER"
+    booking.studio.ownerId === user.id &&
+      booking.creatorId !== user.id
       ? "/owner/bookings/" + bookingId + "?dispute=1"
       : "/creator/bookings/" + bookingId + "?dispute=1",
   );

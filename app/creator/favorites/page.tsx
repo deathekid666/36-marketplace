@@ -5,16 +5,19 @@ import { AppHeader } from "@/components/AppHeader";
 import { CompareStudioButton } from "@/components/CompareStudioButton";
 import { CompareTray } from "@/components/CompareTray";
 import { ShortlistProjects } from "@/components/ShortlistProjects";
-import { requireRole } from "@/lib/auth";
+import { requireCreatorAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/commerce";
 
 export default async function FavoritesPage() {
-  const user = await requireRole("CREATOR");
+  const user = await requireCreatorAccess();
   const favorites = await db.favorite.findMany({
     where: {
       userId: user.id,
-      studio: { status: "VERIFIED" },
+      studio: {
+        status: "VERIFIED",
+        ownerId: { not: user.id },
+      },
     },
     include: {
       studio: {

@@ -7,7 +7,7 @@ import { BookingHoldCountdown } from "@/components/BookingHoldCountdown";
 import { VerifiedReviewForm } from "@/components/VerifiedReviewForm";
 import { openDisputeAction } from "@/app/disputes/actions";
 import { cancelBookingAction, sendBookingMessageAction } from "@/app/bookings/actions";
-import { requireRole } from "@/lib/auth";
+import { requireCreatorAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/commerce";
 import {
@@ -35,7 +35,7 @@ export default async function CreatorBookingDetailPage({
     booked?: string;
   }>;
 }) {
-  const user = await requireRole("CREATOR");
+  const user = await requireCreatorAccess();
   const { id } = await params;
   const query = await searchParams;
 

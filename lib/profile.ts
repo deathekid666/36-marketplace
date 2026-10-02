@@ -1,7 +1,7 @@
 import type { UserRole } from "@prisma/client";
 
 export function profileRoleLabel(role: UserRole) {
-  if (role === "STUDIO_OWNER") return "Studio Host";
+  if (role === "STUDIO_OWNER") return "Creator · Studio Host";
   if (role === "CREATOR") return "Creator";
   return "36 Admin";
 }

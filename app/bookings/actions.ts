@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireRole, requireUser } from "@/lib/auth";
+import { requireCreatorAccess, requireRole, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/commerce";
 import { notifyUser } from "@/lib/notifications";
@@ -24,13 +24,9 @@ async function accessibleBooking(bookingId: string, user: Awaited<ReturnType<typ
   });
   if (!booking) return null;
   if (user.role === "ADMIN") return booking;
-  if (user.role === "CREATOR" && booking.creatorId === user.id) return booking;
-  if (user.role === "STUDIO_OWNER" && booking.studio.ownerId === user.id) return booking;
+  if (booking.creatorId === user.id) return booking;
+  if (booking.studio.ownerId === user.id) return booking;
   return null;
-}
-
-function bookingPath(role: string, bookingId: string) {
-  return role === "STUDIO_OWNER" ? `/owner/bookings/${bookingId}` : `/creator/bookings/${bookingId}`;
 }
 
 export async function sendBookingMessageAction(form: FormData) {
@@ -49,7 +45,10 @@ export async function sendBookingMessageAction(form: FormData) {
   await db.message.create({
     data: { conversationId: conversation.id, senderId: user.id, body },
   });
-  const recipientId = user.role === "CREATOR" ? booking.studio.ownerId : booking.creatorId;
+  const recipientId =
+    booking.creatorId === user.id
+      ? booking.studio.ownerId
+      : booking.creatorId;
   await notifyUser({
     userId: recipientId,
     type: "BOOKING_MESSAGE",
@@ -66,7 +65,7 @@ export async function sendBookingMessageAction(form: FormData) {
 }
 
 export async function cancelBookingAction(form: FormData) {
-  const user = await requireRole("CREATOR");
+  const user = await requireCreatorAccess();
   const bookingId = text(form, "bookingId", 80);
   const reason = text(form, "reason", 500);
   const booking = await db.booking.findFirst({
@@ -342,7 +341,7 @@ function rating(value: FormDataEntryValue | null) {
 }
 
 export async function submitReviewAction(form: FormData) {
-  const user = await requireRole("CREATOR");
+  const user = await requireCreatorAccess();
   const bookingId = text(form, "bookingId", 80);
   const booking = await db.booking.findFirst({
     where: { id: bookingId, creatorId: user.id, status: "COMPLETED" },

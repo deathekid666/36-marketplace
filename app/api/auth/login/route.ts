@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { createSession, roleHome } from "@/lib/auth";
+import { createSession, hasCreatorAccess, roleHome } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { normalizeEmail } from "@/lib/validation";
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    redirectTo: !user.emailVerifiedAt ? "/auth/verify-email" : (user.role === "CREATOR" && safeNext ? safeNext : roleHome(user.role)),
+    redirectTo: !user.emailVerifiedAt ? "/auth/verify-email" : (hasCreatorAccess(user.role) && safeNext ? safeNext : roleHome(user.role)),
     user: {
       id: user.id,
       name: user.name,
