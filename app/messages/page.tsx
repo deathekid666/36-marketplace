@@ -199,10 +199,14 @@ export default async function MessagesPage({
     return new Date(bValue).getTime() - new Date(aValue).getTime();
   });
 
-  const requestedThread =
-    query.thread && threads.some((thread) => thread.id === query.thread)
-      ? query.thread
-      : null;
+  const requestedThread = query.thread
+    ? threads.find(
+        (thread) =>
+          thread.id === query.thread ||
+          (query.thread?.startsWith("inquiry:") &&
+            thread.conversationId === query.thread.slice("inquiry:".length)),
+      )?.id || null
+    : null;
 
   const legacyBookingThread =
     query.booking &&
