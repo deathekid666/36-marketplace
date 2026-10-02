@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { requireVerifiedRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-export async function enableHostingAction() {
+export async function enableHostingAction(form?: FormData) {
   const user = await requireVerifiedRole("CREATOR");
 
   await db.user.updateMany({
@@ -26,5 +26,12 @@ export async function enableHostingAction() {
   revalidatePath("/creator");
   revalidatePath("/owner");
 
-  redirect("/owner/studios/new");
+  const requestedNext = String(form?.get("nextTo") || "").trim();
+  const nextTo =
+    requestedNext.startsWith("/") &&
+    !requestedNext.startsWith("//")
+      ? requestedNext
+      : "/owner/studios/new";
+
+  redirect(nextTo);
 }
