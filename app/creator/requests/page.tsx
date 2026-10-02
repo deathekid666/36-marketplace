@@ -1,6 +1,6 @@
 import { AppHeader } from "@/components/AppHeader";
 import { acceptOfferAction, createStudioRequestAction } from "@/app/creator/actions";
-import { requireRole } from "@/lib/auth";
+import { requireCreatorAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/commerce";
 import { geocodeAddress } from "@/lib/geocoding";
@@ -12,7 +12,7 @@ import {
 } from "@/lib/time";
 
 export default async function CreatorRequestsPage({ searchParams }: { searchParams: Promise<{ created?: string; error?: string }> }) {
-  const user = await requireRole("CREATOR");
+  const user = await requireCreatorAccess();
   const query = await searchParams;
   const requests = await db.studioRequest.findMany({
     where: { creatorId: user.id },
