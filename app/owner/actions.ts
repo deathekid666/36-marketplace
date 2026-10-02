@@ -78,7 +78,7 @@ async function uniqueSlug(name: string) {
 }
 
 export async function createStudioAction(form: FormData) {
-  const user = await requireRole("STUDIO_OWNER");
+  const user = await requireVerifiedRole("STUDIO_OWNER");
   const name = text(form, "name", 120);
   if (name.length < 3) return;
   const slug = await uniqueSlug(name);
@@ -97,7 +97,7 @@ export async function createStudioAction(form: FormData) {
 
 
 export async function createStudioWizardAction(form: FormData) {
-  const user = await requireRole("STUDIO_OWNER");
+  const user = await requireVerifiedRole("STUDIO_OWNER");
 
   const name = text(form, "name", 120);
   const description = text(form, "description", 5000);
