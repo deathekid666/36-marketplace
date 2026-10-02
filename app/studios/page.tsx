@@ -564,7 +564,11 @@ export default async function StudiosPage({
                         </div>
                       </Link>
 
-                      {Boolean(user && hasCreatorAccess(user.role)) && (
+                      {Boolean(
+                        user &&
+                          hasCreatorAccess(user.role) &&
+                          studio.ownerId !== user.id,
+                      ) && (
                         <form action={toggleFavoriteAction} className="absolute right-3 top-3">
                           <input type="hidden" name="studioId" value={studio.id} />
                           <input type="hidden" name="returnTo" value={returnTo} />
