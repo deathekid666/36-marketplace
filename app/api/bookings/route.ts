@@ -169,7 +169,7 @@ export async function POST(request: Request) {
           booking.durationMinutes / 60 +
           "h. Total " +
           formatMoney(booking.totalAmountMad, booking.currency) +
-          "."
+          ".",
         href: "/owner/bookings/" + booking.id,
         email: true,
         whatsapp: true,
