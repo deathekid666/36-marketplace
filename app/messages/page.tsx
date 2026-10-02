@@ -86,6 +86,7 @@ export default async function MessagesPage({
               bookingId: null,
               ownerId: user.id,
               studioId: { not: null },
+              studio: { ownerId: user.id },
             },
       include: {
         creator: {
@@ -199,12 +200,14 @@ export default async function MessagesPage({
     return new Date(bValue).getTime() - new Date(aValue).getTime();
   });
 
-  const requestedThread = query.thread
+  const requestedThreadParam = query.thread || "";
+  const requestedThread = requestedThreadParam
     ? threads.find(
         (thread) =>
-          thread.id === query.thread ||
-          (query.thread?.startsWith("inquiry:") &&
-            thread.conversationId === query.thread.slice("inquiry:".length)),
+          thread.id === requestedThreadParam ||
+          (requestedThreadParam.startsWith("inquiry:") &&
+            thread.conversationId ===
+              requestedThreadParam.slice("inquiry:".length)),
       )?.id || null
     : null;
 
@@ -257,14 +260,19 @@ export default async function MessagesPage({
     initialThread.conversationId
   ) {
     const conversation = await db.conversation.findFirst({
-      where: {
-        id: initialThread.conversationId,
-        bookingId: null,
-        OR: [
-          { creatorId: user.id },
-          { ownerId: user.id },
-        ],
-      },
+      where:
+        user.role === "CREATOR"
+          ? {
+              id: initialThread.conversationId,
+              bookingId: null,
+              creatorId: user.id,
+            }
+          : {
+              id: initialThread.conversationId,
+              bookingId: null,
+              ownerId: user.id,
+              studio: { ownerId: user.id },
+            },
       include: {
         messages: {
           include: {
