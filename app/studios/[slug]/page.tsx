@@ -12,7 +12,7 @@ import { formatMoney } from "@/lib/commerce";
 import { StudioMap } from "@/components/StudioMap";
 import { StudioProfileGallery } from "@/components/StudioProfileGallery";
 import { StudioRecommendations } from "@/components/StudioRecommendations";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, hasCreatorAccess } from "@/lib/auth";
 import { trackMarketplaceEvent } from "@/lib/analytics";
 import { db } from "@/lib/db";
 import { getStudioRecommendations } from "@/lib/recommendations";
@@ -165,8 +165,15 @@ export default async function StudioDetailPage({
     studioId: studio.id,
   });
 
+  const isOwnStudio = Boolean(
+    user && user.id === studio.ownerId,
+  );
+  const canInteractAsCreator = Boolean(
+    user && hasCreatorAccess(user.role) && !isOwnStudio,
+  );
+
   const [saved, creatorBooking] = await Promise.all([
-    user?.role === "CREATOR"
+    canInteractAsCreator && user
       ? db.favorite
           .findUnique({
             where: {
@@ -179,7 +186,7 @@ export default async function StudioDetailPage({
           })
           .then(Boolean)
       : Promise.resolve(false),
-    user?.role === "CREATOR"
+    canInteractAsCreator && user
       ? db.booking.findFirst({
           where: {
             creatorId: user.id,
@@ -299,7 +306,7 @@ export default async function StudioDetailPage({
           </Link>
 
           <div className="flex items-center gap-2">
-            {user?.role === "CREATOR" &&
+            {canInteractAsCreator &&
               (creatorBooking ? (
                 <Link
                   href={
@@ -323,7 +330,7 @@ export default async function StudioDetailPage({
                 </form>
               ))}
 
-            {user?.role === "CREATOR" && (
+            {canInteractAsCreator && (
               <form action={toggleFavoriteAction}>
                 <input
                   type="hidden"
@@ -838,7 +845,7 @@ export default async function StudioDetailPage({
                     >
                       Message host
                     </Link>
-                  ) : user?.role === "CREATOR" ? (
+                  ) : canInteractAsCreator ? (
                     <form action={startStudioConversationAction} className="mt-5">
                       <input
                         type="hidden"
@@ -916,6 +923,7 @@ export default async function StudioDetailPage({
                   unitLabel: addon.unitLabel,
                 }))}
                 userRole={user?.role || null}
+                isOwnStudio={isOwnStudio}
                 depositPercent={studio.depositPercent}
                 freeCancellationHours={studio.freeCancellationHours}
                 taxRateBps={studio.taxRateBps}
