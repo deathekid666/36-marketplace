@@ -3,7 +3,7 @@
 import { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 
-import { requireVerifiedRole } from "@/lib/auth";
+import { requireVerifiedCreatorAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 function text(form: FormData, name: string, max = 120) {
@@ -11,11 +11,15 @@ function text(form: FormData, name: string, max = 120) {
 }
 
 export async function startStudioConversationAction(form: FormData) {
-  const user = await requireVerifiedRole("CREATOR");
+  const user = await requireVerifiedCreatorAccess();
   const studioId = text(form, "studioId", 80);
 
   const studio = await db.studio.findFirst({
-    where: { id: studioId, status: "VERIFIED" },
+    where: {
+      id: studioId,
+      status: "VERIFIED",
+      ownerId: { not: user.id },
+    },
     select: { id: true, ownerId: true },
   });
 
