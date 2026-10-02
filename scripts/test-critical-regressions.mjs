@@ -88,6 +88,22 @@ mustInclude(
   "the map opens at world zoom",
 );
 
+mustInclude(
+  MAP_COMPONENT,
+  "function declutterNodes",
+  "dense world and city cluster labels are collision-filtered before rendering",
+);
+mustInclude(
+  MAP_COMPONENT,
+  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "the map uses a keyless OpenStreetMap basemap",
+);
+mustNotInclude(
+  MAP_COMPONENT,
+  "basemaps.cartocdn.com",
+  "the map must not use the CARTO endpoint that renders API-key-required watermarks",
+);
+
 // API must continue combining verified/bookable supply with contact-only discovery supply.
 mustInclude(
   MAP_API,

@@ -264,7 +264,6 @@ export function CreativeExplorerMap({
     let disposed = false;
     let L: any;
     let markerLayer: any;
-    let fallbackTilesUsed = false;
 
     function clearMarkers() {
       markersRef.current = [];
@@ -301,6 +300,72 @@ export function CreativeExplorerMap({
       });
     }
 
+    function declutterNodes(nodes: MapNode[]) {
+      const map = mapRef.current;
+      if (!map || nodes.length < 2) return nodes;
+
+      const zoom = map.getZoom();
+      if (zoom > 11) return nodes;
+
+      const viewport = map.getSize();
+      const occupied: Array<{
+        left: number;
+        top: number;
+        right: number;
+        bottom: number;
+      }> = [];
+
+      const ranked = [...nodes].sort((a, b) => {
+        const aCount = a.type === "place" ? 0 : a.count;
+        const bCount = b.type === "place" ? 0 : b.count;
+        return bCount - aCount;
+      });
+
+      const visible: MapNode[] = [];
+
+      for (const node of ranked) {
+        if (node.type === "place") {
+          visible.push(node);
+          continue;
+        }
+
+        const point = map.latLngToContainerPoint([node.lat, node.lng]);
+        const width =
+          node.type === "category" ? 142 : node.type === "city" ? 132 : 144;
+        const height = 40;
+        const padding = zoom <= 4 ? 8 : zoom <= 7 ? 5 : 3;
+        const box = {
+          left: point.x - width / 2 - padding,
+          right: point.x + width / 2 + padding,
+          top: point.y - height / 2 - padding,
+          bottom: point.y + height / 2 + padding,
+        };
+
+        if (
+          box.right < 0 ||
+          box.left > viewport.x ||
+          box.bottom < 0 ||
+          box.top > viewport.y
+        ) {
+          continue;
+        }
+
+        const collides = occupied.some(
+          (existing) =>
+            box.left < existing.right &&
+            box.right > existing.left &&
+            box.top < existing.bottom &&
+            box.bottom > existing.top,
+        );
+
+        if (collides) continue;
+        occupied.push(box);
+        visible.push(node);
+      }
+
+      return visible;
+    }
+
     function renderNodes(nodes: MapNode[]) {
       const map = mapRef.current;
       if (!map || !L || !markerLayer) return;
@@ -308,7 +373,9 @@ export function CreativeExplorerMap({
       clearMarkers();
       latestNodesRef.current = nodes;
 
-      for (const node of nodes) {
+      const nodesToRender = declutterNodes(nodes);
+
+      for (const node of nodesToRender) {
         const marker = L.marker([node.lat, node.lng], {
           icon: markerSpec(L, node),
           keyboard: true,
@@ -481,30 +548,13 @@ export function CreativeExplorerMap({
       mapRef.current = map;
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
-      const cartoTiles = L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        {
-          subdomains: "abcd",
-          maxZoom: 20,
-          minZoom: 2,
-          noWrap: true,
-          keepBuffer: 3,
-          attribution: "© OpenStreetMap contributors © CARTO",
-        },
-      ).addTo(map);
-
-      cartoTiles.on("tileerror", () => {
-        if (fallbackTilesUsed || disposed) return;
-        fallbackTilesUsed = true;
-        cartoTiles.remove();
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          minZoom: 2,
-          noWrap: true,
-          keepBuffer: 3,
-          attribution: "© OpenStreetMap contributors",
-        }).addTo(map);
-      });
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        minZoom: 2,
+        noWrap: true,
+        keepBuffer: 3,
+        attribution: "© OpenStreetMap contributors",
+      }).addTo(map);
 
       markerLayer = L.layerGroup().addTo(map);
 
@@ -515,7 +565,11 @@ export function CreativeExplorerMap({
 
       map.on("zoomend", () => scheduleRefresh(100));
       map.on("moveend", () => {
-        if (map.getZoom() >= 8) scheduleRefresh(170);
+        if (map.getZoom() >= 8) {
+          scheduleRefresh(170);
+        } else if (latestNodesRef.current.length > 0) {
+          renderNodes(latestNodesRef.current);
+        }
       });
       map.on("dragend", () => setAreaDirty(true));
 

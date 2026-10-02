@@ -7927,6 +7927,17 @@ label.air-search-segment:hover {
   box-shadow: inset 0 0 0 1px rgba(0,0,0,.035);
 }
 
+
+.air-map-canvas .leaflet-tile-pane {
+  filter: grayscale(.82) saturate(.5) brightness(1.08) contrast(.88);
+}
+
+.air-map-country-pin span {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .air-map-country-pin,
 .air-map-city-pin,
 .air-map-category-pin,
