@@ -17,11 +17,20 @@ function viewMatches(type: string, view: View) {
   if (view === "unread") return true;
   if (view === "messages") return value.includes("MESSAGE");
   if (view === "money") {
-    return ["PAYMENT", "PAYOUT", "REFUND", "OFFLINE"].some((token) =>
-      value.includes(token),
-    );
+    return [
+      "PAYMENT",
+      "PAYOUT",
+      "REFUND",
+      "OFFLINE",
+      "DEPOSIT",
+      "BALANCE",
+      "INVOICE",
+      "REFERRAL",
+    ].some((token) => value.includes(token));
   }
-  return ["BOOKING", "SESSION", "REVIEW"].some((token) => value.includes(token));
+  return ["BOOKING", "SESSION", "REVIEW", "DISPUTE"].some((token) =>
+    value.includes(token),
+  );
 }
 
 function deliveryLabel(channel: string, status: string) {
@@ -42,19 +51,25 @@ export default async function NotificationsPage({
     ? (query.view as View)
     : "all";
 
-  const items = await db.notification.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 150,
-    include: {
-      deliveries: {
-        orderBy: { createdAt: "asc" },
-        select: { id: true, channel: true, status: true },
+  const [items, unread, totalCount] = await Promise.all([
+    db.notification.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 150,
+      include: {
+        deliveries: {
+          orderBy: { createdAt: "asc" },
+          select: { id: true, channel: true, status: true },
+        },
       },
-    },
-  });
-
-  const unread = items.filter((item) => !item.readAt).length;
+    }),
+    db.notification.count({
+      where: { userId: user.id, readAt: null },
+    }),
+    db.notification.count({
+      where: { userId: user.id },
+    }),
+  ]);
   const visible = items.filter(
     (item) =>
       (view !== "unread" || !item.readAt) &&
@@ -112,6 +127,12 @@ export default async function NotificationsPage({
             </Link>
           ))}
         </nav>
+
+        {totalCount > items.length && (
+          <p className="mt-5 text-[10px] text-[#8a8a8a]">
+            Showing the latest {items.length} of {totalCount} notifications.
+          </p>
+        )}
 
         <div className="mt-5 space-y-3">
           {visible.length === 0 ? (
