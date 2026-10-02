@@ -3,7 +3,7 @@
 import { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 function text(form: FormData, name: string, max = 120) {
@@ -11,7 +11,7 @@ function text(form: FormData, name: string, max = 120) {
 }
 
 export async function startStudioConversationAction(form: FormData) {
-  const user = await requireRole("CREATOR");
+  const user = await requireVerifiedRole("CREATOR");
   const studioId = text(form, "studioId", 80);
 
   const studio = await db.studio.findFirst({
