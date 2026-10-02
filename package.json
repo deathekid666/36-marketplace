@@ -12,7 +12,8 @@
     "db:studio": "prisma studio",
     "admin:create": "node scripts/create-admin.mjs",
     "db:seed-demo": "node scripts/seed-demo.mjs",
-    "test:smoke-db": "node scripts/smoke-db.mjs"
+    "test:smoke-db": "node scripts/smoke-db.mjs",
+    "test:critical-regressions": "node scripts/test-critical-regressions.mjs"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
