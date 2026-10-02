@@ -2,7 +2,7 @@ import type { Booking, Prisma } from "@prisma/client";
 
 type RefundBookingSnapshot = Pick<
   Booking,
-  "id" | "status" | "totalAmountMad"
+  "id" | "status" | "totalAmountMad" | "commissionAmountMad"
 >;
 
 export async function reconcileConfirmedRefund(
@@ -82,12 +82,17 @@ export async function reconcileConfirmedRefund(
     };
   }
 
-  const commissionAmountMad = Math.min(
-    retainedGrossMad,
-    Math.round(
-      (retainedGrossMad * payout.commissionBps) / 10000,
-    ),
-  );
+  const commissionAmountMad =
+    booking.totalAmountMad > 0
+      ? Math.min(
+          retainedGrossMad,
+          Math.round(
+            (booking.commissionAmountMad *
+              retainedGrossMad) /
+              booking.totalAmountMad,
+          ),
+        )
+      : 0;
   const netAmountMad = Math.max(
     0,
     retainedGrossMad - commissionAmountMad,
