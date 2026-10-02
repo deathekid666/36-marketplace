@@ -324,7 +324,7 @@ export function AirbnbUserProfile({
 
             <p className="air-profile-about-copy">
               {isOwner
-                ? "Studio Host on 36. This public profile brings together verified studio listings, completed sessions and marketplace reviews."
+                ? "Creator and Studio Host on 36. This profile brings together verified studio listings, personal booking activity and marketplace reviews on one account."
                 : "Creator on 36. This profile shows verified booking activity and reviews connected to completed studio sessions."}
             </p>
 
@@ -579,7 +579,7 @@ export function AirbnbUserProfile({
               <Icon name="shield" />
             </div>
             <span>36 trust</span>
-            <h3>{isOwner ? "Studio Host" : "Creator"}</h3>
+            <h3>{isOwner ? "Creator + Host" : "Creator"}</h3>
             <p>
               These signals come from real account and marketplace activity on
               36.
