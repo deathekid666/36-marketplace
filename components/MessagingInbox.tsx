@@ -35,6 +35,7 @@ export type InboxThread = {
   lastMessage: string;
   lastMessageAt: string | null;
   needsReply: boolean;
+  perspective: "CREATOR" | "OWNER";
 };
 
 function shortDate(value: string) {
@@ -77,13 +78,11 @@ function initials(value: string) {
 
 export function MessagingInbox({
   userId,
-  role,
   threads,
   initialBookingId,
   initialMessages,
 }: {
   userId: string;
-  role: "CREATOR" | "STUDIO_OWNER";
   threads: InboxThread[];
   initialBookingId: string | null;
   initialMessages: InboxMessage[];
@@ -100,7 +99,8 @@ export function MessagingInbox({
 
   const active = threads.find((thread) => thread.id === activeId) || null;
   const activeEndpoint = active?.messageEndpoint || "";
-  const quickReplies = role === "CREATOR"
+  const creatorPerspective = active?.perspective !== "OWNER";
+  const quickReplies = creatorPerspective
     ? [
         "Hi, can you confirm the access instructions?",
         "Can you confirm the listed equipment will be ready?",
@@ -395,7 +395,7 @@ export function MessagingInbox({
                   {active.bookingId && (
                     <Link
                       href={
-                        role === "CREATOR"
+                        active.perspective === "CREATOR"
                           ? "/creator/bookings/" + active.bookingId
                           : "/owner/bookings/" + active.bookingId
                       }
@@ -534,7 +534,7 @@ export function MessagingInbox({
                       rows={1}
                       maxLength={2000}
                       placeholder={
-                        role === "CREATOR"
+                        active.perspective === "CREATOR"
                           ? "Message the studio…"
                           : "Message the creator…"
                       }
