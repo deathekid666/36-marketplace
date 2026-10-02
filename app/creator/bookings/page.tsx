@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AppHeader } from "@/components/AppHeader";
 import { releaseBookingHoldAction } from "@/app/creator/actions";
-import { requireRole } from "@/lib/auth";
+import { requireCreatorAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/commerce";
 import { offlinePaymentLabel } from "@/lib/offline-payment";
@@ -50,7 +50,7 @@ export default async function CreatorBookingsPage({
     view?: string;
   }>;
 }) {
-  const user = await requireRole("CREATOR");
+  const user = await requireCreatorAccess();
   const query = await searchParams;
   const view = parseView(query.view);
   const now = new Date();
