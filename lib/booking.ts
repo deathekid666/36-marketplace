@@ -573,7 +573,7 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
     process.env.PAYMENT_PROVIDER ||
     "MANUAL";
 
-  return tx.booking.create({
+  const booking = await tx.booking.create({
     data: {
       creatorId: input.creatorId,
       studioId: valid.room.studioId,
@@ -636,6 +636,24 @@ export async function createBookingHoldInTransaction(tx: Prisma.TransactionClien
     },
     include: { studio: true, room: true, payments: true, addons: true, payout: true },
   });
+
+  const inquiry = await tx.conversation.findFirst({
+    where: {
+      bookingId: null,
+      studioId: valid.room.studioId,
+      creatorId: input.creatorId,
+    },
+    select: { id: true },
+  });
+
+  if (inquiry) {
+    await tx.conversation.update({
+      where: { id: inquiry.id },
+      data: { bookingId: booking.id },
+    });
+  }
+
+  return booking;
 }
 
 export async function createBookingHold(input: CreateBookingInput) {
