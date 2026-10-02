@@ -73,6 +73,7 @@ export async function sendDueBookingReminders(limit = 50) {
   });
 
   let sent = 0;
+  let failed = 0;
 
   for (const reminder of due) {
     const claimedAt = new Date();
@@ -114,7 +115,8 @@ export async function sendDueBookingReminders(limit = 50) {
         whatsapp: true,
       });
       sent += 1;
-    } catch (error) {
+    } catch {
+      failed += 1;
       await db.bookingReminder.updateMany({
         where: {
           id: reminder.id,
@@ -124,9 +126,8 @@ export async function sendDueBookingReminders(limit = 50) {
           sentAt: null,
         },
       });
-      throw error;
     }
   }
 
-  return sent;
+  return { sent, failed };
 }
