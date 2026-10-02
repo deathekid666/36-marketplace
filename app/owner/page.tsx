@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { StudioStatusBadge } from "@/components/StudioStatusBadge";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { formatMad } from "@/lib/finance";
+import { formatMoney } from "@/lib/commerce";
 import { categoryLabel, studioCompletion } from "@/lib/studio";
 import {
   formatMarketplaceDateTime,
@@ -50,20 +50,42 @@ export default async function OwnerDashboardPage() {
           createdAt: { gte: last30Days },
           status: { in: ["PENDING_DEPOSIT", "CONFIRMED", "COMPLETED"] },
         },
-        select: { totalAmountMad: true, studioNetAmountMad: true },
+        select: {
+          totalAmountMad: true,
+          studioNetAmountMad: true,
+          currency: true,
+        },
       }),
       db.candidateStudioClaim.count({
         where: { claimantId: user.id, status: "SUBMITTED" },
       }),
-      db.payout.aggregate({
+      db.payout.findMany({
         where: { studioId: { in: studioIds }, status: "ELIGIBLE" },
-        _sum: { netAmountMad: true },
+        select: { netAmountMad: true, currency: true },
       }),
     ]);
 
   const verifiedStudios = studios.filter((studio) => studio.status === "VERIFIED").length;
-  const gross30 = recentValue.reduce((sum, booking) => sum + booking.totalAmountMad, 0);
-  const net30 = recentValue.reduce((sum, booking) => sum + booking.studioNetAmountMad, 0);
+  function groupedMoney<T extends { currency: string }>(
+    rows: T[],
+    amount: (row: T) => number,
+  ) {
+    const totals = new Map<string, number>();
+    for (const row of rows) {
+      totals.set(
+        row.currency,
+        (totals.get(row.currency) || 0) + amount(row),
+      );
+    }
+    return [...totals.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }
+
+  const gross30 = groupedMoney(recentValue, (booking) => booking.totalAmountMad);
+  const net30 = groupedMoney(recentValue, (booking) => booking.studioNetAmountMad);
+  const eligiblePayoutTotals = groupedMoney(
+    eligiblePayout,
+    (payout) => payout.netAmountMad,
+  );
   const ratings = studios.flatMap((studio) => studio.reviews.map((review) => review.rating));
   const averageRating = ratings.length
     ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
@@ -80,7 +102,7 @@ export default async function OwnerDashboardPage() {
     ["My studios", "Edit listings, rooms, photos and verification.", "/owner/studios", "36"],
     ["Bookings", "Manage sessions and payments.", "/owner/bookings", "▣"],
     ["Availability", "Open or block studio time.", "/owner/availability", "◷"],
-    ["Revenue", "See studio net, payouts and commission.", "/owner/revenue", "MAD"],
+    ["Revenue", "See studio net, payouts and commission.", "/owner/revenue", "¤"],
     ["Analytics", "Track views, saves and booking conversion.", "/owner/analytics", "↗"],
   ];
 
@@ -124,13 +146,39 @@ export default async function OwnerDashboardPage() {
           </article>
           <article className="rounded-2xl border border-[#e7e7e7] bg-white p-5">
             <span className="label">30-day studio net</span>
-            <b className="mt-2 block text-3xl">{formatMad(net30)}</b>
-            <span className="mt-1 block text-xs text-[#8a8a8a]">{formatMad(gross30)} gross</span>
+            <div className="mt-2 space-y-1">
+              {net30.length ? (
+                net30.map(([currency, amount]) => (
+                  <b key={currency} className="block text-xl">
+                    {formatMoney(amount, currency)}
+                  </b>
+                ))
+              ) : (
+                <b className="block text-xl text-[#a3a3a3]">—</b>
+              )}
+            </div>
+            <span className="mt-2 block text-xs text-[#8a8a8a]">
+              {gross30.length
+                ? gross30
+                    .map(([currency, amount]) => formatMoney(amount, currency))
+                    .join(" · ") + " gross"
+                : "No booking value in this window"}
+            </span>
           </article>
           <article className="rounded-2xl border border-[#e7e7e7] bg-white p-5">
             <span className="label">Eligible payout</span>
-            <b className="mt-2 block text-3xl">{formatMad(eligiblePayout._sum.netAmountMad || 0)}</b>
-            <span className="mt-1 block text-xs text-[#8a8a8a]">ready for payout</span>
+            <div className="mt-2 space-y-1">
+              {eligiblePayoutTotals.length ? (
+                eligiblePayoutTotals.map(([currency, amount]) => (
+                  <b key={currency} className="block text-xl">
+                    {formatMoney(amount, currency)}
+                  </b>
+                ))
+              ) : (
+                <b className="block text-xl text-[#a3a3a3]">—</b>
+              )}
+            </div>
+            <span className="mt-2 block text-xs text-[#8a8a8a]">ready for payout</span>
           </article>
           <article className="rounded-2xl border border-[#e7e7e7] bg-white p-5">
             <span className="label">Rating</span>
@@ -173,7 +221,7 @@ export default async function OwnerDashboardPage() {
                         )}</span>
                     </div>
                     <div className="text-left sm:text-right">
-                      <b>{formatMad(booking.totalAmountMad)}</b>
+                      <b>{formatMoney(booking.totalAmountMad, booking.currency)}</b>
                       <span className="block text-[10px] text-[#8a8a8a]">booking value</span>
                     </div>
                   </Link>
