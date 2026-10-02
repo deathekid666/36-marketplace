@@ -33,6 +33,12 @@ function text(form: FormData, name: string, max = 1000) {
   return String(form.get(name) ?? "").trim().slice(0, max);
 }
 
+function validUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 function positiveInt(value: FormDataEntryValue | null, fallback = 1) {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 1) return fallback;
@@ -661,7 +667,7 @@ export async function submitStudioAction(form: FormData) {
   const user = await requireVerifiedRole("STUDIO_OWNER");
   const studioId = text(form, "studioId", 80);
 
-  if (!/^[0-9a-f-]{36}$/i.test(studioId)) {
+  if (!validUuid(studioId)) {
     redirect("/owner/studios");
   }
 
