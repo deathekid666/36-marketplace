@@ -27,7 +27,7 @@ export async function verifyStudioAction(form: FormData) {
   if (!validUuid(studioId)) redirect("/admin");
 
   const result = await db.$transaction(async (tx) => {
-    await tx.$executeRaw`
+    await tx.$queryRaw`
       SELECT id
       FROM "Studio"
       WHERE id = ${studioId}::uuid
@@ -124,7 +124,7 @@ export async function rejectStudioAction(form: FormData) {
     note || "Please update the listing and resubmit.";
 
   const result = await db.$transaction(async (tx) => {
-    await tx.$executeRaw`
+    await tx.$queryRaw`
       SELECT id
       FROM "Studio"
       WHERE id = ${studioId}::uuid
