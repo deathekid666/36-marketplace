@@ -5,6 +5,7 @@ import { studioTimeZone } from "@/lib/time";
 import { notFound } from "next/navigation";
 
 import { toggleFavoriteAction } from "@/app/favorites/actions";
+import { startStudioConversationAction } from "@/app/messages/actions";
 import { AppHeader } from "@/components/AppHeader";
 import { BookingWidget } from "@/components/BookingWidget";
 import { formatMoney } from "@/lib/commerce";
@@ -296,17 +297,29 @@ export default async function StudioDetailPage({
           </Link>
 
           <div className="flex items-center gap-2">
-            {creatorBooking && (
-              <Link
-                href={
-                  "/messages?booking=" +
-                  creatorBooking.id
-                }
-                className="rounded-full border border-[#dddddd] px-4 py-2 text-xs font-black text-[#333333] hover:border-[#bdbdbd]"
-              >
-                Message
-              </Link>
-            )}
+            {user?.role === "CREATOR" &&
+              (creatorBooking ? (
+                <Link
+                  href={
+                    "/messages?booking=" +
+                    creatorBooking.id
+                  }
+                  className="rounded-full border border-[#dddddd] px-4 py-2 text-xs font-black text-[#333333] hover:border-[#bdbdbd]"
+                >
+                  Message host
+                </Link>
+              ) : (
+                <form action={startStudioConversationAction}>
+                  <input
+                    type="hidden"
+                    name="studioId"
+                    value={studio.id}
+                  />
+                  <button className="rounded-full border border-[#dddddd] px-4 py-2 text-xs font-black text-[#333333] hover:border-[#bdbdbd]">
+                    Message host
+                  </button>
+                </form>
+              ))}
 
             {user?.role === "CREATOR" && (
               <form action={toggleFavoriteAction}>
