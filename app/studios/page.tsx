@@ -19,6 +19,7 @@ import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
 import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
 import { normalizeSearchText } from "@/lib/discovery/normalization";
 import { categoryLabel, slugify, STUDIO_CATEGORIES } from "@/lib/studio";
+import { formatMoney, normalizeCurrency } from "@/lib/commerce";
 
 function parseCategory(value?: string): StudioCategory | undefined {
   return STUDIO_CATEGORIES.some((item) => item.value === value)
@@ -69,6 +70,7 @@ export default async function StudiosPage({
     duration?: string;
     minPrice?: string;
     maxPrice?: string;
+    currency?: string;
     capacity?: string;
     engineer?: string;
     equipment?: string;
@@ -87,6 +89,7 @@ export default async function StudiosPage({
   const durationHours = parseDuration(query.duration);
   const minPrice = parsePositiveInt(query.minPrice);
   const maxPrice = parsePositiveInt(query.maxPrice);
+  const priceCurrency = normalizeCurrency(query.currency, "");
   const capacity = parsePositiveInt(query.capacity, 500);
   const engineerIncluded = query.engineer === "1";
   const equipment = String(query.equipment || "").trim().slice(0, 100);
@@ -97,7 +100,7 @@ export default async function StudiosPage({
   const roomWhere: Prisma.RoomWhereInput = {
     active: true,
     ...(category ? { category } : {}),
-    ...(minPrice || maxPrice
+    ...(priceCurrency && (minPrice || maxPrice)
       ? {
           hourlyRateMad: {
             ...(minPrice ? { gte: minPrice } : {}),
@@ -122,7 +125,8 @@ export default async function StudiosPage({
   };
 
   const advancedInventoryFilters = Boolean(
-    minPrice ||
+    priceCurrency ||
+      minPrice ||
       maxPrice ||
       capacity ||
       engineerIncluded ||
@@ -142,6 +146,7 @@ export default async function StudiosPage({
       durationHours,
       minPrice: minPrice || null,
       maxPrice: maxPrice || null,
+      currency: priceCurrency || null,
       capacity: capacity || null,
       engineerIncluded,
       equipment: equipment || null,
@@ -167,6 +172,7 @@ export default async function StudiosPage({
               ],
             }
           : {}),
+        ...(priceCurrency ? { currency: priceCurrency } : {}),
         rooms: { some: roomWhere },
         ...(amenity
           ? {
@@ -303,6 +309,11 @@ export default async function StudiosPage({
       })
     : availableResults;
 
+  const effectiveSort =
+    ["price_asc", "price_desc"].includes(sort) && !priceCurrency
+      ? "recommended"
+      : sort;
+
   const results = [...ratingFiltered].sort((a, b) => {
     const aPrice = a.rooms[0]?.hourlyRateMad ?? Number.MAX_SAFE_INTEGER;
     const bPrice = b.rooms[0]?.hourlyRateMad ?? Number.MAX_SAFE_INTEGER;
@@ -319,11 +330,11 @@ export default async function StudiosPage({
     const aPopularity = a._count.bookings * 2 + a._count.favorites;
     const bPopularity = b._count.bookings * 2 + b._count.favorites;
 
-    if (sort === "price_asc") return aPrice - bPrice;
-    if (sort === "price_desc") return bPrice - aPrice;
-    if (sort === "rating_desc") return bRating - aRating;
-    if (sort === "popular") return bPopularity - aPopularity;
-    if (sort === "capacity_desc") return bCapacity - aCapacity;
+    if (effectiveSort === "price_asc") return aPrice - bPrice;
+    if (effectiveSort === "price_desc") return bPrice - aPrice;
+    if (effectiveSort === "rating_desc") return bRating - aRating;
+    if (effectiveSort === "popular") return bPopularity - aPopularity;
+    if (effectiveSort === "capacity_desc") return bCapacity - aCapacity;
 
     const verifiedDifference =
       (b.verifiedAt?.getTime() || 0) -
@@ -353,8 +364,9 @@ export default async function StudiosPage({
       bookableResults: results.length,
       dateAppliedToBookableOnly: Boolean(date),
       maxPriceAppliedToBookableOnly: Boolean(maxPrice),
+      currency: priceCurrency || null,
       advancedInventoryFilters,
-      sort,
+      sort: effectiveSort,
     },
   });
 
@@ -406,6 +418,7 @@ export default async function StudiosPage({
   returnParams.set("duration", String(durationHours));
   if (minPrice) returnParams.set("minPrice", String(minPrice));
   if (maxPrice) returnParams.set("maxPrice", String(maxPrice));
+  if (priceCurrency) returnParams.set("currency", priceCurrency);
   if (capacity) returnParams.set("capacity", String(capacity));
   if (engineerIncluded) returnParams.set("engineer", "1");
   if (equipment) returnParams.set("equipment", equipment);
@@ -446,12 +459,13 @@ export default async function StudiosPage({
           durationHours={durationHours}
           minPrice={minPrice}
           maxPrice={maxPrice}
+          currency={priceCurrency}
           capacity={capacity}
           engineerIncluded={engineerIncluded}
           equipment={equipment}
           amenity={amenity}
           minRating={minRating}
-          sort={sort}
+          sort={effectiveSort}
           categories={STUDIO_CATEGORIES}
           locationSuggestions={locationSuggestions}
         />
@@ -595,7 +609,7 @@ export default async function StudiosPage({
                       </div>
 
                       <p className="mt-2 text-sm">
-                        <b>{minRate ? `${minRate} MAD` : "—"}</b>
+                        <b>{minRate ? formatMoney(minRate, studio.currency) : "—"}</b>
                         <span className="text-[#717171]"> / hour</span>
                       </p>
                       {(studio.rooms[0]?.equipment.length > 0 ||

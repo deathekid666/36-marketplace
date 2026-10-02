@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 
 import { DateCalendar } from "@/components/DateCalendar";
+import {
+  currencyLabel,
+  SUPPORTED_CURRENCIES,
+} from "@/lib/commerce";
 
 type CategoryOption = {
   value: string;
@@ -32,6 +36,7 @@ export function MarketplaceSearchBar({
   durationHours,
   minPrice,
   maxPrice,
+  currency,
   capacity,
   engineerIncluded,
   equipment,
@@ -47,6 +52,7 @@ export function MarketplaceSearchBar({
   durationHours: number;
   minPrice?: number;
   maxPrice?: number;
+  currency?: string;
   capacity?: number;
   engineerIncluded: boolean;
   equipment: string;
@@ -58,6 +64,7 @@ export function MarketplaceSearchBar({
 }) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(date);
+  const [selectedCurrency, setSelectedCurrency] = useState(currency || "");
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   return (
@@ -127,7 +134,8 @@ export function MarketplaceSearchBar({
       <details
         className="air-filter-panel"
         open={Boolean(
-          minPrice ||
+          selectedCurrency ||
+            minPrice ||
             maxPrice ||
             capacity ||
             engineerIncluded ||
@@ -143,8 +151,22 @@ export function MarketplaceSearchBar({
         </summary>
 
         <div className="air-filter-grid">
-          <label><span>Min price · MAD/h</span><input className="field" type="number" min="1" name="minPrice" defaultValue={minPrice || ""} placeholder="Any" /></label>
-          <label><span>Max price · MAD/h</span><input className="field" type="number" min="1" name="maxPrice" defaultValue={maxPrice || ""} placeholder="Any" /></label>
+          <label>
+            <span>Price currency</span>
+            <select
+              className="field"
+              name="currency"
+              value={selectedCurrency}
+              onChange={(event) => setSelectedCurrency(event.target.value)}
+            >
+              <option value="">Choose currency</option>
+              {SUPPORTED_CURRENCIES.map((item) => (
+                <option key={item} value={item}>{currencyLabel(item)}</option>
+              ))}
+            </select>
+          </label>
+          <label><span>Min price{selectedCurrency ? " · " + selectedCurrency + "/h" : ""}</span><input className="field" type="number" min="1" name="minPrice" defaultValue={minPrice || ""} placeholder={selectedCurrency ? "Any" : "Choose currency first"} disabled={!selectedCurrency} /></label>
+          <label><span>Max price{selectedCurrency ? " · " + selectedCurrency + "/h" : ""}</span><input className="field" type="number" min="1" name="maxPrice" defaultValue={maxPrice || ""} placeholder={selectedCurrency ? "Any" : "Choose currency first"} disabled={!selectedCurrency} /></label>
           <label><span>Minimum capacity</span><input className="field" type="number" min="1" max="500" name="capacity" defaultValue={capacity || ""} placeholder="Any" /></label>
           <label>
             <span>Minimum rating</span>
@@ -161,8 +183,8 @@ export function MarketplaceSearchBar({
             <span>Sort by</span>
             <select className="field" name="sort" defaultValue={sort}>
               <option value="recommended">Recommended</option>
-              <option value="price_asc">Price · low to high</option>
-              <option value="price_desc">Price · high to low</option>
+              <option value="price_asc" disabled={!selectedCurrency}>Price · low to high</option>
+              <option value="price_desc" disabled={!selectedCurrency}>Price · high to low</option>
               <option value="rating_desc">Rating · highest first</option>
               <option value="popular">Popularity</option>
               <option value="capacity_desc">Capacity · largest first</option>
@@ -175,7 +197,7 @@ export function MarketplaceSearchBar({
         </div>
 
         <div className="air-filter-footer">
-          <span>Advanced filters apply to verified, bookable inventory.</span>
+          <span>Price filters and price sorting only compare studios in the selected currency. 36 never mixes currencies silently.</span>
           <a href="/studios">Clear all</a>
         </div>
       </details>
