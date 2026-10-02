@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireRole, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import { notifyUser } from "@/lib/notifications";
 import { ensureInvoice } from "@/lib/invoices";
 import {
@@ -157,6 +158,7 @@ export async function cancelBookingAction(form: FormData) {
             bookingId: booking.id,
             kind: "REFUND",
             amountMad: refundAmountMad,
+            currency: booking.currency,
             status: "PENDING",
             provider:
               paidCharge?.provider ||
@@ -189,7 +191,14 @@ export async function cancelBookingAction(form: FormData) {
     userId: booking.studio.ownerId,
     type: "BOOKING_CANCELLED",
     title: `Booking cancelled by ${user.name}`,
-    body: `${booking.totalAmountMad} MAD booking. ${refundAmountMad ? `Refund requested: ${refundAmountMad} MAD.` : "No automatic refund due."}`,
+    body:
+      formatMoney(booking.totalAmountMad, booking.currency) +
+      " booking. " +
+      (refundAmountMad
+        ? "Refund requested: " +
+          formatMoney(refundAmountMad, booking.currency) +
+          "."
+        : "No automatic refund due."),
     href: `/owner/bookings/${booking.id}`,
     email: true,
     whatsapp: true,

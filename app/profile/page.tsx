@@ -20,6 +20,7 @@ function transform(data: NonNullable<Awaited<ReturnType<typeof loadPublicProfile
       neighborhood: studio.neighborhood,
       photoUrl: studio.photos[0]?.url || null,
       priceMad: studio.rooms[0]?.hourlyRateMad || null,
+      currency: studio.currency,
       rating,
       reviewCount: studio.reviews.length,
     };

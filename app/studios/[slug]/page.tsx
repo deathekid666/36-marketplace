@@ -214,6 +214,7 @@ export default async function StudioDetailPage({
     {
       id: studio.id,
       city: studio.city,
+      currency: studio.currency,
       primaryCategory: studio.primaryCategory,
       latitude:
         studio.latitude != null

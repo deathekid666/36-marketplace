@@ -32,7 +32,7 @@ export async function resolveDisputeAction(form:FormData){
     await tx.dispute.update({where:{id:dispute.id},data:{status,assignedAdminId:admin.id,resolution,refundAmountMad:refund,resolvedAt:new Date()}});
     if(refund>0&&status==="RESOLVED"){
       const exists=await tx.payment.findFirst({where:{bookingId:dispute.bookingId,kind:"REFUND",status:{in:["PENDING","REFUNDED"]}}});
-      if(!exists)await tx.payment.create({data:{bookingId:dispute.bookingId,kind:"REFUND",amountMad:Math.min(refund,dispute.booking.totalAmountMad),status:"PENDING",provider:process.env.PAYMENT_PROVIDER||"MANUAL",providerRef:"DISPUTE_REFUND"}});
+      if(!exists)await tx.payment.create({data:{bookingId:dispute.bookingId,kind:"REFUND",amountMad:Math.min(refund,dispute.booking.totalAmountMad),currency:dispute.booking.currency,status:"PENDING",provider:process.env.PAYMENT_PROVIDER||"MANUAL",providerRef:"DISPUTE_REFUND"}});
     }
     const restored=dispute.booking.endAt<=new Date()?"COMPLETED":"CONFIRMED";
     await tx.booking.update({where:{id:dispute.bookingId},data:{status:status==="REJECTED"?restored:(refund>=dispute.booking.totalAmountMad?"CANCELLED":restored)}});

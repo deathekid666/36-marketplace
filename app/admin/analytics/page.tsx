@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { discoveryStaleCutoff } from "@/lib/discovery/freshness";
 import { discoverySnapshotMetrics } from "@/lib/discovery/metrics";
 import { discoveryRolloutWhere } from "@/lib/discovery/rollout";
-import { formatMad } from "@/lib/finance";
+import { formatMoney } from "@/lib/commerce";
 
 function countMap<T extends { [key: string]: unknown }>(
   rows: T[],
@@ -45,6 +45,7 @@ export default async function AdminAnalyticsPage() {
         status: true,
         totalAmountMad: true,
         commissionAmountMad: true,
+        currency: true,
         createdAt: true,
       },
     }),
@@ -55,9 +56,13 @@ export default async function AdminAnalyticsPage() {
       where: { createdAt: { gte: since } },
       _count: { _all: true },
     }),
-    db.payout.aggregate({
-      _sum: { netAmountMad: true, commissionAmountMad: true },
+    db.payout.findMany({
       where: { createdAt: { gte: since } },
+      select: {
+        currency: true,
+        netAmountMad: true,
+        commissionAmountMad: true,
+      },
     }),
     db.candidateStudio.groupBy({
       by: ["status"],
@@ -91,12 +96,39 @@ export default async function AdminAnalyticsPage() {
     }),
   ]);
 
-  const gmv = bookings
-    .filter((booking) => ["CONFIRMED", "COMPLETED"].includes(booking.status))
-    .reduce((sum, booking) => sum + booking.totalAmountMad, 0);
-  const commission = bookings
-    .filter((booking) => ["CONFIRMED", "COMPLETED"].includes(booking.status))
-    .reduce((sum, booking) => sum + booking.commissionAmountMad, 0);
+  const moneyByCurrency = new Map<
+    string,
+    { currency: string; gmv: number; commission: number; studioNet: number }
+  >();
+
+  const getMoneyRow = (currency: string) => {
+    const key = currency || "USD";
+    const current = moneyByCurrency.get(key);
+    if (current) return current;
+    const created = {
+      currency: key,
+      gmv: 0,
+      commission: 0,
+      studioNet: 0,
+    };
+    moneyByCurrency.set(key, created);
+    return created;
+  };
+
+  for (const booking of bookings) {
+    if (!["CONFIRMED", "COMPLETED"].includes(booking.status)) continue;
+    const row = getMoneyRow(booking.currency);
+    row.gmv += booking.totalAmountMad;
+    row.commission += booking.commissionAmountMad;
+  }
+
+  for (const payout of payouts) {
+    getMoneyRow(payout.currency).studioNet += payout.netAmountMad;
+  }
+
+  const financialRows = [...moneyByCurrency.values()].sort((a, b) =>
+    a.currency.localeCompare(b.currency),
+  );
   const cancelled = bookings.filter((booking) => booking.status === "CANCELLED").length;
   const confirmed = bookings.filter((booking) =>
     ["CONFIRMED", "COMPLETED"].includes(booking.status),
@@ -168,8 +200,6 @@ export default async function AdminAnalyticsPage() {
             ["Verified studios", verified],
             ["Bookings created", bookings.length],
             ["Confirmed/completed", confirmed],
-            ["GMV", formatMad(gmv)],
-            ["36 commission", formatMad(commission)],
             ["36 Requests", requests],
             ["Offers sent", offers],
           ].map(([label, value]) => (
@@ -179,6 +209,43 @@ export default async function AdminAnalyticsPage() {
             </div>
           ))}
         </div>
+
+        <section className="mt-8 panel">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <span className="label">Financials</span>
+              <h2 className="text-xl font-black">Native-currency totals</h2>
+            </div>
+            <span className="text-[10px] text-zinc-600">
+              No cross-currency addition
+            </span>
+          </div>
+          {financialRows.length === 0 ? (
+            <p className="mt-5 text-sm text-zinc-600">No financial activity in this window.</p>
+          ) : (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {financialRows.map((row) => (
+                <div key={row.currency} className="rounded-xl border border-zinc-900 p-4">
+                  <b>{row.currency}</b>
+                  <div className="mt-3 space-y-2 text-xs">
+                    <div className="flex justify-between gap-3">
+                      <span className="text-zinc-500">GMV</span>
+                      <strong>{formatMoney(row.gmv, row.currency)}</strong>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-zinc-500">36 commission</span>
+                      <strong>{formatMoney(row.commission, row.currency)}</strong>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-zinc-500">Studio net tracked</span>
+                      <strong>{formatMoney(row.studioNet, row.currency)}</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           <section className="panel">
@@ -227,9 +294,9 @@ export default async function AdminAnalyticsPage() {
                 </dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-zinc-500">Net studio value tracked</dt>
+                <dt className="text-zinc-500">Currencies tracked</dt>
                 <dd className="font-bold text-acid">
-                  {formatMad(payouts._sum.netAmountMad || 0)}
+                  {financialRows.length}
                 </dd>
               </div>
             </dl>

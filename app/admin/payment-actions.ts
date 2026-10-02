@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import { notifyUser } from "@/lib/notifications";
 import { scheduleBookingReminders } from "@/lib/reminders";
 
@@ -21,7 +22,7 @@ export async function setPaymentLinkAction(form: FormData) {
   const payment = await db.payment.findFirst({ where: { id: paymentId, status: "PENDING" }, include: { booking: { include: { studio: true } } } });
   if (!payment) redirect("/admin/payments?error=missing");
   await db.payment.update({ where: { id: payment.id }, data: { checkoutUrl, provider } });
-  await notifyUser({ userId: payment.booking.creatorId, type: "PAYMENT_LINK_READY", title: "Your 36 payment link is ready", body: `${payment.amountMad} MAD for ${payment.booking.studio.name}.`, href: `/creator/bookings/${payment.bookingId}`, email: true, whatsapp: true });
+  await notifyUser({ userId: payment.booking.creatorId, type: "PAYMENT_LINK_READY", title: "Your 36 payment link is ready", body: `${formatMoney(payment.amountMad, payment.currency)} for ${payment.booking.studio.name}.`, href: `/creator/bookings/${payment.bookingId}`, email: true, whatsapp: true });
   revalidatePath("/admin/payments");
   revalidatePath(`/creator/bookings/${payment.bookingId}`);
   redirect("/admin/payments?linked=1");
@@ -143,7 +144,7 @@ export async function confirmRefundAction(form: FormData) {
     }),
   ]);
 
-  await notifyUser({ userId: refund.booking.creatorId, type: "REFUND_CONFIRMED", title: "Refund confirmed", body: `${refund.amountMad} MAD refund for ${refund.booking.studio.name} has been marked completed.`, href: `/creator/bookings/${refund.bookingId}`, email: true, whatsapp: true });
+  await notifyUser({ userId: refund.booking.creatorId, type: "REFUND_CONFIRMED", title: "Refund confirmed", body: `${formatMoney(refund.amountMad, refund.currency)} refund for ${refund.booking.studio.name} has been marked completed.`, href: `/creator/bookings/${refund.bookingId}`, email: true, whatsapp: true });
   revalidatePath("/admin/payments");
   revalidatePath(`/creator/bookings/${refund.bookingId}`);
   redirect("/admin/payments?refunded=1");
