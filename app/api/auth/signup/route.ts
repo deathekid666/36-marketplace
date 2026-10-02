@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { normalizeCurrency } from "@/lib/commerce";
 import { hashPassword } from "@/lib/password";
 import { issueEmailVerification } from "@/lib/account-security";
 import { consumeRateLimit, fingerprintFromRequest } from "@/lib/rate-limit";
@@ -72,7 +73,29 @@ export async function POST(request: Request) {
   if (referralCodeInput) {
     const inviter = await db.user.findUnique({ where: { referralCode: referralCodeInput }, select: { id: true } });
     if (inviter && inviter.id !== user.id) {
-      await db.referral.create({ data: { inviterId: inviter.id, inviteeId: user.id, code: referralCodeInput, rewardMad: Math.max(0, Number(process.env.REFERRAL_REWARD_MAD || "50")) } }).catch(() => undefined);
+      const rewardAmount = Math.max(
+        0,
+        Number(
+          process.env.REFERRAL_REWARD_AMOUNT ||
+            process.env.REFERRAL_REWARD_MAD ||
+            "50",
+        ) || 0,
+      );
+      const rewardCurrency = normalizeCurrency(
+        process.env.REFERRAL_REWARD_CURRENCY,
+        "USD",
+      );
+      await db.referral
+        .create({
+          data: {
+            inviterId: inviter.id,
+            inviteeId: user.id,
+            code: referralCodeInput,
+            rewardMad: rewardAmount,
+            currency: rewardCurrency,
+          },
+        })
+        .catch(() => undefined);
     }
   }
 

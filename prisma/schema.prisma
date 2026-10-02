@@ -795,6 +795,7 @@ model Referral {
   code        String
   status      ReferralStatus @default(PENDING)
   rewardMad   Int            @default(0)
+  currency    String         @default("MAD") @db.VarChar(3)
   createdAt   DateTime       @default(now()) @db.Timestamp(3)
   qualifiedAt DateTime?      @db.Timestamp(3)
   rewardedAt  DateTime?      @db.Timestamp(3)
