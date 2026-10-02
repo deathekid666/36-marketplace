@@ -25,7 +25,7 @@ export async function generateMetadata({
     title: data.user.name + " · 36",
     description:
       data.user.role === "STUDIO_OWNER"
-        ? "View " + data.user.name + "'s verified studios and hosting activity on 36."
+        ? "View " + data.user.name + "'s creator and hosting activity, verified studios and reviews on 36."
         : "View " + data.user.name + "'s creator profile and verified activity on 36.",
   };
 }
@@ -70,9 +70,15 @@ export default async function PublicProfilePage({
     createdAt: review.createdAt,
     studioName: review.studio.name,
     studioSlug: review.studio.slug,
-    personName: isOwner ? review.creator?.name || null : null,
-    personId: isOwner ? review.creator?.id || null : null,
-    direction: isOwner ? ("RECEIVED" as const) : ("WRITTEN" as const),
+    personName:
+      review.profileDirection === "RECEIVED"
+        ? review.creator?.name || null
+        : null,
+    personId:
+      review.profileDirection === "RECEIVED"
+        ? review.creator?.id || null
+        : null,
+    direction: review.profileDirection,
   }));
 
   return (
@@ -87,9 +93,8 @@ export default async function PublicProfilePage({
             emailVerified: Boolean(data.user.emailVerifiedAt),
             createdAt: data.user.createdAt,
             completedSessions: data.completedSessions,
-            reviewCount: isOwner
-              ? data.reviewsReceived
-              : data.reviewsWritten,
+            reviewCount:
+              data.reviewsReceived + data.reviewsWritten,
             averageRating: data.averageRating,
             avatarUrl: data.user.avatarUrl,
             coverUrl: data.user.coverUrl,
