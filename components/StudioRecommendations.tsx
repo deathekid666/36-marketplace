@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { RecommendedStudio } from "@/lib/recommendations";
 import { categoryLabel } from "@/lib/studio";
+import { formatMoney } from "@/lib/commerce";
 
 type Group = {
   title: string;
@@ -55,7 +56,7 @@ function RecommendationCard({
 
         <div className="mt-3 flex items-center justify-between gap-3 text-xs">
           <span>
-            <b>{studio.priceMad ? studio.priceMad + " MAD" : "—"}</b>
+            <b>{studio.priceMad ? formatMoney(studio.priceMad, studio.currency) : "—"}</b>
             <span className="text-[#8a8a8a]"> / hour</span>
           </span>
           {studio.distanceKm != null && (

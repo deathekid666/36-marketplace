@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 import {
   offlinePaymentLabel,
 } from "@/lib/offline-payment";
@@ -129,13 +130,22 @@ export default async function OwnerBookingsPage({
         Boolean(offlinePaymentLabel(payment.provider)),
     ),
   );
-  const collectedMad = bookings
-    .filter((booking) => booking.paymentStatus === "PAID")
-    .reduce((sum, booking) => sum + booking.totalAmountMad, 0);
-  const pendingCollectionMad = offlinePending.reduce(
-    (sum, booking) => sum + booking.totalAmountMad,
-    0,
+  const moneyByCurrency = (
+    rows: typeof bookings,
+  ) => {
+    const totals = new Map<string, number>();
+    for (const booking of rows) {
+      totals.set(
+        booking.currency,
+        (totals.get(booking.currency) || 0) + booking.totalAmountMad,
+      );
+    }
+    return [...totals.entries()].sort(([a], [b]) => a.localeCompare(b));
+  };
+  const collectedByCurrency = moneyByCurrency(
+    bookings.filter((booking) => booking.paymentStatus === "PAID"),
   );
+  const pendingByCurrency = moneyByCurrency(offlinePending);
 
   const upcomingDateCounts = upcoming.reduce(
     (counts, booking) => {
@@ -219,16 +229,34 @@ export default async function OwnerBookingsPage({
           </div>
           <div className="panel">
             <span className="label">Collected</span>
-            <b className="mt-2 block text-3xl">{collectedMad} MAD</b>
+            <div className="mt-2 space-y-1">
+              {collectedByCurrency.length ? (
+                collectedByCurrency.map(([currency, amount]) => (
+                  <b key={currency} className="block text-xl">
+                    {formatMoney(amount, currency)}
+                  </b>
+                ))
+              ) : (
+                <b className="block text-xl text-[#a3a3a3]">—</b>
+              )}
+            </div>
             <span className="mt-1 block text-xs text-[#8a8a8a]">
               marked paid in this 180-day window
             </span>
           </div>
           <div className="panel">
             <span className="label">To collect</span>
-            <b className="mt-2 block text-3xl text-emerald-600">
-              {pendingCollectionMad} MAD
-            </b>
+            <div className="mt-2 space-y-1 text-emerald-600">
+              {pendingByCurrency.length ? (
+                pendingByCurrency.map(([currency, amount]) => (
+                  <b key={currency} className="block text-xl">
+                    {formatMoney(amount, currency)}
+                  </b>
+                ))
+              ) : (
+                <b className="block text-xl text-[#a3a3a3]">—</b>
+              )}
+            </div>
             <span className="mt-1 block text-xs text-[#8a8a8a]">
               {offlinePending.length} offline booking
               {offlinePending.length === 1 ? "" : "s"}
@@ -391,7 +419,7 @@ export default async function OwnerBookingsPage({
 
                           <div className="text-right">
                             <b className="text-xl">
-                              {booking.totalAmountMad} MAD
+                              {formatMoney(booking.totalAmountMad, booking.currency)}
                             </b>
                             <span className="block text-[10px] uppercase tracking-[0.08em] text-[#8a8a8a]">
                               {booking.paymentStatus.replaceAll("_", " ")}

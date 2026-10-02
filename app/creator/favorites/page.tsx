@@ -7,6 +7,7 @@ import { CompareTray } from "@/components/CompareTray";
 import { ShortlistProjects } from "@/components/ShortlistProjects";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/commerce";
 
 export default async function FavoritesPage() {
   const user = await requireRole("CREATOR");
@@ -42,6 +43,7 @@ export default async function FavoritesPage() {
     slug: studio.slug,
     city: studio.city,
     priceMad: studio.rooms[0]?.hourlyRateMad || null,
+    currency: studio.currency,
     photoUrl: studio.photos[0]?.url || null,
   }));
 
@@ -143,8 +145,8 @@ export default async function FavoritesPage() {
                               studio.city}
                             {rate
                               ? " · from " +
-                                rate +
-                                " MAD/h"
+                                formatMoney(rate, studio.currency) +
+                                "/h"
                               : ""}
                           </p>
                           <p className="mt-2 text-xs text-acid">

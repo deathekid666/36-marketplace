@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 type CurrentStudioShape = {
   id: string;
   city: string;
+  currency: string;
   primaryCategory: StudioCategory;
   latitude: number | null;
   longitude: number | null;
@@ -46,6 +47,7 @@ export type RecommendedStudio = {
   neighborhood: string;
   primaryCategory: StudioCategory;
   priceMad: number | null;
+  currency: string;
   rating: number | null;
   reviewCount: number;
   photoUrl: string | null;
@@ -137,7 +139,11 @@ export async function getStudioRecommendations(
       reasons.push("Same studio type");
     }
 
-    if (currentPrice != null && priceMad != null) {
+    if (
+      currentPrice != null &&
+      priceMad != null &&
+      candidate.currency === current.currency
+    ) {
       const delta = Math.abs(priceMad - currentPrice);
       const priceScore = Math.max(
         0,
@@ -228,6 +234,7 @@ export async function getStudioRecommendations(
       neighborhood: candidate.neighborhood,
       primaryCategory: candidate.primaryCategory,
       priceMad,
+      currency: candidate.currency,
       rating,
       reviewCount: candidate.reviews.length,
       photoUrl: candidate.photos[0]?.url || null,
@@ -254,6 +261,7 @@ export async function getStudioRecommendations(
         : rows
             .filter(
               (row) =>
+                row.currency === current.currency &&
                 row.priceMad != null &&
                 row.priceMad < currentPrice,
             )

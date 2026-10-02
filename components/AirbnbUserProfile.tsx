@@ -3,6 +3,7 @@ import type { UserRole } from "@prisma/client";
 
 import { updateProfileAction } from "@/app/profile/actions";
 import { ProfileImageUploader } from "@/components/ProfileImageUploader";
+import { formatMoney } from "@/lib/commerce";
 import {
   memberSinceLabel,
   profileInitials,
@@ -18,6 +19,7 @@ type ProfileStudio = {
   neighborhood: string;
   photoUrl: string | null;
   priceMad: number | null;
+  currency: string;
   rating: number | null;
   reviewCount: number;
 };
@@ -417,7 +419,7 @@ export function AirbnbUserProfile({
                         <span>
                           <b>
                             {studio.priceMad
-                              ? studio.priceMad + " MAD"
+                              ? formatMoney(studio.priceMad, studio.currency)
                               : "—"}
                           </b>{" "}
                           / hour

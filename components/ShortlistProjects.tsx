@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { formatMoney } from "@/lib/commerce";
+
 type StudioOption = {
   id: string;
   name: string;
   slug: string;
   city: string;
   priceMad: number | null;
+  currency: string;
   photoUrl: string | null;
 };
 
@@ -410,8 +413,8 @@ export function ShortlistProjects({
                             {studio.city}
                             {studio.priceMad
                               ? " · " +
-                                studio.priceMad +
-                                " MAD/h"
+                                formatMoney(studio.priceMad, studio.currency) +
+                                "/h"
                               : ""}
                           </span>
                         </div>
