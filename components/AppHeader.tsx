@@ -53,8 +53,8 @@ export async function AppHeader({ user }: { user?: User | null }) {
 
           <div className="air-header-actions">
             {user?.role === "STUDIO_OWNER" ? (
-              <Link href="/owner/studios/new" className="air-host-link">
-                List your studio
+              <Link href="/owner" className="air-host-link">
+                Host dashboard
               </Link>
             ) : user?.role === "CREATOR" ? (
               <Link href="/list-your-studio" className="air-host-link">
@@ -87,13 +87,11 @@ export async function AppHeader({ user }: { user?: User | null }) {
                   href={
                     user.role === "ADMIN"
                       ? "/admin"
-                      : user.role === "STUDIO_OWNER"
-                        ? "/owner"
-                        : "/creator"
+                      : "/creator"
                   }
                   className="air-dashboard-link"
                 >
-                  Dashboard
+                  {user.role === "STUDIO_OWNER" ? "Creator mode" : "Dashboard"}
                 </Link>
                 <LogoutButton />
               </>
