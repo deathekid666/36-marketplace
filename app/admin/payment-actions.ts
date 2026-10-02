@@ -128,8 +128,8 @@ export async function confirmRefundAction(form: FormData) {
   });
   if (!refund) redirect("/admin/payments?error=missing");
 
-  await db.$transaction([
-    db.payment.update({
+  await db.$transaction(async (tx) => {
+    await tx.payment.update({
       where: { id: refund.id },
       data: {
         status: "REFUNDED",
@@ -137,12 +137,55 @@ export async function confirmRefundAction(form: FormData) {
         confirmedAt: new Date(),
         confirmedById: admin.id,
       },
-    }),
-    db.booking.update({
+    });
+
+    const [paidCharges, completedRefunds] = await Promise.all([
+      tx.payment.aggregate({
+        where: {
+          bookingId: refund.bookingId,
+          kind: { in: ["DEPOSIT", "BALANCE"] },
+          status: "PAID",
+        },
+        _sum: { amountMad: true },
+      }),
+      tx.payment.aggregate({
+        where: {
+          bookingId: refund.bookingId,
+          kind: "REFUND",
+          status: "REFUNDED",
+        },
+        _sum: { amountMad: true },
+      }),
+    ]);
+
+    const netCollected = Math.max(
+      0,
+      (paidCharges._sum.amountMad || 0) -
+        (completedRefunds._sum.amountMad || 0),
+    );
+    const paymentStatus =
+      netCollected >= refund.booking.totalAmountMad
+        ? "PAID"
+        : netCollected > 0
+          ? "PARTIALLY_PAID"
+          : "REFUNDED";
+
+    await tx.booking.update({
       where: { id: refund.bookingId },
-      data: { paymentStatus: "REFUNDED" },
-    }),
-  ]);
+      data: { paymentStatus },
+    });
+
+    await tx.payout.updateMany({
+      where: {
+        bookingId: refund.bookingId,
+        status: { in: ["PENDING", "ELIGIBLE"] },
+      },
+      data: {
+        status: "HOLD",
+        availableAt: null,
+      },
+    });
+  });
 
   await notifyUser({ userId: refund.booking.creatorId, type: "REFUND_CONFIRMED", title: "Refund confirmed", body: `${formatMoney(refund.amountMad, refund.currency)} refund for ${refund.booking.studio.name} has been marked completed.`, href: `/creator/bookings/${refund.bookingId}`, email: true, whatsapp: true });
   revalidatePath("/admin/payments");
