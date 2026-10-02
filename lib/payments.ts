@@ -58,20 +58,53 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
       return { ...success, idempotent: true, stale: true };
     }
 
-    await db.$transaction([
-      db.payment.update({
+    await db.$transaction(async (tx) => {
+      await tx.payment.update({
         where: { id: payment.id },
         data: {
           status: "REFUNDED",
           providerRef: event.providerRef || payment.providerRef,
           confirmedAt: new Date(),
         },
-      }),
-      db.booking.update({
+      });
+
+      const [paidCharges, completedRefunds] = await Promise.all([
+        tx.payment.aggregate({
+          where: {
+            bookingId: payment.bookingId,
+            kind: { in: ["DEPOSIT", "BALANCE"] },
+            status: "PAID",
+          },
+          _sum: { amountMad: true },
+        }),
+        tx.payment.aggregate({
+          where: {
+            bookingId: payment.bookingId,
+            kind: "REFUND",
+            status: "REFUNDED",
+          },
+          _sum: { amountMad: true },
+        }),
+      ]);
+
+      const netCollected = Math.max(
+        0,
+        (paidCharges._sum.amountMad || 0) -
+          (completedRefunds._sum.amountMad || 0),
+      );
+      const paymentStatus =
+        netCollected >= payment.booking.totalAmountMad
+          ? "PAID"
+          : netCollected > 0
+            ? "PARTIALLY_PAID"
+            : "REFUNDED";
+
+      await tx.booking.update({
         where: { id: payment.bookingId },
-        data: { paymentStatus: "REFUNDED" },
-      }),
-      db.payout.updateMany({
+        data: { paymentStatus },
+      });
+
+      await tx.payout.updateMany({
         where: {
           bookingId: payment.bookingId,
           status: { in: ["PENDING", "ELIGIBLE"] },
@@ -80,8 +113,8 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
           status: "HOLD",
           availableAt: null,
         },
-      }),
-    ]);
+      });
+    });
     return success;
   }
 
@@ -94,6 +127,67 @@ export async function applyNormalizedPaymentEvent(event: NormalizedPaymentEvent)
   }
   if (payment.status === "REFUNDED") {
     return { ...success, idempotent: true, stale: true };
+  }
+
+  if (
+    payment.kind === "BALANCE" &&
+    payment.booking.status !== "CONFIRMED"
+  ) {
+    const now = new Date();
+
+    await db.$transaction(async (tx) => {
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: "PAID",
+          providerRef: event.providerRef || payment.providerRef,
+          confirmedAt: now,
+        },
+      });
+
+      await tx.booking.update({
+        where: { id: payment.bookingId },
+        data: {
+          status: "DISPUTED",
+          expiresAt: null,
+        },
+      });
+
+      await tx.payout.updateMany({
+        where: {
+          bookingId: payment.bookingId,
+          status: { in: ["PENDING", "ELIGIBLE"] },
+        },
+        data: {
+          status: "HOLD",
+          availableAt: null,
+        },
+      });
+
+      const existingRefund = await tx.payment.findFirst({
+        where: {
+          bookingId: payment.bookingId,
+          kind: "REFUND",
+          status: "PENDING",
+        },
+      });
+
+      if (!existingRefund && payment.amountMad > 0) {
+        await tx.payment.create({
+          data: {
+            bookingId: payment.bookingId,
+            kind: "REFUND",
+            amountMad: payment.amountMad,
+            currency: payment.currency,
+            status: "PENDING",
+            provider: payment.provider,
+            providerRef: "LATE_BALANCE_AUTO_REFUND",
+          },
+        });
+      }
+    });
+
+    return { ...success, disputed: true };
   }
 
   if (payment.kind !== "DEPOSIT") {
