@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/AppHeader";
 import { getCurrentUser } from "@/lib/auth";
+import { enableHostingAction } from "@/app/list-your-studio/actions";
 
 export const metadata = { title: "List your studio" };
 
@@ -47,33 +48,38 @@ export default async function ListYourStudioPage() {
         <div className="rounded-[32px] border border-[#e2e2e2] bg-white p-7 sm:p-10">
           {user?.role === "CREATOR" ? (
             <>
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">Studio-owner workspace</span>
-              <h2 className="mt-4 text-3xl font-black tracking-[-0.04em]">Listing a studio is separate from your Creator dashboard.</h2>
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">Use your same 36 account</span>
+              <h2 className="mt-4 text-3xl font-black tracking-[-0.04em]">Start hosting without creating another account.</h2>
               <p className="mt-3 text-sm leading-7 text-[#717171]">
-                Your current account is a Creator account. The current 36 account model keeps studio-owner management separate so bookings and owner operations do not land on the same dashboard.
+                Your bookings, favorites, requests, messages and profile stay on this account. Enabling hosting simply adds the owner workspace for listings, availability, revenue and payouts.
               </p>
               <div className="mt-7 rounded-2xl bg-[#f7f7f7] p-5">
-                <b className="text-sm">For now</b>
+                <b className="text-sm">One account, two modes</b>
                 <p className="mt-2 text-xs leading-6 text-[#717171]">
-                  Use a Studio Owner account to create or claim a studio. We will later merge Creator + Owner capabilities into one Airbnb-style account without mixing the two dashboards.
+                  You will still be able to browse and book studios as a creator after you become a host.
                 </p>
               </div>
-              <Link href="/profile" className="mt-7 flex w-full items-center justify-between rounded-2xl border border-[#d8d8d8] px-5 py-4 text-sm font-black">
-                Back to my account <span>→</span>
+              <form action={enableHostingAction} className="mt-7">
+                <button className="flex w-full items-center justify-between rounded-2xl bg-[#222] px-5 py-4 text-sm font-black text-white">
+                  Start hosting with this account <span>→</span>
+                </button>
+              </form>
+              <Link href="/profile" className="mt-3 flex w-full items-center justify-between rounded-2xl border border-[#d8d8d8] px-5 py-4 text-sm font-black">
+                Back to my profile <span>→</span>
               </Link>
             </>
           ) : (
             <>
               <span className="text-xs font-black uppercase tracking-[0.18em] text-acid">Start listing</span>
-              <h2 className="mt-4 text-3xl font-black tracking-[-0.04em]">Create a studio-owner account.</h2>
+              <h2 className="mt-4 text-3xl font-black tracking-[-0.04em]">Create one 36 account for booking and hosting.</h2>
               <p className="mt-3 text-sm leading-7 text-[#717171]">
-                Studio owners get a separate business dashboard for listings, bookings, availability, revenue and analytics.
+                Host accounts can also browse, save, message and book other studios. There is no separate creator login.
               </p>
               <Link href="/auth/signup?role=STUDIO_OWNER" className="mt-7 flex w-full items-center justify-between rounded-2xl bg-[#222] px-5 py-4 text-sm font-black text-white">
-                Create studio-owner account <span>→</span>
+                Create account & start hosting <span>→</span>
               </Link>
               <Link href="/auth/login" className="mt-3 flex w-full items-center justify-between rounded-2xl border border-[#d8d8d8] px-5 py-4 text-sm font-black">
-                I already have an owner account <span>→</span>
+                I already have a 36 account <span>→</span>
               </Link>
             </>
           )}
