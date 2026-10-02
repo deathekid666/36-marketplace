@@ -15,9 +15,16 @@ function text(form: FormData, name: string, max = 2000) {
   return String(form.get(name) ?? "").trim().slice(0, max);
 }
 
+function validUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 export async function verifyStudioAction(form: FormData) {
   await requireRole("ADMIN");
   const studioId = text(form, "studioId", 80);
+  if (!validUuid(studioId)) redirect("/admin");
 
   const result = await db.$transaction(async (tx) => {
     await tx.$executeRaw`
@@ -111,6 +118,7 @@ export async function verifyStudioAction(form: FormData) {
 export async function rejectStudioAction(form: FormData) {
   await requireRole("ADMIN");
   const studioId = text(form, "studioId", 80);
+  if (!validUuid(studioId)) redirect("/admin");
   const note = text(form, "note", 2000);
   const verificationNote =
     note || "Please update the listing and resubmit.";
