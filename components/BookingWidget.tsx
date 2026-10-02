@@ -56,18 +56,30 @@ type BookingQuote = {
   holdMinutes: number;
 };
 
-function toLocalDateValue(date: Date) {
+function dateValueInTimeZone(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) =>
+    parts.find((part) => part.type === type)?.value || "";
+  return [get("year"), get("month"), get("day")].join("-");
+}
+
+function addDateDays(value: string, days: number) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
   return [
-    String(date.getFullYear()).padStart(4, "0"),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
+    String(date.getUTCFullYear()).padStart(4, "0"),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
   ].join("-");
 }
 
-function defaultDate() {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return toLocalDateValue(date);
+function defaultDate(timeZone: string) {
+  return addDateDays(dateValueInTimeZone(new Date(), timeZone), 1);
 }
 
 function friendlyDate(value: string) {
@@ -84,10 +96,10 @@ function friendlyDate(value: string) {
   }).format(new Date(year, month - 1, day));
 }
 
-function friendlyStartTime(startAt: string) {
+function friendlyStartTime(startAt: string, timeZone: string) {
   if (!startAt) return "Choose time";
   return new Intl.DateTimeFormat("en", {
-    timeZone: "Africa/Casablanca",
+    timeZone,
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
@@ -105,6 +117,7 @@ export function BookingWidget({
   taxRateBps = 0,
   locationLabel,
   freeCancellationHours = 24,
+  timeZone = "Africa/Casablanca",
 }: {
   rooms: RoomOption[];
   addons?: AddonOption[];
@@ -116,6 +129,7 @@ export function BookingWidget({
   taxRateBps?: number;
   locationLabel?: string;
   freeCancellationHours?: number;
+  timeZone?: string;
 }) {
   const router = useRouter();
   const [roomId, setRoomId] = useState(rooms[0]?.id || "");
@@ -129,7 +143,9 @@ export function BookingWidget({
   );
 
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
-  const [date, setDate] = useState(initialDate || defaultDate());
+  const [date, setDate] = useState(
+    initialDate || defaultDate(timeZone),
+  );
   const [durationHours, setDurationHours] = useState(
     Math.max(room?.minimumHours || 1, initialDurationHours || 1),
   );
@@ -150,12 +166,14 @@ export function BookingWidget({
   const [notes, setNotes] = useState("");
   const [acceptedPolicies, setAcceptedPolicies] = useState(false);
 
-  const today = useMemo(() => toLocalDateValue(new Date()), []);
-  const maxDate = useMemo(() => {
-    const value = new Date();
-    value.setDate(value.getDate() + 119);
-    return toLocalDateValue(value);
-  }, []);
+  const today = useMemo(
+    () => dateValueInTimeZone(new Date(), timeZone),
+    [timeZone],
+  );
+  const maxDate = useMemo(
+    () => addDateDays(today, 119),
+    [today],
+  );
 
   useEffect(() => {
     if (!room) return;
@@ -508,13 +526,13 @@ export function BookingWidget({
               {loading
                 ? "Checking availability…"
                 : selected
-                  ? friendlyStartTime(selected)
+                  ? friendlyStartTime(selected, timeZone)
                   : slots.length
                     ? "Choose after selecting date"
                     : "No times available"}
             </span>
           </span>
-          <span className="text-xs text-[#8a8a8a]">Casablanca time</span>
+          <span className="text-xs text-[#8a8a8a]">studio local time · {timeZone}</span>
         </button>
       </div>
       </div>
@@ -553,6 +571,7 @@ export function BookingWidget({
                 value={date}
                 min={today}
                 max={maxDate}
+                today={today}
                 twoMonths
                 availability={calendarAvailability}
                 loadingAvailability={calendarLoading}
@@ -564,7 +583,7 @@ export function BookingWidget({
                   <span className="text-[10px] text-[#8a8a8a]">
                     {calendarLoading
                       ? "Loading live dates…"
-                      : "120-day booking window · Casablanca time"}
+                      : "120-day booking window · studio local time · {timeZone}"}
                   </span>
                 }
               />
@@ -619,7 +638,7 @@ export function BookingWidget({
             </span>
             <p className="mt-1 text-sm font-semibold">
               {friendlyDate(date)}
-              {selected ? " · " + friendlyStartTime(selected) : ""}
+              {selected ? " · " + friendlyStartTime(selected, timeZone) : ""}
               {" · " + durationHours + "h"}
             </p>
           </div>
@@ -804,7 +823,7 @@ export function BookingWidget({
                   {friendlyDate(date)} · {friendlyStartTime(quote.startAt)}
                 </b>
                 <span className="mt-1 block text-[10px] text-[#8a8a8a]">
-                  {quote.durationMinutes / 60}h · Casablanca time
+                  {quote.durationMinutes / 60}h · studio local time · {timeZone}
                 </span>
               </div>
             </div>

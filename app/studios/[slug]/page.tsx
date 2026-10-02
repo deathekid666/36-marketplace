@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+
+import { studioTimeZone } from "@/lib/time";
 import { notFound } from "next/navigation";
 
 import { toggleFavoriteAction } from "@/app/favorites/actions";
@@ -891,6 +893,7 @@ export default async function StudioDetailPage({
                 depositPercent={studio.depositPercent}
                 freeCancellationHours={studio.freeCancellationHours}
                 taxRateBps={studio.taxRateBps}
+                timeZone={studioTimeZone(studio)}
                 initialDate={safeDate(query.date)}
                 initialDurationHours={safeDuration(
                   query.duration,

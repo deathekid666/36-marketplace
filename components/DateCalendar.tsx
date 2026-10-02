@@ -100,6 +100,7 @@ export function DateCalendar({
   onChange,
   min,
   max,
+  today,
   twoMonths = false,
   availability,
   loadingAvailability = false,
@@ -109,6 +110,7 @@ export function DateCalendar({
   onChange: (value: string) => void;
   min?: string;
   max?: string;
+  today?: string;
   twoMonths?: boolean;
   availability?: Record<string, number>;
   loadingAvailability?: boolean;
@@ -126,7 +128,7 @@ export function DateCalendar({
   const canGoBack = !minMonth || month.getTime() > minMonth.getTime();
   const furthestVisibleMonth = twoMonths ? nextMonth : month;
   const canGoForward = !maxMonth || furthestVisibleMonth.getTime() < maxMonth.getTime();
-  const todayValue = toDateValue(new Date());
+  const todayValue = today || toDateValue(new Date());
   const nextAvailable = availability
     ? Object.entries(availability)
         .filter(([key, count]) => count > 0 && key >= (min || todayValue))
