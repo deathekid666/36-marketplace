@@ -367,15 +367,33 @@ export async function submitReviewAction(form: FormData) {
 export async function replyToReviewAction(form: FormData) {
   const user = await requireRole("STUDIO_OWNER");
   const reviewId = text(form, "reviewId", 80);
-  const bookingId = text(form, "bookingId", 80);
   const reply = text(form, "reply", 1500);
   const review = await db.review.findFirst({
     where: { id: reviewId, studio: { ownerId: user.id } },
-    include: { studio: { select: { slug: true } } },
+    include: { studio: { select: { slug: true, name: true } } },
   });
-  if (!review) return;
-  await db.review.update({ where: { id: review.id }, data: { ownerReply: reply } });
-  revalidatePath(`/owner/bookings/${bookingId}`);
+  if (!review || !reply) return;
+
+  const published = await db.review.updateMany({
+    where: {
+      id: review.id,
+      ownerReply: "",
+    },
+    data: { ownerReply: reply },
+  });
+  if (!published.count) return;
+
+  await notifyUser({
+    userId: review.creatorId,
+    type: "REVIEW_REPLY",
+    title: review.studio.name + " replied to your review",
+    body: reply.slice(0, 180),
+    href: "/creator/bookings/" + review.bookingId,
+    email: true,
+  }).catch(() => undefined);
+
+  revalidatePath(`/owner/bookings/${review.bookingId}`);
+  revalidatePath(`/creator/bookings/${review.bookingId}`);
   revalidatePath("/studios");
   revalidatePath(`/studios/${review.studio.slug}`);
 }

@@ -199,17 +199,11 @@ export default async function StudioDetailPage({
       : Promise.resolve(null),
   ]);
 
-  const average = studio.reviews.length
-    ? studio.reviews.reduce(
-        (sum, review) => sum + review.rating,
-        0,
-      ) / studio.reviews.length
-    : null;
-
   const trust = await getStudioTrustMetrics(
     studio.id,
     studio.ownerId,
   );
+  const average = trust.averageRating;
   const responseLabel =
     trust.responseSampleSize >= 3
       ? responseTimeLabel(trust.typicalResponseMinutes)
@@ -362,8 +356,8 @@ export default async function StudioDetailPage({
                   href="#reviews"
                   className="font-bold underline decoration-[#bdbdbd] underline-offset-4"
                 >
-                  {studio.reviews.length} review
-                  {studio.reviews.length === 1
+                  {trust.verifiedReviewCount} review
+                  {trust.verifiedReviewCount === 1
                     ? ""
                     : "s"}
                 </a>
@@ -845,9 +839,16 @@ export default async function StudioDetailPage({
                       Message host
                     </Link>
                   ) : user?.role === "CREATOR" ? (
-                    <p className="mt-5 text-xs leading-5 text-[#8a8a8a]">
-                      Messaging opens after you reserve a session with this studio.
-                    </p>
+                    <form action={startStudioConversationAction} className="mt-5">
+                      <input
+                        type="hidden"
+                        name="studioId"
+                        value={studio.id}
+                      />
+                      <button className="studio-detail-host-message w-full">
+                        Message host
+                      </button>
+                    </form>
                   ) : !user ? (
                     <Link
                       href={
@@ -859,7 +860,7 @@ export default async function StudioDetailPage({
                       }
                       className="studio-detail-host-message"
                     >
-                      Log in to book
+                      Log in to message
                     </Link>
                   ) : null}
                 </div>
