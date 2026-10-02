@@ -26,10 +26,10 @@ function localMonthKey(date: Date, timeZone: string) {
   return year + "-" + month;
 }
 
-function parseMonth(value: string | undefined) {
+function parseMonth(value: string | undefined, timeZone: string) {
   return /^\d{4}-\d{2}$/.test(String(value || ""))
     ? String(value)
-    : localMonthKey(new Date());
+    : localMonthKey(new Date(), timeZone);
 }
 
 function shiftMonth(value: string, delta: number) {
