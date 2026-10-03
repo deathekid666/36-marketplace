@@ -84,12 +84,14 @@ export async function requireVerifiedRole(...roles: UserRole[]): Promise<User> {
   return user;
 }
 
-export function hasCreatorAccess(role: UserRole): boolean {
-  return role === "CREATOR" || role === "STUDIO_OWNER";
+// Every active signed-in account is also a marketplace customer. Roles add
+// management capabilities; they do not remove the ability to book studios.
+export function hasCreatorAccess(_role: UserRole): boolean {
+  return true;
 }
 
 export async function requireCreatorAccess(): Promise<User> {
-  return requireRole("CREATOR", "STUDIO_OWNER");
+  return requireUser();
 }
 
 export async function requireVerifiedCreatorAccess(): Promise<User> {
