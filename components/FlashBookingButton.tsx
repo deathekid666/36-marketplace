@@ -42,8 +42,13 @@ export function FlashBookingButton({
       setError(data.error || "This slot is no longer available.");
       return;
     }
-    router.push(`/creator/bookings/${data.bookingId}?from=now`);
-    router.refresh();
+    const bookingId = String(data.bookingId || "");
+    window.location.assign(
+      bookingId
+        ? `/creator/bookings/${bookingId}?from=now`
+        : "/creator/bookings",
+    );
+    return;
   }
 
   return (
