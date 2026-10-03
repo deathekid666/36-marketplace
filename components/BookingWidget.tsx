@@ -384,8 +384,19 @@ export function BookingWidget({
         return;
       }
 
-      router.push(data.redirectTo || "/creator/bookings");
-      router.refresh();
+      const bookingId = String(data.bookingId || "");
+      const destination =
+        typeof data.redirectTo === "string" && data.redirectTo.startsWith("/")
+          ? data.redirectTo
+          : bookingId
+            ? "/creator/bookings/" + bookingId + "?booked=1"
+            : "/creator/bookings";
+
+      // Booking creation has already succeeded on the server. Use a hard
+      // navigation so the reservation hub always loads even if the current
+      // App Router tree is stale or a client transition gets interrupted.
+      window.location.assign(destination);
+      return;
     } catch {
       setCheckoutOpen(false);
       setQuote(null);
